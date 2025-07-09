@@ -136,7 +136,7 @@ jobs:
   update-homebrew-tap:
     needs: release
     runs-on: ubuntu-latest
-    if: '!contains(github.ref, '-')'  # Skip for pre-releases
+    if: "!contains(github.ref, '-')"  # Skip for pre-releases
     
     steps:
       - name: Checkout tap repository
