@@ -21,6 +21,7 @@ pub use backlog_core::{
 };
 
 // Domain models (from backlog_domain_models)
+#[cfg(any(feature = "project", feature = "team", feature = "star"))]
 pub use backlog_domain_models::Star as UserStar;
 
 // Document module (from backlog_document)

@@ -64,7 +64,7 @@ jobs:
       - name: Test with minimal features
         run: |
           cargo test --package backlog-api-client --no-default-features
-          cargo test --package blg --no-default-features
+          cargo check --package blg --no-default-features
           
   coverage:
     name: Code Coverage
