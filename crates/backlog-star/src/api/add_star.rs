@@ -1,7 +1,7 @@
 #[cfg(feature = "writable")]
 use backlog_api_core::IntoRequest;
 #[cfg(feature = "writable")]
-use backlog_core::identifier::{CommentId, IssueId, PullRequestCommentId, WikiId};
+use backlog_core::identifier::{CommentId, IssueId, PullRequestCommentId, PullRequestId, WikiId};
 #[cfg(feature = "writable")]
 use serde::Serialize;
 
@@ -35,7 +35,7 @@ pub enum StarTarget {
     /// Star a wiki page
     Wiki { id: WikiId },
     /// Star a pull request
-    PullRequest { id: u32 },
+    PullRequest { id: PullRequestId },
     /// Star a pull request comment
     PullRequestComment { comment_id: PullRequestCommentId },
 }
@@ -67,9 +67,9 @@ impl AddStarParams {
     }
 
     /// Creates parameters for adding a star to a pull request.
-    pub fn pull_request(id: u32) -> Self {
+    pub fn pull_request(id: impl Into<PullRequestId>) -> Self {
         Self {
-            target: StarTarget::PullRequest { id },
+            target: StarTarget::PullRequest { id: id.into() },
         }
     }
 
@@ -173,11 +173,11 @@ mod tests {
 
     #[test]
     fn test_add_star_params_pull_request() {
-        let params = AddStarParams::pull_request(10);
+        let params = AddStarParams::pull_request(10u32);
 
         match &params.target {
             StarTarget::PullRequest { id } => {
-                assert_eq!(*id, 10);
+                assert_eq!(id.value(), 10);
             }
             _ => panic!("Expected PullRequest target"),
         }

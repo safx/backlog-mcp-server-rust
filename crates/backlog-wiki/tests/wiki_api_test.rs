@@ -1,7 +1,7 @@
 mod common;
 use common::*;
 
-use backlog_core::ProjectKey;
+use backlog_core::{ProjectKey, identifier::StarId};
 use backlog_wiki::WikiCount;
 use backlog_wiki::api::{
     DownloadWikiAttachmentParams, GetWikiAttachmentListParams, GetWikiCountParams,
@@ -762,12 +762,12 @@ async fn test_get_wiki_stars_success() {
     assert!(result.is_ok());
     let stars = result.unwrap();
     assert_eq!(stars.len(), 2);
-    assert_eq!(stars[0].id, 75);
+    assert_eq!(stars[0].id, StarId::new(75));
     assert_eq!(stars[0].comment, None);
     assert_eq!(stars[0].url, "https://xx.backlog.jp/alias/wiki/1");
     assert_eq!(stars[0].title, "[TEST1] Home | Wiki - Backlog");
     assert_eq!(stars[0].presenter.name, "admin");
-    assert_eq!(stars[1].id, 80);
+    assert_eq!(stars[1].id, StarId::new(80));
     assert_eq!(stars[1].comment, Some("Great documentation!".to_string()));
 }
 
@@ -828,7 +828,7 @@ async fn test_get_wiki_stars_with_u32_id() {
     assert!(result.is_ok());
     let stars = result.unwrap();
     assert_eq!(stars.len(), 1);
-    assert_eq!(stars[0].id, 100);
+    assert_eq!(stars[0].id, StarId::new(100));
     assert_eq!(stars[0].comment, Some("Excellent!".to_string()));
 }
 

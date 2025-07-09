@@ -1,7 +1,7 @@
 mod common;
 
 use backlog_core::ApiDate;
-use backlog_core::identifier::{Identifier, UserId};
+use backlog_core::identifier::{Identifier, StarId, UserId};
 use backlog_user::api::{
     GetNotificationCountParams, GetNotificationsParams, GetOwnUserParams, GetUserIconParams,
     GetUserListParams, GetUserParams, GetUserStarCountParams, GetUserStarsParams,
@@ -297,11 +297,11 @@ async fn test_get_user_stars_success() {
     assert!(result.is_ok());
     let stars = result.unwrap();
     assert_eq!(stars.len(), 2);
-    assert_eq!(stars[0].id, 75);
+    assert_eq!(stars[0].id, StarId::new(75));
     assert_eq!(stars[0].comment, None);
     assert_eq!(stars[0].url, "https://xx.backlog.jp/view/BLG-1");
     assert_eq!(stars[0].presenter.name, "admin");
-    assert_eq!(stars[1].id, 80);
+    assert_eq!(stars[1].id, StarId::new(80));
     assert_eq!(stars[1].comment, Some("Great work!".to_string()));
 }
 
@@ -348,7 +348,7 @@ async fn test_get_user_stars_with_pagination() {
     assert!(result.is_ok());
     let stars = result.unwrap();
     assert_eq!(stars.len(), 1);
-    assert_eq!(stars[0].id, 150);
+    assert_eq!(stars[0].id, StarId::new(150));
 }
 
 #[tokio::test]

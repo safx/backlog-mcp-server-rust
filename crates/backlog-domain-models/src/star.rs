@@ -1,10 +1,10 @@
-use backlog_core::User;
+use backlog_core::{User, identifier::StarId};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Star {
-    pub id: u64,
+    pub id: StarId,
     pub comment: Option<String>,
     pub url: String,
     pub title: String,
@@ -37,7 +37,7 @@ mod tests {
         }"#;
 
         let star: Star = serde_json::from_str(json).unwrap();
-        assert_eq!(star.id, 75);
+        assert_eq!(star.id, StarId::new(75));
         assert_eq!(star.comment, None);
         assert_eq!(star.url, "https://xx.backlog.jp/view/BLG-1");
         assert_eq!(star.title, "[BLG-1] first issue | 課題の表示 - Backlog");
@@ -66,7 +66,7 @@ mod tests {
         }"#;
 
         let star: Star = serde_json::from_str(json).unwrap();
-        assert_eq!(star.id, 100);
+        assert_eq!(star.id, StarId::new(100));
         assert_eq!(star.comment, Some("Great work!".to_string()));
         assert_eq!(star.presenter.role_type, Role::User);
         assert_eq!(star.presenter.lang, Some(Language::English));
@@ -112,8 +112,8 @@ mod tests {
 
         let stars: Vec<Star> = serde_json::from_str(json).unwrap();
         assert_eq!(stars.len(), 2);
-        assert_eq!(stars[0].id, 1);
-        assert_eq!(stars[1].id, 2);
+        assert_eq!(stars[0].id, StarId::new(1));
+        assert_eq!(stars[1].id, StarId::new(2));
         assert_eq!(stars[1].comment, Some("Nice!".to_string()));
     }
 }
