@@ -365,6 +365,44 @@ pub use get_issues::{GetIssuesParams, GetIssuesParamsBuilder};
 - Available tools follow `category_resource_action` naming pattern (e.g., `issue_details_get`, `wiki_update`)
 - 34 tools available covering read and write operations across all domains
 
+## Release Process
+
+### Creating a New Release
+
+1. **Update version in Cargo.toml**:
+   ```bash
+   # Update version in workspace Cargo.toml
+   # version = "0.1.0" → "0.1.1"
+   ```
+
+2. **Commit version changes**:
+   ```bash
+   git add Cargo.toml
+   git commit -m "chore: bump version to 0.1.1"
+   git push github main
+   ```
+
+3. **Create and push a tag**:
+   ```bash
+   git tag v0.1.1
+   git push github v0.1.1
+   ```
+
+4. **Automated release process**:
+   - GitHub Actions will automatically:
+     - Build binaries for multiple platforms (Linux, macOS, Windows)
+     - Create a GitHub Release with the binaries
+     - Update the Homebrew tap at https://github.com/safx/homebrew-tap
+
+5. **Verify the release**:
+   - Check https://github.com/safx/backlog-mcp-server-rust/releases
+   - Test Homebrew installation: `brew update && brew upgrade blg`
+
+### Prerequisites
+
+- `TAP_GITHUB_TOKEN` must be set in GitHub repository secrets
+- Token needs write access to safx/homebrew-tap repository
+
 ## Common Pitfalls and Solutions
 
 ### 1. Array Parameter Serialization

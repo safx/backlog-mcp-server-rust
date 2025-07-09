@@ -3,6 +3,41 @@
 `mcp-backlog-server` is a Model Context Protocol (MCP) server for interacting with the Backlog API.
 This server allows MCP-compatible clients (such as AI assistants) to utilize Backlog functionalities.
 
+## Installation
+
+### Using Homebrew (Recommended for macOS/Linux)
+
+The easiest way to install is via Homebrew:
+
+```bash
+# Add the tap (only needed once)
+brew tap safx/tap
+
+# Install the tools
+brew install mcp-backlog-server  # MCP server for AI assistants
+brew install blg                 # Backlog CLI tool (Optional)
+```
+
+To update to the latest version:
+```bash
+brew update
+brew upgrade mcp-backlog-server
+brew upgrade blg
+```
+
+To uninstall:
+```bash
+brew uninstall mcp-backlog-server
+brew uninstall blg
+brew untap safx/tap  # Optional: remove the tap
+```
+
+### Alternative Installation Methods
+
+For other platforms or if you prefer not to use Homebrew:
+- **Pre-built binaries**: Download from the [releases page](https://github.com/safx/backlog-mcp-server-rust/releases)
+- **Build from source**: Clone the repository and run `cargo build --release`
+
 ## Example Configuration for MCP Client
 
 ### Claude Desktop
