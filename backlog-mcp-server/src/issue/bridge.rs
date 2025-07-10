@@ -353,21 +353,13 @@ pub(crate) async fn add_issue_impl(
 
     let client_guard = client.lock().await;
 
-    // Resolve project ID if a key was provided
     let project_id = match &project_id_or_key {
         ProjectIdOrKey::Id(id) => *id,
         ProjectIdOrKey::Key(key) => {
-            // Get project list and find by key
-            let projects = client_guard
-                .project()
-                .get_project_list(backlog_project::GetProjectListParams::default())
+            let project = access_control
+                .project_cache()
+                .get_by_key(key, &client_guard)
                 .await?;
-            let project = projects
-                .iter()
-                .find(|p| &p.project_key == key)
-                .ok_or_else(|| {
-                    McpError::ProjectNotFound(format!("Project with key '{key}' not found"))
-                })?;
             project.id
         }
         ProjectIdOrKey::EitherIdOrKey(id, _) => *id,

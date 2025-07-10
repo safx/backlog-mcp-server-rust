@@ -1,20 +1,20 @@
 use crate::error::Error;
+use crate::project_cache::{CacheConfig, ProjectCacheManager};
 use backlog_api_client::client::BacklogApiClient;
 use backlog_core::identifier::ProjectId;
 use backlog_core::{ProjectIdOrKey, ProjectKey};
-use std::collections::HashMap;
 use std::env;
 use std::str::FromStr;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use std::time::Duration;
 
 /// Structure to manage project access control
 #[derive(Debug, Clone)]
 pub struct AccessControl {
     /// Allowed project keys from environment variable
     allowed_projects: Option<Vec<ProjectKey>>,
-    /// Resolved project mappings (ProjectId -> ProjectKey)
-    resolved_projects: Arc<RwLock<HashMap<ProjectId, ProjectKey>>>,
+    /// Project cache manager
+    project_cache: Arc<ProjectCacheManager>,
 }
 
 impl AccessControl {
@@ -39,9 +39,16 @@ impl AccessControl {
             None
         };
 
+        // キャッシュ設定（5分のTTL、最大1000プロジェクト）
+        let cache_config = CacheConfig {
+            ttl: Some(Duration::from_secs(300)),
+            max_size: Some(1000),
+        };
+        let project_cache = Arc::new(ProjectCacheManager::with_config(cache_config));
+
         Ok(Self {
             allowed_projects,
-            resolved_projects: Arc::new(RwLock::new(HashMap::new())),
+            project_cache,
         })
     }
 
@@ -51,18 +58,16 @@ impl AccessControl {
         project_id: &ProjectId,
         client: &BacklogApiClient,
     ) -> Result<ProjectKey, Error> {
-        use backlog_project::GetProjectDetailParams;
+        // キャッシュから取得
+        let project = self
+            .project_cache
+            .get_by_id(project_id, client)
+            .await
+            .map_err(|e| {
+                Error::Parameter(format!("Failed to resolve project ID '{project_id}': {e}"))
+            })?;
 
-        let params = GetProjectDetailParams::new(ProjectIdOrKey::Id(*project_id));
-        let project = client.project().get_project(params).await.map_err(|e| {
-            Error::Parameter(format!("Failed to resolve project ID '{project_id}': {e}"))
-        })?;
-
-        // Store the resolved project
-        let mut resolved_map = self.resolved_projects.write().await;
-        resolved_map.insert(project.id, project.project_key.clone());
-
-        Ok(project.project_key)
+        Ok(project.project_key.clone())
     }
 
     /// Check access permissions for the specified project ID (async version)
@@ -77,22 +82,17 @@ impl AccessControl {
         }
         let allowed_keys = self.allowed_projects.as_ref().unwrap();
 
-        // Check if this project ID is already resolved
-        {
-            let resolved_map = self.resolved_projects.read().await;
-            if let Some(project_key) = resolved_map.get(project_id) {
-                if allowed_keys.contains(project_key) {
-                    return Ok(());
-                }
+        // Check if this project ID is in cache
+        if let Some(project) = self.project_cache.get_from_cache_by_id(project_id).await {
+            if allowed_keys.contains(&project.project_key) {
+                return Ok(());
             }
         }
 
-        // If not resolved and not in unresolved list, try to resolve it
-        if let Some(allowed_keys) = &self.allowed_projects {
-            if let Ok(project_key) = self.resolve_project_by_id(project_id, client).await {
-                if allowed_keys.contains(&project_key) {
-                    return Ok(());
-                }
+        // If not in cache, try to resolve it
+        if let Ok(project_key) = self.resolve_project_by_id(project_id, client).await {
+            if allowed_keys.contains(&project_key) {
+                return Ok(());
             }
         }
 
@@ -141,6 +141,11 @@ impl AccessControl {
     /// Returns whether access control is enabled
     pub fn is_enabled(&self) -> bool {
         self.allowed_projects.is_some()
+    }
+
+    /// Get the project cache manager
+    pub fn project_cache(&self) -> &Arc<ProjectCacheManager> {
+        &self.project_cache
     }
 
     // Synchronous versions for backward compatibility (will be removed)
@@ -197,9 +202,15 @@ impl AccessControl {
 
 impl Default for AccessControl {
     fn default() -> Self {
-        Self::new().unwrap_or(Self {
-            allowed_projects: None,
-            resolved_projects: Arc::new(RwLock::new(HashMap::new())),
+        Self::new().unwrap_or_else(|_| {
+            let cache_config = CacheConfig {
+                ttl: Some(Duration::from_secs(300)),
+                max_size: Some(1000),
+            };
+            Self {
+                allowed_projects: None,
+                project_cache: Arc::new(ProjectCacheManager::with_config(cache_config)),
+            }
         })
     }
 }

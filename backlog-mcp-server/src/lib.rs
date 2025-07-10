@@ -7,6 +7,7 @@ pub mod file;
 pub mod git;
 pub mod issue;
 pub mod project;
+pub(crate) mod project_cache;
 mod server;
 pub mod user;
 mod util;

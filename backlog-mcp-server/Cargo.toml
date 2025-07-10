@@ -31,6 +31,7 @@ backlog-domain-models = { path = "../crates/backlog-domain-models" } # For Custo
 schemars = { workspace = true, features = ["derive"] } # For JsonSchema derive
 strsim = "0.11.1"
 base64 = { workspace = true } # Added for base64 encoding
+dashmap = "6.1"
 
 [dev-dependencies]
-# wiremock = { workspace = true }
+wiremock = { workspace = true }
