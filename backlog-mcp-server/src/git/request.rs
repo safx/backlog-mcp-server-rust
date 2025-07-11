@@ -9,31 +9,52 @@ use serde::Deserialize;
 #[derive(Deserialize, JsonSchema, Debug)]
 pub struct ListPullRequestsRequest {
     /// The project ID or project key.
+    #[schemars(
+        description = "The project ID (numeric) or project key (string). Examples: 'MYPROJECTKEY' or '123'."
+    )]
     pub project_id_or_key: String,
     /// The repository ID (as a string) or repository name.
+    #[schemars(
+        description = "The repository ID (numeric as string) or repository name. Examples: '456' or 'my-repo'."
+    )]
     pub repo_id_or_name: String,
-    // TODO: Add other query parameters like statusId[], assigneeId[], etc.
+    // Note: Additional optional parameters (status, assignee_id, issue_id, created_by_id, offset, count) are supported by the underlying API
 }
 
 #[derive(Deserialize, JsonSchema, Debug)]
 pub struct GetPullRequestDetailsRequest {
     /// The project ID or project key.
+    #[schemars(
+        description = "The project ID (numeric) or project key (string). Examples: 'MYPROJECTKEY' or '123'."
+    )]
     pub project_id_or_key: String,
     /// The repository ID (as a string) or repository name.
+    #[schemars(
+        description = "The repository ID (numeric as string) or repository name. Examples: '456' or 'my-repo'."
+    )]
     pub repo_id_or_name: String,
     /// The pull request number.
+    #[schemars(description = "The pull request number. Example: 42")]
     pub pr_number: u64,
 }
 
 #[derive(Deserialize, JsonSchema, Debug)]
 pub struct DownloadPullRequestAttachmentRequest {
     /// The project ID or project key.
+    #[schemars(
+        description = "The project ID (numeric) or project key (string). Examples: 'MYPROJECTKEY' or '123'."
+    )]
     pub project_id_or_key: String,
     /// The repository ID (as a string) or repository name.
+    #[schemars(
+        description = "The repository ID (numeric as string) or repository name. Examples: '456' or 'my-repo'."
+    )]
     pub repo_id_or_name: String,
     /// The pull request number.
+    #[schemars(description = "The pull request number. Example: 42")]
     pub pr_number: u64,
     /// The numeric ID of the attachment to download.
+    #[schemars(description = "The numeric ID of the attachment to download.")]
     pub attachment_id: u32,
     /// Optional format specification: 'image', 'text', or 'raw'. If not specified, format will be auto-detected.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -43,8 +64,14 @@ pub struct DownloadPullRequestAttachmentRequest {
 #[derive(Deserialize, JsonSchema, Debug)]
 pub struct GetRepositoryDetailsRequest {
     /// The project ID or project key.
+    #[schemars(
+        description = "The project ID (numeric) or project key (string). Examples: 'MYPROJECTKEY' or '123'."
+    )]
     pub project_id_or_key: String,
     /// The repository ID (as a string) or repository name.
+    #[schemars(
+        description = "The repository ID (numeric as string) or repository name. Examples: '456' or 'my-repo'."
+    )]
     pub repo_id_or_name: String,
 }
 
@@ -57,20 +84,34 @@ pub struct GetRepositoryListRequest {
 #[derive(Deserialize, JsonSchema, Debug)]
 pub struct GetPullRequestAttachmentListRequest {
     /// The project ID or project key.
+    #[schemars(
+        description = "The project ID (numeric) or project key (string). Examples: 'MYPROJECTKEY' or '123'."
+    )]
     pub project_id_or_key: String,
     /// The repository ID (as a string) or repository name.
+    #[schemars(
+        description = "The repository ID (numeric as string) or repository name. Examples: '456' or 'my-repo'."
+    )]
     pub repo_id_or_name: String,
     /// The pull request number.
+    #[schemars(description = "The pull request number. Example: 42")]
     pub pr_number: u64,
 }
 
 #[derive(Deserialize, JsonSchema, Debug)]
 pub struct GetPullRequestCommentListRequest {
     /// The project ID or project key.
+    #[schemars(
+        description = "The project ID (numeric) or project key (string). Examples: 'MYPROJECTKEY' or '123'."
+    )]
     pub project_id_or_key: String,
     /// The repository ID (as a string) or repository name.
+    #[schemars(
+        description = "The repository ID (numeric as string) or repository name. Examples: '456' or 'my-repo'."
+    )]
     pub repo_id_or_name: String,
     /// The pull request number.
+    #[schemars(description = "The pull request number. Example: 42")]
     pub pr_number: u64,
     /// The minimum comment ID to retrieve.
     #[serde(default)]
@@ -131,12 +172,20 @@ impl TryFrom<GetPullRequestCommentListRequest> for GetPullRequestCommentListPara
 #[derive(Deserialize, JsonSchema, Debug)]
 pub struct AddPullRequestCommentRequest {
     /// The project ID or project key.
+    #[schemars(
+        description = "The project ID (numeric) or project key (string). Examples: 'MYPROJECTKEY' or '123'."
+    )]
     pub project_id_or_key: String,
     /// The repository ID (as a string) or repository name.
+    #[schemars(
+        description = "The repository ID (numeric as string) or repository name. Examples: '456' or 'my-repo'."
+    )]
     pub repo_id_or_name: String,
     /// The pull request number.
+    #[schemars(description = "The pull request number. Example: 42")]
     pub pr_number: u64,
     /// The content of the comment.
+    #[schemars(description = "The content of the comment to add.")]
     pub content: String,
     /// Optional list of user IDs to notify about this comment.
     #[serde(default)]
