@@ -1,6 +1,11 @@
-use backlog_issue::models::{CustomFieldInput, CustomFieldWithValue};
+use backlog_issue::models::CustomFieldWithValue;
+use criterion::{Criterion, criterion_group, criterion_main};
+use std::hint::black_box;
+
+#[cfg(feature = "writable")]
+use backlog_issue::models::CustomFieldInput;
+#[cfg(feature = "writable")]
 use chrono::NaiveDate;
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
 
 #[cfg(feature = "writable")]
 use backlog_core::identifier::{

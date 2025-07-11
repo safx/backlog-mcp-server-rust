@@ -1,2 +1,2 @@
-**think harder** how to implement a function to API endpoint in our API client and cli tool `blg`.
+**think harder** how to implement about $ARGUMENTS.
 DO NOT IMPLEMENT AT THIS TIME.

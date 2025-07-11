@@ -571,4 +571,3 @@ mod tests {
         assert_eq!(cache.size().await, 0);
     }
 }
-

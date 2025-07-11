@@ -20,6 +20,8 @@ use commands::team::{TeamArgs, handle_team_command};
 #[cfg(feature = "watching")]
 use commands::watching::handle_watching_command;
 
+#[cfg(feature = "issue_writable")]
+use backlog_api_client::AddCommentParamsBuilder;
 #[cfg(feature = "git_writable")]
 use backlog_api_client::AddPullRequestParams;
 #[cfg(feature = "issue_writable")]
@@ -31,10 +33,10 @@ use backlog_api_client::UpdatePullRequestCommentParams;
 #[allow(unused_imports)]
 use backlog_api_client::UpdatePullRequestParams;
 use backlog_api_client::{
-    AddCommentParamsBuilder, AttachmentId, GetCommentNotificationsParams,
-    GetIssueListParamsBuilder, GetPullRequestCountParams, IssueIdOrKey, ProjectId, ProjectIdOrKey,
-    PullRequestAttachmentId, PullRequestCommentId, PullRequestNumber, RepositoryIdOrName, StatusId,
-    UserId, WikiId, backlog_issue, client::BacklogApiClient,
+    AttachmentId, GetCommentNotificationsParams, GetIssueListParamsBuilder,
+    GetPullRequestCountParams, IssueIdOrKey, ProjectId, ProjectIdOrKey, PullRequestAttachmentId,
+    PullRequestCommentId, PullRequestNumber, RepositoryIdOrName, StatusId, UserId, WikiId,
+    backlog_issue, client::BacklogApiClient,
 };
 use backlog_core::ApiDate;
 #[cfg(feature = "project")]
@@ -133,6 +135,7 @@ enum Commands {
     /// Manage projects
     Project(ProjectArgs),
     /// Manage users
+    #[cfg(feature = "user")]
     User(UserArgs),
     /// Manage wikis
     #[cfg(feature = "wiki")]
@@ -416,6 +419,7 @@ enum IssueCommands {
     #[command(about = "Download an issue attachment")]
     DownloadAttachment(DownloadAttachmentArgs),
     /// Add a comment to an issue
+    #[cfg(feature = "issue_writable")]
     #[command(about = "Add a comment to an issue")]
     AddComment(AddCommentArgs),
     /// Update an existing comment
@@ -431,12 +435,15 @@ enum IssueCommands {
     #[command(about = "Delete an attachment from an issue")]
     DeleteAttachment(DeleteAttachmentArgs),
     /// Create a new issue
+    #[cfg(feature = "issue_writable")]
     #[command(about = "Create a new issue")]
     Create(CreateIssueArgs),
     /// Update an existing issue
+    #[cfg(feature = "issue_writable")]
     #[command(about = "Update an existing issue")]
     Update(UpdateIssueArgs),
     /// Delete an issue
+    #[cfg(feature = "issue_writable")]
     #[command(about = "Delete an issue")]
     Delete(DeleteIssueArgs),
     /// Count comments for an issue
@@ -1147,6 +1154,7 @@ enum ProjectCommands {
         item_id: u32,
     },
     /// Add a category to a project
+    #[cfg(feature = "project_writable")]
     CategoryAdd {
         /// Project ID or Key
         #[clap(name = "PROJECT_ID_OR_KEY")]
@@ -1156,6 +1164,7 @@ enum ProjectCommands {
         name: String,
     },
     /// Update a category in a project
+    #[cfg(feature = "project_writable")]
     CategoryUpdate {
         /// Project ID or Key
         #[clap(name = "PROJECT_ID_OR_KEY")]
@@ -1168,6 +1177,7 @@ enum ProjectCommands {
         name: String,
     },
     /// Delete a category from a project
+    #[cfg(feature = "project_writable")]
     CategoryDelete {
         /// Project ID or Key
         #[clap(name = "PROJECT_ID_OR_KEY")]
@@ -1177,6 +1187,7 @@ enum ProjectCommands {
         category_id: u32,
     },
     /// Add an issue type to a project
+    #[cfg(feature = "project_writable")]
     IssueTypeAdd {
         /// Project ID or Key
         #[clap(name = "PROJECT_ID_OR_KEY")]
@@ -1195,6 +1206,7 @@ enum ProjectCommands {
         template_description: Option<String>,
     },
     /// Delete an issue type from a project
+    #[cfg(feature = "project_writable")]
     IssueTypeDelete {
         /// Project ID or Key
         #[clap(name = "PROJECT_ID_OR_KEY")]
@@ -1207,6 +1219,7 @@ enum ProjectCommands {
         substitute_issue_type_id: u32,
     },
     /// Update an issue type in a project
+    #[cfg(feature = "project_writable")]
     IssueTypeUpdate {
         /// Project ID or Key
         #[clap(name = "PROJECT_ID_OR_KEY")]
@@ -1374,12 +1387,14 @@ enum ProjectCommands {
     },
 }
 
+#[cfg(feature = "user")]
 #[derive(Parser)]
 struct UserArgs {
     #[clap(subcommand)]
     command: UserCommands,
 }
 
+#[cfg(feature = "user")]
 #[derive(Parser)]
 enum UserCommands {
     /// List all users
@@ -2350,6 +2365,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
+            #[cfg(feature = "issue_writable")]
             IssueCommands::AddComment(add_args) => {
                 println!(
                     "Adding comment to issue {}: {}",
@@ -2483,6 +2499,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             #[cfg(feature = "issue_writable")]
+            #[cfg(feature = "issue_writable")]
             IssueCommands::Create(create_args) => {
                 println!("Creating new issue...");
 
@@ -2579,6 +2596,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             #[cfg(feature = "issue_writable")]
+            #[cfg(feature = "issue_writable")]
             IssueCommands::Update(update_args) => {
                 println!("Updating issue: {}", update_args.issue_id_or_key);
 
@@ -2658,6 +2676,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
+            #[cfg(feature = "issue_writable")]
             #[cfg(feature = "issue_writable")]
             IssueCommands::Delete(delete_args) => {
                 println!("Deleting issue: {}", delete_args.issue_key);
@@ -3143,14 +3162,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             #[cfg(not(feature = "issue_writable"))]
-            IssueCommands::Create(_)
-            | IssueCommands::Update(_)
-            | IssueCommands::Delete(_)
-            | IssueCommands::LinkSharedFiles { .. }
-            | IssueCommands::UnlinkSharedFile { .. } => {
+            _ => {
                 eprintln!(
-                    "Issue creation, update, and deletion are not available. Please build with 'issue_writable' feature."
+                    "This command requires write access to issues and is not available. \
+                    Please build with the 'issue_writable' feature flag:\n\
+                    cargo build --package blg --features issue_writable"
                 );
+                std::process::exit(1);
             }
         },
         Commands::Space(space_args) => match space_args.command {
@@ -3381,12 +3399,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
-            #[cfg(not(feature = "space_writable"))]
-            SpaceCommands::UploadAttachment { .. } => {
-                eprintln!(
-                    "Attachment upload is not available. Please build with 'space_writable' feature."
-                );
-            }
             #[cfg(feature = "space_writable")]
             SpaceCommands::UpdateNotification { content } => {
                 println!("Updating space notification...");
@@ -3409,10 +3421,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             #[cfg(not(feature = "space_writable"))]
-            SpaceCommands::UpdateNotification { .. } => {
+            _ => {
                 eprintln!(
-                    "Update notification is not available. Please build with 'space_writable' feature."
+                    "This command requires write access to space and is not available. \
+                    Please build with the 'space_writable' feature flag:\
+\
+                    cargo build --package blg --features space_writable"
                 );
+                std::process::exit(1);
             }
         },
         Commands::Project(project_args) => match project_args.command {
@@ -5162,36 +5178,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             #[cfg(not(feature = "project_writable"))]
-            ProjectCommands::Add { .. }
-            | ProjectCommands::Update { .. }
-            | ProjectCommands::CategoryAdd { .. }
-            | ProjectCommands::CategoryUpdate { .. }
-            | ProjectCommands::CategoryDelete { .. }
-            | ProjectCommands::CustomFieldUpdate { .. }
-            | ProjectCommands::CustomFieldAdd { .. }
-            | ProjectCommands::CustomFieldDelete { .. }
-            | ProjectCommands::CustomFieldAddItem { .. }
-            | ProjectCommands::CustomFieldUpdateItem { .. }
-            | ProjectCommands::CustomFieldDeleteItem { .. }
-            | ProjectCommands::IssueTypeAdd { .. }
-            | ProjectCommands::IssueTypeDelete { .. }
-            | ProjectCommands::IssueTypeUpdate { .. }
-            | ProjectCommands::VersionAdd { .. }
-            | ProjectCommands::VersionUpdate { .. }
-            | ProjectCommands::VersionDelete { .. }
-            | ProjectCommands::StatusAdd { .. }
-            | ProjectCommands::StatusUpdate { .. }
-            | ProjectCommands::StatusDelete { .. }
-            | ProjectCommands::StatusOrderUpdate { .. }
-            | ProjectCommands::TeamAdd { .. }
-            | ProjectCommands::TeamDelete { .. }
-            | ProjectCommands::AdminAdd { .. }
-            | ProjectCommands::AdminRemove { .. }
-            | ProjectCommands::UserAdd { .. }
-            | ProjectCommands::UserRemove { .. } => {
+            _ => {
                 eprintln!(
-                    "Project creation/update, user/admin management, category, issue type, version, status, team, and custom field management is not available. Please build with 'project_writable' feature."
+                    "This command requires write access to projects and is not available. \
+                    Please build with the 'project_writable' feature flag:\n\
+                    cargo build --package blg --features project_writable"
                 );
+                std::process::exit(1);
             }
             ProjectCommands::PriorityList => {
                 println!("Listing priorities (space-wide):");
@@ -5340,6 +5333,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         },
+        #[cfg(feature = "user")]
         Commands::User(user_args) => match user_args.command {
             UserCommands::List => {
                 println!("Listing all users:");
