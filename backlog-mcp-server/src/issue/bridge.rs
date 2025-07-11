@@ -183,13 +183,7 @@ pub(crate) async fn get_attachment_list_impl(
     req: GetAttachmentListRequest,
     access_control: &AccessControl,
 ) -> Result<Vec<Attachment>> {
-    let parsed_issue_id_or_key =
-        IssueIdOrKey::from_str(req.issue_id_or_key.trim()).map_err(|e| {
-            McpError::Parameter(format!(
-                "Invalid issueIdOrKey: {}. Error: {}",
-                req.issue_id_or_key, e
-            ))
-        })?;
+    let parsed_issue_id_or_key = IssueIdOrKey::from_str(req.issue_id_or_key.trim())?;
 
     let client_guard = client.lock().await;
 

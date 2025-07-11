@@ -1,9 +1,9 @@
 use crate::access_control::AccessControl;
+use crate::error::{Error as McpError, Result};
 use crate::file::request::{DownloadSharedFileRequest, GetSharedFilesListRequest};
 use backlog_api_client::{DownloadedFile, client::BacklogApiClient};
 use backlog_core::{ProjectIdOrKey, identifier::SharedFileId};
 use backlog_file::{GetFileParams, GetSharedFilesListParams, SharedFile};
-use rmcp::Error as McpError;
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -12,17 +12,15 @@ pub(crate) async fn get_shared_files_list_tool(
     client: Arc<Mutex<BacklogApiClient>>,
     request: GetSharedFilesListRequest,
     access_control: &AccessControl,
-) -> Result<Vec<SharedFile>, McpError> {
+) -> Result<Vec<SharedFile>> {
     let client_guard = client.lock().await;
 
-    let project_id_or_key = ProjectIdOrKey::from_str(&request.project_id_or_key)
-        .map_err(|e| McpError::invalid_request(format!("Invalid project ID or key: {e}"), None))?;
+    let project_id_or_key = ProjectIdOrKey::from_str(&request.project_id_or_key)?;
 
     // Check project access with parsed type
     access_control
         .check_project_access_id_or_key_async(&project_id_or_key, &client_guard)
-        .await
-        .map_err(|e| McpError::invalid_request(format!("Access denied: {e}"), None))?;
+        .await?;
 
     let params = GetSharedFilesListParams {
         project_id_or_key,
@@ -32,37 +30,25 @@ pub(crate) async fn get_shared_files_list_tool(
         count: request.count,
     };
 
-    client_guard
-        .file()
-        .get_shared_files_list(params)
-        .await
-        .map_err(|e| {
-            McpError::internal_error(format!("Failed to get shared files list: {e}"), None)
-        })
+    Ok(client_guard.file().get_shared_files_list(params).await?)
 }
 
 pub(crate) async fn download_shared_file_bridge(
     client: Arc<Mutex<BacklogApiClient>>,
     request: DownloadSharedFileRequest,
     access_control: &AccessControl,
-) -> Result<DownloadedFile, McpError> {
+) -> Result<DownloadedFile> {
     let client_guard = client.lock().await;
 
-    let project_id_or_key = ProjectIdOrKey::from_str(&request.project_id_or_key)
-        .map_err(|e| McpError::invalid_request(format!("Invalid project ID or key: {e}"), None))?;
+    let project_id_or_key = ProjectIdOrKey::from_str(&request.project_id_or_key)?;
 
     // Check project access with parsed type
     access_control
         .check_project_access_id_or_key_async(&project_id_or_key, &client_guard)
-        .await
-        .map_err(|e| McpError::invalid_request(format!("Access denied: {e}"), None))?;
+        .await?;
 
     let shared_file_id = SharedFileId::new(request.shared_file_id);
     let params = GetFileParams::new(project_id_or_key, shared_file_id);
 
-    client_guard
-        .file()
-        .get_file(params)
-        .await
-        .map_err(|e| McpError::internal_error(format!("Failed to download shared file: {e}"), None))
+    Ok(client_guard.file().get_file(params).await?)
 }
