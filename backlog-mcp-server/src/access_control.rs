@@ -8,17 +8,13 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
-/// Structure to manage project access control
 #[derive(Debug, Clone)]
 pub struct AccessControl {
-    /// Allowed project keys from environment variable
     allowed_projects: Option<Vec<ProjectKey>>,
-    /// Project cache manager
     project_cache: Arc<ProjectCacheManager>,
 }
 
 impl AccessControl {
-    /// Initialize access control settings from environment variables
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let env_value = env::var("BACKLOG_PROJECTS").ok();
 
@@ -39,7 +35,7 @@ impl AccessControl {
             None
         };
 
-        // キャッシュ設定（5分のTTL、最大1000プロジェクト）
+        // Cache configuration: 5 minute TTL, max 1000 projects
         let cache_config = CacheConfig {
             ttl: Some(Duration::from_secs(300)),
             max_size: Some(1000),
@@ -52,13 +48,11 @@ impl AccessControl {
         })
     }
 
-    /// Resolve a project by ID using the API
     async fn resolve_project_by_id(
         &self,
         project_id: &ProjectId,
         client: &BacklogApiClient,
     ) -> Result<ProjectKey, Error> {
-        // キャッシュから取得
         let project = self
             .project_cache
             .get_by_id(project_id, client)
@@ -70,26 +64,22 @@ impl AccessControl {
         Ok(project.project_key.clone())
     }
 
-    /// Check access permissions for the specified project ID (async version)
     pub async fn check_project_access_by_id_async(
         &self,
         project_id: &ProjectId,
         client: &BacklogApiClient,
     ) -> Result<(), Error> {
-        // If no allow list is set, allow access to all projects
         if !self.is_enabled() {
             return Ok(());
         }
         let allowed_keys = self.allowed_projects.as_ref().unwrap();
 
-        // Check if this project ID is in cache
         if let Some(project) = self.project_cache.get_from_cache_by_id(project_id).await {
             if allowed_keys.contains(&project.project_key) {
                 return Ok(());
             }
         }
 
-        // If not in cache, try to resolve it
         if let Ok(project_key) = self.resolve_project_by_id(project_id, client).await {
             if allowed_keys.contains(&project_key) {
                 return Ok(());
@@ -102,12 +92,10 @@ impl AccessControl {
         })
     }
 
-    /// Check access permissions for the specified project key (async version)
     pub async fn check_project_access_by_key_async(
         &self,
         project_key: &ProjectKey,
     ) -> Result<(), Error> {
-        // If no allow list is set, allow access to all projects
         if !self.is_enabled() {
             return Ok(());
         }
@@ -123,7 +111,6 @@ impl AccessControl {
         })
     }
 
-    /// Check access permissions for the specified project (accepts ProjectIdOrKey) (async version)
     pub async fn check_project_access_id_or_key_async(
         &self,
         project: &ProjectIdOrKey,
@@ -138,21 +125,17 @@ impl AccessControl {
         }
     }
 
-    /// Returns whether access control is enabled
     pub fn is_enabled(&self) -> bool {
         self.allowed_projects.is_some()
     }
 
-    /// Get the project cache manager
     pub fn project_cache(&self) -> &Arc<ProjectCacheManager> {
         &self.project_cache
     }
 
     // Synchronous versions for backward compatibility (will be removed)
 
-    /// Check access permissions for the specified project ID (synchronous - for tests only)
     pub fn check_project_access_by_id(&self, project_id: &ProjectId) -> Result<(), Error> {
-        // If no allow list is set, allow access to all projects
         if !self.is_enabled() {
             return Ok(());
         }
@@ -164,14 +147,11 @@ impl AccessControl {
         })
     }
 
-    /// Check access permissions for the specified project key (synchronous - for tests only)
     pub fn check_project_access_by_key(&self, project_key: &ProjectKey) -> Result<(), Error> {
-        // If no allow list is set, allow access to all projects
         if !self.is_enabled() {
             return Ok(());
         }
 
-        // Direct check - no resolution needed for keys
         if let Some(allowed_keys) = &self.allowed_projects {
             if allowed_keys.contains(project_key) {
                 return Ok(());
@@ -190,7 +170,6 @@ impl AccessControl {
         })
     }
 
-    /// Check access permissions for the specified project (accepts ProjectIdOrKey) (synchronous - for tests only)
     pub fn check_project_access_id_or_key(&self, project: &ProjectIdOrKey) -> Result<(), Error> {
         match project {
             ProjectIdOrKey::Id(id) => self.check_project_access_by_id(id),
@@ -221,7 +200,6 @@ mod tests {
     use std::env;
     use std::sync::Mutex;
 
-    // Ensure tests run sequentially to avoid environment variable conflicts
     static TEST_MUTEX: Mutex<()> = Mutex::new(());
 
     #[test]
@@ -232,7 +210,6 @@ mod tests {
         }
         let access_control = AccessControl::new().unwrap();
         assert!(!access_control.is_enabled());
-        // When disabled, any project is allowed
         let project_key = ProjectKey::from_str("ANY_PROJECT").unwrap();
         assert!(
             access_control
@@ -385,7 +362,6 @@ mod tests {
         }
         let access_control = AccessControl::new().unwrap();
 
-        // Simulate checking access after retrieving wiki with project_id
         let wiki_proj = ProjectKey::from_str("WIKI_PROJ").unwrap();
         assert!(
             access_control
@@ -400,7 +376,6 @@ mod tests {
                 .is_err()
         );
 
-        // Check error message contains allowed projects
         let err = access_control
             .check_project_access_by_key(&other_proj)
             .unwrap_err();

@@ -34,7 +34,6 @@ pub(crate) async fn get_issue_details(
         .get_issue(backlog_issue::GetIssueParams::new(parsed_issue_key.clone()))
         .await?;
 
-    // Check project access from the response
     access_control
         .check_project_access_by_id_async(&issue.project_id, &client_guard)
         .await?;
@@ -50,7 +49,6 @@ pub(crate) async fn get_version_milestone_list(
     let client_guard = client.lock().await;
     let proj_id_or_key = ProjectIdOrKey::from_str(req.project_id_or_key.trim())?;
 
-    // Check project access with parsed type
     access_control
         .check_project_access_id_or_key_async(&proj_id_or_key, &client_guard)
         .await?;
@@ -70,7 +68,6 @@ pub(crate) async fn get_issues_by_milestone_name(
 
     let client_guard = client.lock().await;
 
-    // Check project access with parsed type
     access_control
         .check_project_access_id_or_key_async(&proj_id_or_key, &client_guard)
         .await?;
@@ -125,7 +122,6 @@ pub(crate) async fn update_issue_impl(
 
     let client_guard = client.lock().await;
 
-    // First get issue details to check project access
     let parsed_issue_id_or_key = IssueIdOrKey::from_str(req.issue_id_or_key.trim())?;
     let issue = client_guard
         .issue()
@@ -138,10 +134,8 @@ pub(crate) async fn update_issue_impl(
         .check_project_access_by_id_async(&issue.project_id, &client_guard)
         .await?;
 
-    // Convert base params
     let mut update_params = UpdateIssueParams::try_from(req.clone())?;
 
-    // Handle custom fields if provided
     if let Some(custom_fields_by_name) = req.custom_fields {
         let project_id_or_key = ProjectIdOrKey::from(issue.project_id);
         let custom_fields = crate::issue::custom_field_converter::resolve_custom_fields(
@@ -151,7 +145,6 @@ pub(crate) async fn update_issue_impl(
         )
         .await?;
 
-        // Set custom fields on params
         update_params.custom_fields = Some(custom_fields);
     }
 
@@ -168,7 +161,6 @@ pub(crate) async fn get_issue_comments_impl(
 
     let client_guard = client.lock().await;
 
-    // First get issue details to check project access
     let parsed_issue_id_or_key = IssueIdOrKey::from_str(req.issue_id_or_key.trim())?;
     let issue = client_guard
         .issue()
@@ -201,7 +193,6 @@ pub(crate) async fn get_attachment_list_impl(
 
     let client_guard = client.lock().await;
 
-    // First get issue details to check project access
     let issue = client_guard
         .issue()
         .get_issue(backlog_issue::GetIssueParams::new(
@@ -232,7 +223,6 @@ pub(crate) async fn download_issue_attachment_file(
 
     let client_guard = client.lock().await;
 
-    // First get issue details to check project access
     let issue = client_guard
         .issue()
         .get_issue(backlog_issue::GetIssueParams::new(
@@ -260,7 +250,6 @@ pub(crate) async fn add_comment_impl(
 
     let client_guard = client.lock().await;
 
-    // First get issue details to check project access
     let parsed_issue_id_or_key = IssueIdOrKey::from_str(req.issue_id_or_key.trim())?;
     let issue = client_guard
         .issue()
@@ -289,7 +278,6 @@ pub(crate) async fn update_comment_impl(
 
     let client_guard = client.lock().await;
 
-    // Phase 3: First get issue details to check project access
     let issue = client_guard
         .issue()
         .get_issue(backlog_issue::GetIssueParams::new(
@@ -320,7 +308,6 @@ pub(crate) async fn get_issue_shared_files_impl(
 
     let client_guard = client.lock().await;
 
-    // First get issue details to check project access
     let issue = client_guard
         .issue()
         .get_issue(backlog_issue::GetIssueParams::new(
@@ -365,7 +352,6 @@ pub(crate) async fn add_issue_impl(
         ProjectIdOrKey::EitherIdOrKey(id, _) => *id,
     };
 
-    // Check project access with resolved ID
     access_control
         .check_project_access_by_id_async(&project_id, &client_guard)
         .await?;
@@ -381,7 +367,6 @@ pub(crate) async fn add_issue_impl(
         builder.description(description);
     }
 
-    // Handle custom fields if provided
     if let Some(custom_fields_by_name) = req.custom_fields {
         let project_id_or_key = ProjectIdOrKey::from(project_id);
         let custom_fields = crate::issue::custom_field_converter::resolve_custom_fields(

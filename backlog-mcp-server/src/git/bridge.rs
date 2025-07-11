@@ -20,18 +20,15 @@ use backlog_api_client::{
 use std::{str::FromStr, sync::Arc};
 use tokio::sync::Mutex;
 
-/// Helper function to implement the get_repository_list tool.
 pub(crate) async fn get_repository_list(
     client: Arc<Mutex<BacklogApiClient>>,
     req: GetRepositoryListRequest,
     access_control: &AccessControl,
 ) -> Result<Vec<Repository>> {
-    // Type-safe conversion
     let project_id = req.project_id_or_key.parse::<ProjectIdOrKey>()?;
 
     let client_guard = client.lock().await;
 
-    // Check project access with converted type and client
     access_control
         .check_project_access_id_or_key_async(&project_id, &client_guard)
         .await?;
@@ -51,7 +48,6 @@ pub(crate) async fn get_repository(
 
     let client_guard = client.lock().await;
 
-    // Check project access
     access_control
         .check_project_access_id_or_key_async(&proj_id_or_key, &client_guard)
         .await?;
@@ -71,7 +67,6 @@ pub(crate) async fn get_pull_request_list(
 
     let client_guard = client.lock().await;
 
-    // Check project access
     access_control
         .check_project_access_id_or_key_async(&proj_id_or_key, &client_guard)
         .await?;
@@ -92,7 +87,6 @@ pub(crate) async fn get_pull_request(
 
     let client_guard = client.lock().await;
 
-    // Check project access
     access_control
         .check_project_access_id_or_key_async(&proj_id_or_key, &client_guard)
         .await?;
@@ -113,7 +107,6 @@ pub(crate) async fn get_pull_request_attachment_list_tool(
 
     let client_guard = client.lock().await;
 
-    // Check project access
     access_control
         .check_project_access_id_or_key_async(&project_id_or_key, &client_guard)
         .await?;
@@ -138,7 +131,6 @@ pub(crate) async fn download_pr_attachment_bridge(
 
     let client_guard = client.lock().await;
 
-    // Check project access
     access_control
         .check_project_access_id_or_key_async(&project_id_or_key, &client_guard)
         .await?;
@@ -150,8 +142,6 @@ pub(crate) async fn download_pr_attachment_bridge(
         attachment_id_for_download,
     );
 
-    // The download_pull_request_attachment method in backlog-git now returns (filename, content_type, bytes)
-    // due to changes in client.download_file_raw.
     client_guard
         .git()
         .download_pull_request_attachment(params)
@@ -164,13 +154,11 @@ pub(crate) async fn get_pull_request_comment_list_tool(
     req: GetPullRequestCommentListRequest,
     access_control: &AccessControl,
 ) -> Result<Vec<PullRequestComment>> {
-    // Parse project ID first
     let project_id_or_key = req.project_id_or_key.parse::<ProjectIdOrKey>()?;
     let params = GetPullRequestCommentListParams::try_from(req)?;
 
     let client_guard = client.lock().await;
 
-    // Check project access with parsed type
     access_control
         .check_project_access_id_or_key_async(&project_id_or_key, &client_guard)
         .await?;
@@ -187,13 +175,11 @@ pub(crate) async fn add_pull_request_comment_bridge(
     req: AddPullRequestCommentRequest,
     access_control: &AccessControl,
 ) -> Result<PullRequestComment> {
-    // Parse project ID first
     let project_id_or_key = req.project_id_or_key.parse::<ProjectIdOrKey>()?;
     let params = AddPullRequestCommentParams::try_from(req)?;
 
     let client_guard = client.lock().await;
 
-    // Check project access with parsed type
     access_control
         .check_project_access_id_or_key_async(&project_id_or_key, &client_guard)
         .await?;

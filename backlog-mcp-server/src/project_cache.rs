@@ -8,12 +8,12 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 
-/// キャッシュエントリ
+/// Cache entry
 #[derive(Debug, Clone)]
 struct CacheEntry {
-    /// キャッシュされたプロジェクト
+    /// Cached project
     project: Arc<Project>,
-    /// キャッシュされた時刻
+    /// Time when cached
     cached_at: Instant,
 }
 
@@ -34,35 +34,30 @@ impl CacheEntry {
     }
 }
 
-/// キャッシュ設定
+/// Cache configuration
 #[derive(Debug, Clone, Default)]
 pub struct CacheConfig {
-    /// キャッシュの有効期限
+    /// Cache TTL (time to live)
     pub ttl: Option<Duration>,
-    /// 最大キャッシュサイズ
+    /// Maximum cache size
     pub max_size: Option<usize>,
 }
 
-/// プロジェクト情報のキャッシュを管理する構造体
+/// Manages project information cache
 #[derive(Debug, Clone)]
 pub struct ProjectCacheManager {
-    /// ProjectId -> CacheEntry のマッピング
     by_id: Arc<DashMap<ProjectId, CacheEntry>>,
-    /// ProjectKey -> CacheEntry のマッピング
     by_key: Arc<DashMap<ProjectKey, CacheEntry>>,
-    /// キャッシュ設定
     config: Arc<RwLock<CacheConfig>>,
-    /// アクセス順序の追跡（LRU用）
+    /// Track access order for LRU eviction
     access_order: Arc<RwLock<Vec<ProjectId>>>,
 }
 
 impl ProjectCacheManager {
-    /// 新しいキャッシュマネージャーを作成
     pub fn new() -> Self {
         Self::with_config(CacheConfig::default())
     }
 
-    /// 設定を指定してキャッシュマネージャーを作成
     pub fn with_config(config: CacheConfig) -> Self {
         Self {
             by_id: Arc::new(DashMap::new()),
@@ -72,19 +67,17 @@ impl ProjectCacheManager {
         }
     }
 
-    /// プロジェクト情報をキャッシュに保存
     pub async fn cache_project(&self, project: Project) {
         let project_arc = Arc::new(project);
         let entry = CacheEntry::new(project_arc.clone());
         let project_id = project_arc.id;
         let project_key = project_arc.project_key.clone();
 
-        // 容量制限のチェック
         let config = self.config.read().await;
         if let Some(max_size) = config.max_size {
             let current_size = self.by_id.len();
             if current_size >= max_size {
-                // LRU: 最も古いエントリを削除
+                // LRU eviction: remove oldest entry
                 let mut access_order = self.access_order.write().await;
                 if let Some(oldest_id) = access_order.first().cloned() {
                     if let Some((_, entry)) = self.by_id.remove(&oldest_id) {
@@ -96,28 +89,23 @@ impl ProjectCacheManager {
         }
         drop(config);
 
-        // 新しいエントリを追加
         self.by_id.insert(project_id, entry.clone());
         self.by_key.insert(project_key, entry);
 
-        // アクセス順序を更新
         let mut access_order = self.access_order.write().await;
         access_order.retain(|&id| id != project_id);
         access_order.push(project_id);
     }
 
-    /// キャッシュからIDで取得（キャッシュのみ）
     pub async fn get_from_cache_by_id(&self, id: &ProjectId) -> Option<Arc<Project>> {
         let config = self.config.read().await;
         if let Some(entry) = self.by_id.get(id) {
             if !entry.is_expired(&config.ttl) {
-                // アクセス順序を更新
                 let mut access_order = self.access_order.write().await;
                 access_order.retain(|&project_id| project_id != *id);
                 access_order.push(*id);
                 return Some(entry.project.clone());
             } else {
-                // 期限切れのエントリを削除
                 drop(entry);
                 self.by_id.remove(id);
                 if let Some((_, cache_entry)) = self.by_id.remove_if(id, |_, _| true) {
@@ -128,19 +116,16 @@ impl ProjectCacheManager {
         None
     }
 
-    /// キャッシュからKeyで取得（キャッシュのみ）
     pub async fn get_from_cache_by_key(&self, key: &ProjectKey) -> Option<Arc<Project>> {
         let config = self.config.read().await;
         if let Some(entry) = self.by_key.get(key) {
             if !entry.is_expired(&config.ttl) {
-                // アクセス順序を更新
                 let project_id = entry.project.id;
                 let mut access_order = self.access_order.write().await;
                 access_order.retain(|&id| id != project_id);
                 access_order.push(project_id);
                 return Some(entry.project.clone());
             } else {
-                // 期限切れのエントリを削除
                 let project_id = entry.project.id;
                 drop(entry);
                 self.by_key.remove(key);
@@ -150,49 +135,40 @@ impl ProjectCacheManager {
         None
     }
 
-    /// プロジェクトIDからプロジェクト情報を取得（キャッシュまたはAPI）
     pub async fn get_by_id(
         &self,
         id: &ProjectId,
         client: &BacklogApiClient,
     ) -> Result<Arc<Project>> {
-        // キャッシュを確認
         if let Some(project) = self.get_from_cache_by_id(id).await {
             return Ok(project);
         }
 
-        // APIから取得
         use backlog_api_client::backlog_project::GetProjectDetailParams;
         let params = GetProjectDetailParams::new(ProjectIdOrKey::Id(*id));
         let project = client.project().get_project(params).await?;
 
-        // キャッシュに保存
         self.cache_project(project.clone()).await;
         Ok(Arc::new(project))
     }
 
-    /// プロジェクトKeyからプロジェクト情報を取得（キャッシュまたはAPI）
     pub async fn get_by_key(
         &self,
         key: &ProjectKey,
         client: &BacklogApiClient,
     ) -> Result<Arc<Project>> {
-        // キャッシュを確認
         if let Some(project) = self.get_from_cache_by_key(key).await {
             return Ok(project);
         }
 
-        // APIから取得
         use backlog_api_client::backlog_project::GetProjectDetailParams;
         let params = GetProjectDetailParams::new(ProjectIdOrKey::Key(key.clone()));
         let project = client.project().get_project(params).await?;
 
-        // キャッシュに保存
         self.cache_project(project.clone()).await;
         Ok(Arc::new(project))
     }
 
-    /// ProjectIdOrKeyからプロジェクト情報を解決
     pub async fn resolve(
         &self,
         id_or_key: &ProjectIdOrKey,
@@ -205,7 +181,6 @@ impl ProjectCacheManager {
         }
     }
 
-    /// キャッシュをクリア
     pub async fn clear(&self) {
         self.by_id.clear();
         self.by_key.clear();
@@ -213,7 +188,6 @@ impl ProjectCacheManager {
         access_order.clear();
     }
 
-    /// キャッシュのサイズを取得
     pub async fn size(&self) -> usize {
         self.by_id.len()
     }
@@ -265,7 +239,6 @@ mod tests {
         let project = create_test_project(123, "TEST_PROJ");
         let project_id = project.id;
 
-        // キャッシュに保存
         cache.cache_project(project.clone()).await;
 
         // IDで取得（キャッシュから）
@@ -280,7 +253,6 @@ mod tests {
         let project = create_test_project(456, "ANOTHER_PROJ");
         let project_key = project.project_key.clone();
 
-        // キャッシュに保存
         cache.cache_project(project.clone()).await;
 
         // Keyで取得（キャッシュから）
@@ -296,10 +268,8 @@ mod tests {
         let project_id = project.id;
         let project_key = project.project_key.clone();
 
-        // キャッシュに保存
         cache.cache_project(project.clone()).await;
 
-        // 両方の方法で取得できることを確認
         let by_id = cache.get_from_cache_by_id(&project_id).await;
         let by_key = cache.get_from_cache_by_key(&project_key).await;
 
@@ -315,7 +285,6 @@ mod tests {
         let client = create_test_client(&mock_server.uri());
         let project_id = ProjectId::new(999);
 
-        // APIモックを設定
         Mock::given(matchers::method("GET"))
             .and(matchers::path("/api/v2/projects/999"))
             .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
@@ -337,14 +306,12 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        // キャッシュになければAPIから取得
         let result = cache.get_by_id(&project_id, &client).await;
         assert!(result.is_ok());
         let project = result.unwrap();
         assert_eq!(project.id, project_id);
         assert_eq!(project.project_key.as_str(), "API_PROJ");
 
-        // 再度取得（今度はキャッシュから）
         let cached = cache.get_from_cache_by_id(&project_id).await;
         assert!(cached.is_some());
         assert_eq!(cached.unwrap().id, project_id);
@@ -357,7 +324,6 @@ mod tests {
         let client = create_test_client(&mock_server.uri());
         let project_key = ProjectKey::from_str("KEY_PROJ").unwrap();
 
-        // APIモックを設定
         Mock::given(matchers::method("GET"))
             .and(matchers::path("/api/v2/projects/KEY_PROJ"))
             .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
@@ -379,14 +345,12 @@ mod tests {
             .mount(&mock_server)
             .await;
 
-        // キャッシュになければAPIから取得
         let result = cache.get_by_key(&project_key, &client).await;
         assert!(result.is_ok());
         let project = result.unwrap();
         assert_eq!(project.project_key, project_key);
         assert_eq!(project.id.value(), 1234);
 
-        // 再度取得（今度はキャッシュから）
         let cached = cache.get_from_cache_by_key(&project_key).await;
         assert!(cached.is_some());
         assert_eq!(cached.unwrap().project_key, project_key);
@@ -398,7 +362,6 @@ mod tests {
         let project_id = ProjectId::new(99999);
         let project_key = ProjectKey::from_str("NOTFOUND").unwrap();
 
-        // 存在しないものはNone
         let by_id = cache.get_from_cache_by_id(&project_id).await;
         let by_key = cache.get_from_cache_by_key(&project_key).await;
 
@@ -412,23 +375,19 @@ mod tests {
         let cache = ProjectCacheManager::new();
         let client = create_test_client(&mock_server.uri());
 
-        // テストプロジェクトをキャッシュ
         let project = create_test_project(5555, "RESOLVE_PROJ");
         cache.cache_project(project.clone()).await;
 
-        // IDで解決
         let id_or_key = ProjectIdOrKey::Id(ProjectId::new(5555));
         let result = cache.resolve(&id_or_key, &client).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap().id.value(), 5555);
 
-        // Keyで解決
         let id_or_key = ProjectIdOrKey::Key(ProjectKey::from_str("RESOLVE_PROJ").unwrap());
         let result = cache.resolve(&id_or_key, &client).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap().project_key.as_str(), "RESOLVE_PROJ");
 
-        // EitherIdOrKeyで解決
         let id_or_key = ProjectIdOrKey::EitherIdOrKey(
             ProjectId::new(5555),
             ProjectKey::from_str("RESOLVE_PROJ").unwrap(),
@@ -446,7 +405,6 @@ mod tests {
         let cache = Arc::new(ProjectCacheManager::new());
         let mut tasks = JoinSet::new();
 
-        // 複数のタスクから同時にアクセス
         for i in 0..10 {
             let cache_clone = cache.clone();
             tasks.spawn(async move {
@@ -455,10 +413,8 @@ mod tests {
             });
         }
 
-        // すべてのタスクが完了するのを待つ
         while tasks.join_next().await.is_some() {}
 
-        // すべてのプロジェクトがキャッシュされていることを確認
         for i in 0..10 {
             let project_id = ProjectId::new(i);
             let cached = cache.get_from_cache_by_id(&project_id).await;
@@ -480,17 +436,13 @@ mod tests {
         let project = create_test_project(111, "TTL_PROJ");
         let project_id = project.id;
 
-        // キャッシュに保存
         cache.cache_project(project.clone()).await;
 
-        // 直後は取得できる
         let cached = cache.get_from_cache_by_id(&project_id).await;
         assert!(cached.is_some());
 
-        // TTLが過ぎるまで待つ
         time::sleep(Duration::from_millis(150)).await;
 
-        // TTL後は取得できない
         let expired = cache.get_from_cache_by_id(&project_id).await;
         assert!(expired.is_none());
     }
@@ -503,28 +455,23 @@ mod tests {
         };
         let cache = ProjectCacheManager::with_config(config);
 
-        // 容量制限まで追加
         for i in 0..3 {
             let project = create_test_project(i, &format!("SIZE_{i}"));
             cache.cache_project(project).await;
         }
 
-        // すべて取得できることを確認
         for i in 0..3 {
             let project_id = ProjectId::new(i);
             let cached = cache.get_from_cache_by_id(&project_id).await;
             assert!(cached.is_some());
         }
 
-        // 容量を超えて追加
         let project = create_test_project(3, "SIZE_3");
         cache.cache_project(project).await;
 
-        // 最も古いものが削除される（LRU）
         let oldest = cache.get_from_cache_by_id(&ProjectId::new(0)).await;
         assert!(oldest.is_none());
 
-        // 新しいものは存在する
         let newest = cache.get_from_cache_by_id(&ProjectId::new(3)).await;
         assert!(newest.is_some());
     }
@@ -533,7 +480,6 @@ mod tests {
     async fn test_clear_cache() {
         let cache = ProjectCacheManager::new();
 
-        // 複数のプロジェクトを追加
         for i in 0..5 {
             let project = create_test_project(i, &format!("CLEAR_{i}"));
             cache.cache_project(project).await;
@@ -542,7 +488,6 @@ mod tests {
         // キャッシュをクリア
         cache.clear().await;
 
-        // すべて削除されていることを確認
         for i in 0..5 {
             let project_id = ProjectId::new(i);
             let cached = cache.get_from_cache_by_id(&project_id).await;
@@ -554,19 +499,15 @@ mod tests {
     async fn test_cache_size() {
         let cache = ProjectCacheManager::new();
 
-        // サイズ0から開始
         assert_eq!(cache.size().await, 0);
 
-        // プロジェクトを追加
         for i in 0..3 {
             let project = create_test_project(i, &format!("SIZE_TEST_{i}"));
             cache.cache_project(project).await;
         }
 
-        // サイズが正しいことを確認
         assert_eq!(cache.size().await, 3);
 
-        // クリア後はサイズ0
         cache.clear().await;
         assert_eq!(cache.size().await, 0);
     }

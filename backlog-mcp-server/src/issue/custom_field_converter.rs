@@ -11,23 +11,19 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::str::FromStr;
 
-/// Convert custom fields from name-based JSON values to ID-based CustomFieldInput
 pub async fn resolve_custom_fields(
     client: &BacklogApiClient,
     project_id_or_key: &ProjectIdOrKey,
     fields_by_name: HashMap<String, Value>,
 ) -> Result<HashMap<CustomFieldId, CustomFieldInput>> {
-    // Get custom field definitions for the project
     let params = GetCustomFieldListParams::new(project_id_or_key.clone());
     let custom_fields = client.project().get_custom_field_list(params).await?;
 
-    // Build name-to-field mapping
     let fields_by_name_map: HashMap<String, CustomFieldType> = custom_fields
         .into_iter()
         .map(|field| (field.name.clone(), field))
         .collect();
 
-    // Convert each field
     let mut result = HashMap::new();
     for (field_name, value) in fields_by_name {
         match fields_by_name_map.get(&field_name) {
@@ -46,7 +42,6 @@ pub async fn resolve_custom_fields(
     Ok(result)
 }
 
-/// Convert a JSON value to CustomFieldInput based on field type
 fn convert_value_to_input(
     field: &CustomFieldType,
     value: &Value,
@@ -82,7 +77,6 @@ fn convert_value_to_input(
         },
         CustomFieldSettings::Date(_) => match value {
             Value::String(s) => {
-                // Parse yyyy-MM-dd format
                 let date = backlog_core::Date::from_str(s).map_err(|_| {
                     Error::Server(format!(
                         "Custom field '{field_name}' expects date in yyyy-MM-dd format"
@@ -97,7 +91,6 @@ fn convert_value_to_input(
         CustomFieldSettings::SingleList(settings) => {
             let (item_name, other_value) = parse_single_list_value(value, field_name)?;
 
-            // Find the item by name
             let item = settings
                 .items
                 .iter()
@@ -124,7 +117,6 @@ fn convert_value_to_input(
         CustomFieldSettings::MultipleList(settings) => {
             let (item_names, other_value) = parse_multiple_list_value(value, field_name)?;
 
-            // Map names to IDs
             let mut ids = Vec::new();
             for name in item_names {
                 let item = settings
@@ -218,7 +210,6 @@ fn convert_value_to_input(
     }
 }
 
-/// Parse single list value which can be a string or object with "other" field
 fn parse_single_list_value(value: &Value, field_name: &str) -> Result<(String, Option<String>)> {
     match value {
         Value::String(s) => Ok((s.clone(), None)),
@@ -244,7 +235,6 @@ fn parse_single_list_value(value: &Value, field_name: &str) -> Result<(String, O
     }
 }
 
-/// Parse multiple list value which can be an array of strings or objects
 fn parse_multiple_list_value(
     value: &Value,
     field_name: &str,
@@ -263,7 +253,7 @@ fn parse_multiple_list_value(
             Ok((names, None))
         }
         Value::Object(obj) => {
-            // Handle object format: { items: ["name1", "name2"], other: "other value" }
+            // Object format: { items: ["name1", "name2"], other: "other value" }
             let items = obj.get("items").and_then(|v| v.as_array()).ok_or_else(|| {
                 Error::Server(format!(
                     "Custom field '{field_name}' object must have an 'items' array"
