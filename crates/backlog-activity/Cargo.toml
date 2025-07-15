@@ -8,16 +8,14 @@ license.workspace = true
 # Internal crates
 backlog-api-core = { path = "../backlog-api-core" }
 backlog-core = { path = "../backlog-core" }
-backlog-domain-models = { path = "../backlog-domain-models" }
-backlog-api-macros = { path = "../backlog-api-macros" }
 client = { path = "../client" }
 
 # External dependencies
-serde = { version = "1.0", features = ["derive"] }
-chrono = { version = "0.4", features = ["serde"] }
+serde = { workspace = true, features = ["derive"] }
+chrono = { workspace = true, features = ["serde"] }
 
 [dev-dependencies]
-tokio = { version = "1.45", features = ["macros", "rt"] }
+tokio = { workspace = true, features = ["macros", "rt"] }
 serde_json = "1.0"
 wiremock = "0.6"
 

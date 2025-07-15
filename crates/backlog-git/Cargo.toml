@@ -7,24 +7,19 @@ license.workspace = true
 [dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
-thiserror = { workspace = true }
 chrono = { workspace = true }
 backlog-core = { path = "../backlog-core", features = ["schemars"] }
 backlog-api-core = { path = "../backlog-api-core" }
 backlog-api-macros = { path = "../backlog-api-macros" }
 client = { path = "../client" }
 derive_builder = { workspace = true }
-reqwest = { workspace = true }
 url = { workspace = true }
+schemars = { workspace = true, optional = true }
 
 [features]
 default = []
 writable = ["client/writable"]
 schemars = ["dep:schemars", "backlog-core/schemars"]
-
-[dependencies.schemars]
-workspace = true
-optional = true
 
 [dev-dependencies]
 client = { path = "../client", features = ["test-utils"] }

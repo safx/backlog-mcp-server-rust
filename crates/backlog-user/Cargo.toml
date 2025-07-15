@@ -17,11 +17,10 @@ backlog-issue = { path = "../backlog-issue" }
 backlog-watching = { path = "../backlog-watching" }
 serde = { workspace = true }
 serde_json = { workspace = true }
-thiserror = { workspace = true }
 chrono = { workspace = true }
-tokio = { workspace = true }
 derive_builder = { workspace = true }
 
 [dev-dependencies]
 client = { path = "../client", features = ["test-utils"] }
 wiremock = { workspace = true }
+tokio = { workspace = true }

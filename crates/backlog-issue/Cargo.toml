@@ -17,7 +17,6 @@ backlog-api-macros = { path = "../backlog-api-macros" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_repr = { workspace = true }
-thiserror = { workspace = true }
 chrono = { workspace = true }
 derive_builder = { workspace = true }
 schemars = { workspace = true, features = ["chrono"], optional = true }

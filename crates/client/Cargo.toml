@@ -10,7 +10,6 @@ test-utils = ["dep:wiremock"]
 
 [dependencies]
 backlog-api-core = { path = "../backlog-api-core" }
-thiserror = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
