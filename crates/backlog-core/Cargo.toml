@@ -11,7 +11,7 @@ serde_repr = { workspace = true }
 thiserror = { workspace = true }
 regex = { workspace = true }
 chrono = { workspace = true }
-schemars = { workspace = true, features = ["chrono"], optional = true }
+schemars = { workspace = true, features = ["chrono04"], optional = true }
 
 [features]
 default = []

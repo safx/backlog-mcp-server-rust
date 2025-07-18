@@ -19,7 +19,7 @@ serde_json = { workspace = true }
 serde_repr = { workspace = true }
 chrono = { workspace = true }
 derive_builder = { workspace = true }
-schemars = { workspace = true, features = ["chrono"], optional = true }
+schemars = { workspace = true, features = ["chrono04"], optional = true }
 
 [dev-dependencies]
 client = { path = "../client", features = ["test-utils"] }

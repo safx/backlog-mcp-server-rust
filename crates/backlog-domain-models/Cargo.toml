@@ -13,4 +13,4 @@ backlog-core = { path = "../backlog-core" }
 chrono = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-schemars = { workspace = true, features = ["chrono"], optional = true }
+schemars = { workspace = true, features = ["chrono04"], optional = true }

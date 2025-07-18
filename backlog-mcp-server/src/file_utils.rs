@@ -1,6 +1,6 @@
 use backlog_api_client::{DownloadedFile, bytes};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_STANDARD};
-use rmcp::{Error as McpError, model::Content};
+use rmcp::{ErrorData as McpError, model::Content};
 
 #[derive(Debug, Clone)]
 pub enum FileFormat {

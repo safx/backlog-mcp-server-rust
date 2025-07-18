@@ -1,7 +1,7 @@
 use backlog_api_client::{
     ApiError, CoreError, ProjectIdOrKey, PullRequestNumber, RepositoryIdOrName,
 };
-use rmcp::Error as McpError;
+use rmcp::ErrorData as McpError;
 use thiserror::Error as ThisError;
 
 #[derive(Debug, ThisError)]

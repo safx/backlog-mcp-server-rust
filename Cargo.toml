@@ -35,7 +35,7 @@ bytes = "1" # Added bytes
 regex = "1.11"
 chrono = { version = "0.4.41", features = ["serde"] }
 derive_builder = "0.20"
-schemars = { version = "0.8", features = ["chrono"] }
+schemars = { version = "1.0", features = ["chrono04"] }
 wiremock = "0.6.4"
 base64 = "0.22"
 serde_urlencoded = "0.7"

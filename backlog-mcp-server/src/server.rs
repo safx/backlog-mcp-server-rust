@@ -59,7 +59,7 @@ use crate::access_control::AccessControl;
 use crate::git::request::AddPullRequestCommentRequest;
 use backlog_api_client::client::BacklogApiClient;
 use rmcp::{
-    Error as McpError,
+    ErrorData as McpError,
     handler::server::tool::{Parameters, ToolRouter},
     model::{CallToolResult, Content, ServerCapabilities, ServerInfo},
     tool, tool_handler, tool_router,
