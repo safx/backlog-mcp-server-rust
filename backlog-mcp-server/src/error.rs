@@ -98,10 +98,10 @@ impl From<Error> for McpError {
                 let mut message = format!(
                     "Milestone named '{original_name}' not found in project '{project_id_or_key}'.",
                 );
-                if let Some(suggs) = suggestions {
-                    if !suggs.is_empty() {
-                        message.push_str(&format!(" Did you mean one of: {suggs:?}?"));
-                    }
+                if let Some(suggs) = suggestions
+                    && !suggs.is_empty()
+                {
+                    message.push_str(&format!(" Did you mean one of: {suggs:?}?"));
                 }
                 message.push_str(&format!(" You can list all available milestones using the 'get_version_milestone_list' tool for project '{project_id_or_key}'."));
                 McpError::invalid_params(message, None)

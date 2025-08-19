@@ -17,10 +17,10 @@ impl FromStr for IssueIdOrKey {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // Try to parse as IssueId (u32) first
-        if let Ok(id_val) = u32::from_str(s) {
-            if id_val > 0 {
-                return Ok(IssueIdOrKey::Id(IssueId::new(id_val)));
-            }
+        if let Ok(id_val) = u32::from_str(s)
+            && id_val > 0
+        {
+            return Ok(IssueIdOrKey::Id(IssueId::new(id_val)));
         }
         // If not a u32 or not > 0, try to parse as IssueKey
         match IssueKey::from_str(s) {

@@ -19,10 +19,10 @@ impl FromStr for RepositoryIdOrName {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // Try to parse as RepositoryId (u32) first
-        if let Ok(id_val) = u32::from_str(s) {
-            if id_val > 0 {
-                return Ok(RepositoryIdOrName::Id(RepositoryId::new(id_val)));
-            }
+        if let Ok(id_val) = u32::from_str(s)
+            && id_val > 0
+        {
+            return Ok(RepositoryIdOrName::Id(RepositoryId::new(id_val)));
         }
         // If not a u32 or not > 0, try to parse as RepositoryName
         match RepositoryName::from_str(s) {

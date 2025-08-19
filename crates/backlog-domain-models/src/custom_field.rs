@@ -290,13 +290,13 @@ impl<'de> Deserialize<'de> for CustomFieldType {
         let value = serde_json::Value::deserialize(deserializer)?;
 
         // Check if it has a typeId field at the root level
-        if let Ok(peek) = serde_json::from_value::<Peek>(value.clone()) {
-            if peek.type_id.is_some() {
-                // This is an untagged format (API response)
-                let untagged: RawUntaggedCustomFieldType =
-                    serde_json::from_value(value).map_err(serde::de::Error::custom)?;
-                return CustomFieldType::from_untagged::<D>(untagged);
-            }
+        if let Ok(peek) = serde_json::from_value::<Peek>(value.clone())
+            && peek.type_id.is_some()
+        {
+            // This is an untagged format (API response)
+            let untagged: RawUntaggedCustomFieldType =
+                serde_json::from_value(value).map_err(serde::de::Error::custom)?;
+            return CustomFieldType::from_untagged::<D>(untagged);
         }
 
         // Otherwise, try the tagged format

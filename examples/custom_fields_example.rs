@@ -221,10 +221,10 @@ async fn read_custom_fields(
                 if let Some(obj) = field.value.as_object() {
                     if let Some(name) = obj.get("name").and_then(|v| v.as_str()) {
                         print!("{name}");
-                        if let Some(other) = &field.other_value {
-                            if let Some(other_str) = other.as_str() {
-                                print!(" (Other: {other_str})");
-                            }
+                        if let Some(other) = &field.other_value
+                            && let Some(other_str) = other.as_str()
+                        {
+                            print!(" (Other: {other_str})");
                         }
                         println!();
                     } else {
@@ -247,10 +247,10 @@ async fn read_custom_fields(
                         })
                         .collect();
                     print!("[{}]", names.join(", "));
-                    if let Some(other) = &field.other_value {
-                        if let Some(other_str) = other.as_str() {
-                            print!(" (Other: {other_str})");
-                        }
+                    if let Some(other) = &field.other_value
+                        && let Some(other_str) = other.as_str()
+                    {
+                        print!(" (Other: {other_str})");
                     }
                     println!();
                 } else {

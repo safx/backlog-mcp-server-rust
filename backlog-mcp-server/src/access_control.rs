@@ -74,16 +74,16 @@ impl AccessControl {
         }
         let allowed_keys = self.allowed_projects.as_ref().unwrap();
 
-        if let Some(project) = self.project_cache.get_from_cache_by_id(project_id).await {
-            if allowed_keys.contains(&project.project_key) {
-                return Ok(());
-            }
+        if let Some(project) = self.project_cache.get_from_cache_by_id(project_id).await
+            && allowed_keys.contains(&project.project_key)
+        {
+            return Ok(());
         }
 
-        if let Ok(project_key) = self.resolve_project_by_id(project_id, client).await {
-            if allowed_keys.contains(&project_key) {
-                return Ok(());
-            }
+        if let Ok(project_key) = self.resolve_project_by_id(project_id, client).await
+            && allowed_keys.contains(&project_key)
+        {
+            return Ok(());
         }
 
         Err(Error::ProjectAccessDenied {
@@ -152,10 +152,10 @@ impl AccessControl {
             return Ok(());
         }
 
-        if let Some(allowed_keys) = &self.allowed_projects {
-            if allowed_keys.contains(project_key) {
-                return Ok(());
-            }
+        if let Some(allowed_keys) = &self.allowed_projects
+            && allowed_keys.contains(project_key)
+        {
+            return Ok(());
         }
 
         Err(Error::ProjectAccessDenied {

@@ -4245,12 +4245,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             println!("Description: {}", field.description);
                         }
                         println!("Required: {}", field.required);
-                        if let Some(issue_types) = &field.applicable_issue_types {
-                            if !issue_types.is_empty() {
-                                let ids: Vec<String> =
-                                    issue_types.iter().map(|id| id.to_string()).collect();
-                                println!("Applicable Issue Types: {}", ids.join(", "));
-                            }
+                        if let Some(issue_types) = &field.applicable_issue_types
+                            && !issue_types.is_empty()
+                        {
+                            let ids: Vec<String> =
+                                issue_types.iter().map(|id| id.to_string()).collect();
+                            println!("Applicable Issue Types: {}", ids.join(", "));
                         }
                     }
                     Err(e) => {
@@ -4405,12 +4405,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             println!("Description: {}", field.description);
                         }
                         println!("Required: {}", field.required);
-                        if let Some(issue_types) = &field.applicable_issue_types {
-                            if !issue_types.is_empty() {
-                                let ids: Vec<String> =
-                                    issue_types.iter().map(|id| id.to_string()).collect();
-                                println!("Applicable Issue Types: {}", ids.join(", "));
-                            }
+                        if let Some(issue_types) = &field.applicable_issue_types
+                            && !issue_types.is_empty()
+                        {
+                            let ids: Vec<String> =
+                                issue_types.iter().map(|id| id.to_string()).collect();
+                            println!("Applicable Issue Types: {}", ids.join(", "));
                         }
                     }
                     Err(e) => {
@@ -5648,11 +5648,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     println!("   Issue: {} - {}", issue.issue_key, issue.summary);
                                 }
 
-                                if let Some(comment) = &notification.comment {
-                                    if let Some(content) = &comment.content {
-                                        let preview = content.chars().take(100).collect::<String>();
-                                        println!("   Comment: {preview}");
-                                    }
+                                if let Some(comment) = &notification.comment
+                                    && let Some(content) = &comment.content
+                                {
+                                    let preview = content.chars().take(100).collect::<String>();
+                                    println!("   Comment: {preview}");
                                 }
 
                                 println!(
@@ -5983,14 +5983,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     shared_file.created_user.name,
                                     shared_file.created.format("%Y-%m-%d %H:%M:%S")
                                 );
-                                if let Some(updated_user) = &shared_file.updated_user {
-                                    if let Some(updated) = &shared_file.updated {
-                                        println!(
-                                            "  Updated by: {} at {}",
-                                            updated_user.name,
-                                            updated.format("%Y-%m-%d %H:%M:%S")
-                                        );
-                                    }
+                                if let Some(updated_user) = &shared_file.updated_user
+                                    && let Some(updated) = &shared_file.updated
+                                {
+                                    println!(
+                                        "  Updated by: {} at {}",
+                                        updated_user.name,
+                                        updated.format("%Y-%m-%d %H:%M:%S")
+                                    );
                                 }
                             }
                         }
