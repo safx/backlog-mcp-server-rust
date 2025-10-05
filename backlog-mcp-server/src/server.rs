@@ -58,6 +58,7 @@ use crate::access_control::AccessControl;
 #[cfg(feature = "git_writable")]
 use crate::git::request::AddPullRequestCommentRequest;
 use backlog_api_client::client::BacklogApiClient;
+use rmcp::handler::server::router::tool;
 use rmcp::{
     ErrorData as McpError,
     handler::server::tool::{Parameters, ToolRouter},
@@ -72,7 +73,7 @@ use tokio::sync::Mutex;
 pub struct Server {
     client: Arc<Mutex<BacklogApiClient>>,
     access_control: AccessControl,
-    pub tool_router: ToolRouter<Self>,
+    tool_router: ToolRouter<Self>,
 }
 
 type McpResult = Result<CallToolResult, McpError>;
@@ -84,16 +85,34 @@ impl Server {
             .map_err(|_| "BACKLOG_BASE_URL environment variable not set")?;
         let api_key = env::var("BACKLOG_API_KEY")
             .map_err(|_| "BACKLOG_API_KEY environment variable not set")?;
+        let prefix = env::var("BACKLOG_PREFIX").unwrap_or("backlog_".to_string());
 
         eprintln!("Initializing with base_url: {base_url}");
 
         let client = BacklogApiClient::new(&base_url)?.with_api_key(api_key);
         let access_control = AccessControl::new()?;
+
         Ok(Self {
             client: Arc::new(Mutex::new(client)),
             access_control,
-            tool_router: Self::tool_router(),
+            tool_router: Self::create_tool_router(&prefix),
         })
+    }
+
+    fn create_tool_router(prefix: &str) -> ToolRouter<Self> {
+        if prefix.is_empty() {
+            return ToolRouter::new();
+        } else {
+            let mut tool_router = ToolRouter::new();
+            let original_keys: Vec<_> = tool_router.map.keys().cloned().collect();
+            for key in original_keys {
+                let new_key = format!("{}{}", prefix, key);
+                if let Some(handler) = tool_router.map.remove(&key) {
+                    tool_router.map.insert(new_key.into(), handler);
+                }
+            }
+            tool_router
+        }
     }
 
     #[tool(
