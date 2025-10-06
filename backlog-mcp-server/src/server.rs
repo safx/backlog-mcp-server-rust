@@ -61,7 +61,7 @@ use backlog_api_client::client::BacklogApiClient;
 use rmcp::handler::server::router::tool;
 use rmcp::{
     ErrorData as McpError,
-    handler::server::tool::{Parameters, ToolRouter},
+    handler::server::{tool::ToolRouter, wrapper::Parameters},
     model::{CallToolResult, Content, ServerCapabilities, ServerInfo},
     tool, tool_handler, tool_router,
 };
@@ -73,7 +73,7 @@ use tokio::sync::Mutex;
 pub struct Server {
     client: Arc<Mutex<BacklogApiClient>>,
     access_control: AccessControl,
-    tool_router: ToolRouter<Self>,
+    pub tool_router: ToolRouter<Self>,
 }
 
 type McpResult = Result<CallToolResult, McpError>;
@@ -100,19 +100,22 @@ impl Server {
     }
 
     fn create_tool_router(prefix: &str) -> ToolRouter<Self> {
+        let mut tool_router = Self::tool_router();
+
         if prefix.is_empty() {
-            return ToolRouter::new();
-        } else {
-            let mut tool_router = ToolRouter::new();
-            let original_keys: Vec<_> = tool_router.map.keys().cloned().collect();
-            for key in original_keys {
-                let new_key = format!("{}{}", prefix, key);
-                if let Some(handler) = tool_router.map.remove(&key) {
-                    tool_router.map.insert(new_key.into(), handler);
-                }
-            }
-            tool_router
+            return tool_router;
         }
+
+        let original_keys: Vec<_> = tool_router.map.keys().cloned().collect();
+        for key in original_keys {
+            let new_key = format!("{}{}", prefix, key);
+            if let Some(mut route) = tool_router.map.remove(&key) {
+                // Update the tool name in the attribute
+                route.attr.name = new_key.clone().into();
+                tool_router.map.insert(new_key.into(), route);
+            }
+        }
+        tool_router
     }
 
     #[tool(

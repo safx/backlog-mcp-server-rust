@@ -1,9 +1,11 @@
-use backlog_api_core::Result;
 use client::Client;
+
+#[cfg(feature = "writable")]
+use backlog_api_core::Result;
 
 /// API client for star-related operations.
 #[derive(Debug)]
-pub struct StarApi(pub(crate) Client);
+pub struct StarApi(#[allow(dead_code)] pub(crate) Client);
 
 impl StarApi {
     /// Creates a new instance of the StarApi.

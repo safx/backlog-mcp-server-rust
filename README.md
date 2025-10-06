@@ -52,7 +52,8 @@ For other platforms or if you prefer not to use Homebrew:
       "env": {
         "BACKLOG_BASE_URL": "https://your-space.backlog.com",
         "BACKLOG_API_KEY": "YOUR_BACKLOG_API_KEY",
-        "BACKLOG_PROJECTS": "PROJ,DEMO"
+        "BACKLOG_PROJECTS": "PROJ,DEMO",
+        "BACKLOG_PREFIX": "backlog_"
       }
     }
   }
@@ -75,7 +76,8 @@ Add the following to your Cline MCP configuration:
       "env": {
         "BACKLOG_BASE_URL": "https://your-space.backlog.com",
         "BACKLOG_API_KEY": "YOUR_BACKLOG_API_KEY",
-        "BACKLOG_PROJECTS": "PROJ,DEMO"
+        "BACKLOG_PROJECTS": "PROJ,DEMO",
+        "BACKLOG_PREFIX": "backlog_"
       },
       "transportType": "stdio"
     }
@@ -96,7 +98,8 @@ Add the following to your Cline MCP configuration:
       "env": {
         "BACKLOG_BASE_URL": "https://your-space.backlog.com",
         "BACKLOG_API_KEY": "YOUR_BACKLOG_API_KEY",
-        "BACKLOG_PROJECTS": "PROJ,DEMO"
+        "BACKLOG_PROJECTS": "PROJ,DEMO",
+        "BACKLOG_PREFIX": "backlog_"
       }
     }
   }
@@ -239,6 +242,7 @@ To run this server, the following environment variables must be set:
 Optional environment variables:
 
 -   `BACKLOG_PROJECTS`: Comma-separated list of allowed project keys (e.g., `MFP,DEMO,TEST`). When set, the server will only allow access to the specified projects. If not set, all projects accessible with the API key are available.
+-   `BACKLOG_PREFIX`: Custom prefix for tool names (default: `backlog_`). For example, setting `BACKLOG_PREFIX=""` removes the prefix, making tools accessible as `issue_details_get` instead of `backlog_issue_details_get`. Setting `BACKLOG_PREFIX="my_"` changes tools to `my_issue_details_get`.
 
 These environment variables are expected to be passed by the MCP client system when launching the server.
 
