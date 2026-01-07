@@ -106,18 +106,15 @@ pub struct WikiHistory {
 /// Represents the sort order for wiki history entries.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default)]
 pub enum HistoryOrder {
     #[serde(rename = "asc")]
     Asc,
     #[serde(rename = "desc")]
+    #[default]
     Desc,
 }
 
-impl Default for HistoryOrder {
-    fn default() -> Self {
-        Self::Desc
-    }
-}
 
 #[cfg(test)]
 mod tests {
