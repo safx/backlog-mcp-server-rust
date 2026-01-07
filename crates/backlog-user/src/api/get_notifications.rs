@@ -6,16 +6,13 @@ use crate::models::Notification;
 
 #[derive(Debug, Clone, Copy, Serialize)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum NotificationOrder {
     Asc,
+    #[default]
     Desc,
 }
 
-impl Default for NotificationOrder {
-    fn default() -> Self {
-        Self::Desc
-    }
-}
 
 #[derive(Debug, Clone, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
