@@ -73,13 +73,14 @@ async fn test_get_document_tree_success() {
         .await;
 
     let params = GetDocumentTreeParams {
-        project_id_or_key: "TEST_PROJECT".parse().unwrap(),
+        project_id_or_key: "TEST_PROJECT"
+            .parse()
+            .expect("TEST_PROJECT should be a valid project key"),
     };
 
     let result = doc_api.get_document_tree(params).await;
 
-    assert!(result.is_ok());
-    let tree = result.unwrap();
+    let tree = result.expect("get_document_tree should succeed");
 
     // Verify project ID
     assert_eq!(tree.project_id, ProjectId::new(1));
@@ -153,8 +154,7 @@ async fn test_get_document_tree_with_project_id() {
 
     let result = doc_api.get_document_tree(params).await;
 
-    assert!(result.is_ok());
-    let tree = result.unwrap();
+    let tree = result.expect("get_document_tree with project ID should succeed");
     assert_eq!(tree.project_id, ProjectId::new(123));
     assert_eq!(tree.active_tree.children.len(), 0);
     assert_eq!(tree.trash_tree.children.len(), 0);
@@ -189,13 +189,14 @@ async fn test_get_document_tree_empty_response() {
         .await;
 
     let params = GetDocumentTreeParams {
-        project_id_or_key: "EMPTY_PROJECT".parse().unwrap(),
+        project_id_or_key: "EMPTY_PROJECT"
+            .parse()
+            .expect("EMPTY_PROJECT should be a valid project key"),
     };
 
     let result = doc_api.get_document_tree(params).await;
 
-    assert!(result.is_ok());
-    let tree = result.unwrap();
+    let tree = result.expect("get_document_tree for empty project should succeed");
     assert_eq!(tree.active_tree.children.len(), 0);
     assert_eq!(tree.trash_tree.children.len(), 0);
 }
@@ -217,7 +218,9 @@ async fn test_get_document_tree_not_found() {
         .await;
 
     let params = GetDocumentTreeParams {
-        project_id_or_key: "NONEXISTENT".parse().unwrap(),
+        project_id_or_key: "NONEXISTENT"
+            .parse()
+            .expect("NONEXISTENT should be a valid project key format"),
     };
 
     let result = doc_api.get_document_tree(params).await;
@@ -242,7 +245,9 @@ async fn test_get_document_tree_unauthorized() {
         .await;
 
     let params = GetDocumentTreeParams {
-        project_id_or_key: "PRIVATE_PROJECT".parse().unwrap(),
+        project_id_or_key: "PRIVATE_PROJECT"
+            .parse()
+            .expect("PRIVATE_PROJECT should be a valid project key format"),
     };
 
     let result = doc_api.get_document_tree(params).await;
@@ -263,7 +268,9 @@ async fn test_get_document_tree_server_error() {
         .await;
 
     let params = GetDocumentTreeParams {
-        project_id_or_key: "ERROR_PROJECT".parse().unwrap(),
+        project_id_or_key: "ERROR_PROJECT"
+            .parse()
+            .expect("ERROR_PROJECT should be a valid project key format"),
     };
 
     let result = doc_api.get_document_tree(params).await;

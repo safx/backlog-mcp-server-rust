@@ -69,12 +69,11 @@ async fn test_list_documents_with_multiple_project_ids() {
         .offset(0)
         .count(20)
         .build()
-        .unwrap();
+        .expect("builder should succeed with project_ids, sort, order, offset, count");
 
     let result = doc_api.list_documents(params).await;
 
-    assert!(result.is_ok());
-    let documents = result.unwrap();
+    let documents = result.expect("list_documents should succeed");
     assert_eq!(documents.len(), 1);
     assert_eq!(documents[0].title, "First Document");
 }
@@ -97,12 +96,13 @@ async fn test_list_documents_minimal_params() {
         .await;
 
     // All parameters are optional now
-    let params = ListDocumentsParamsBuilder::default().build().unwrap();
+    let params = ListDocumentsParamsBuilder::default()
+        .build()
+        .expect("builder should succeed with default params");
 
     let result = doc_api.list_documents(params).await;
 
-    assert!(result.is_ok());
-    let documents = result.unwrap();
+    let documents = result.expect("list_documents with minimal params should succeed");
     assert_eq!(documents.len(), 0);
 }
 
@@ -131,7 +131,7 @@ async fn test_list_documents_with_keyword() {
         .sort(DocumentSortKey::Updated)
         .order(DocumentOrder::Asc)
         .build()
-        .unwrap();
+        .expect("builder should succeed with keyword and sort params");
 
     let result = doc_api.list_documents(params).await;
 
@@ -152,7 +152,7 @@ async fn test_list_documents_error() {
     let params = ListDocumentsParamsBuilder::default()
         .project_ids(vec![ProjectId::new(1)])
         .build()
-        .unwrap();
+        .expect("builder should succeed with project_ids");
 
     let result = doc_api.list_documents(params).await;
 
