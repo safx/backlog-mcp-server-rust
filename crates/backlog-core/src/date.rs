@@ -41,7 +41,11 @@ impl serde::Serialize for Date {
     where
         S: Serializer,
     {
-        let dt = self.0.and_hms_opt(0, 0, 0).unwrap();
+        // SAFETY: midnight (00:00:00) is always valid for any NaiveDate
+        let dt = self
+            .0
+            .and_hms_opt(0, 0, 0)
+            .expect("midnight is always valid");
         let dt_utc = Utc.from_utc_datetime(&dt);
         serializer.serialize_str(&dt_utc.format(SER_FORMAT).to_string())
     }

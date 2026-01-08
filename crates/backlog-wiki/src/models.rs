@@ -115,7 +115,6 @@ pub enum HistoryOrder {
     Desc,
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
