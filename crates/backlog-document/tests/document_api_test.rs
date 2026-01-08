@@ -36,8 +36,7 @@ async fn test_download_attachment_success() {
     let params = DownloadAttachmentParams::new(document_id, attachment_id);
     let result = doc_api.download_attachment(params).await;
 
-    assert!(result.is_ok());
-    let downloaded_file = result.unwrap();
+    let downloaded_file = result.expect("download_attachment should succeed");
     assert_eq!(downloaded_file.filename, "doc_attachment.txt");
     assert_eq!(downloaded_file.content_type, "application/octet-stream");
     assert_eq!(
