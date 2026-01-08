@@ -1,4 +1,6 @@
 #[cfg(feature = "writable")]
+use super::custom_field_utils::CustomFieldFormSerializer;
+#[cfg(feature = "writable")]
 use crate::models::{CustomFieldInput, Issue};
 #[cfg(feature = "writable")]
 use backlog_api_core::{Error as ApiError, HttpMethod, IntoRequest};
@@ -109,40 +111,7 @@ impl IntoRequest for AddIssueParams {
 
     fn to_form(&self) -> impl Serialize {
         let mut params: Vec<(String, String)> = self.into();
-
-        // Add custom fields
-        if let Some(ref custom_fields) = self.custom_fields {
-            for (field_id, input) in custom_fields {
-                let (value, other_value) = input.to_form_value();
-
-                // Handle multiple values differently from single values
-                let requires_multiple_params = matches!(
-                    input,
-                    CustomFieldInput::MultipleList { .. } | CustomFieldInput::CheckBox(_)
-                );
-
-                if requires_multiple_params {
-                    // Extract IDs for multiple value fields
-                    let ids = match input {
-                        CustomFieldInput::MultipleList { ids, .. } => ids,
-                        CustomFieldInput::CheckBox(ids) => ids,
-                        _ => unreachable!(),
-                    };
-
-                    // Add each ID as a separate parameter
-                    for id in ids {
-                        params.push((format!("customField_{field_id}"), id.to_string()));
-                    }
-                } else {
-                    params.push((format!("customField_{field_id}"), value));
-                }
-
-                if let Some(other) = other_value {
-                    params.push((format!("customField_{field_id}_otherValue"), other));
-                }
-            }
-        }
-
+        self.custom_fields.serialize_custom_fields(&mut params);
         params
     }
 }
