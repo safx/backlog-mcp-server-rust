@@ -28,6 +28,8 @@ mod add_issue_with_api_date;
 #[cfg(feature = "writable")]
 mod add_recently_viewed_issue;
 #[cfg(feature = "writable")]
+mod custom_field_utils;
+#[cfg(feature = "writable")]
 mod delete_attachment;
 #[cfg(feature = "writable")]
 mod delete_comment;
