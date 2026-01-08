@@ -1,10 +1,7 @@
 #[cfg(test)]
 mod additional_tests {
-    use crate::models::{
-        CustomFieldListItem, CustomFieldTypeId, CustomFieldValue, CustomFieldWithValue,
-    };
+    use crate::models::{CustomFieldTypeId, CustomFieldValue, CustomFieldWithValue};
     use backlog_core::identifier::{CustomFieldId, CustomFieldItemId};
-    use chrono::NaiveDate;
 
     #[test]
     fn test_deserialize_text_field_with_special_chars() {
@@ -170,60 +167,6 @@ mod additional_tests {
             }
             _ => panic!("Expected Radio variant"),
         }
-    }
-
-    #[test]
-    fn test_to_json_value_all_types() {
-        // Test Text
-        let text_field = CustomFieldWithValue {
-            id: CustomFieldId::new(1),
-            field_type_id: CustomFieldTypeId::Text,
-            name: "Text".to_string(),
-            value: CustomFieldValue::Text("Test".to_string()),
-        };
-        let (value, other) = text_field.to_json_value();
-        assert_eq!(value, serde_json::Value::String("Test".to_string()));
-        assert_eq!(other, None);
-
-        // Test Numeric
-        let numeric_field = CustomFieldWithValue {
-            id: CustomFieldId::new(2),
-            field_type_id: CustomFieldTypeId::Numeric,
-            name: "Number".to_string(),
-            value: CustomFieldValue::Numeric(123.45),
-        };
-        let (value, other) = numeric_field.to_json_value();
-        assert_eq!(value, serde_json::to_value(123.45).unwrap());
-        assert_eq!(other, None);
-
-        // Test Date
-        let date_field = CustomFieldWithValue {
-            id: CustomFieldId::new(3),
-            field_type_id: CustomFieldTypeId::Date,
-            name: "Date".to_string(),
-            value: CustomFieldValue::Date(NaiveDate::from_ymd_opt(2024, 6, 24).unwrap()),
-        };
-        let (value, other) = date_field.to_json_value();
-        assert_eq!(value, serde_json::Value::String("2024-06-24".to_string()));
-        assert_eq!(other, None);
-
-        // Test SingleList with other
-        let item = CustomFieldListItem {
-            id: CustomFieldItemId::new(100),
-            name: "Item".to_string(),
-        };
-        let single_list_field = CustomFieldWithValue {
-            id: CustomFieldId::new(4),
-            field_type_id: CustomFieldTypeId::SingleList,
-            name: "List".to_string(),
-            value: CustomFieldValue::SingleList {
-                item: item.clone(),
-                other_value: Some("Other".to_string()),
-            },
-        };
-        let (value, other) = single_list_field.to_json_value();
-        assert_eq!(value, serde_json::to_value(&item).unwrap());
-        assert_eq!(other, Some(serde_json::Value::String("Other".to_string())));
     }
 
     #[test]

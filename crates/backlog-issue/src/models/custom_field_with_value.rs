@@ -118,35 +118,6 @@ impl<'de> Deserialize<'de> for CustomFieldWithValue {
     }
 }
 
-impl CustomFieldWithValue {
-    /// Convert back to a JSON Value for compatibility
-    pub fn to_json_value(&self) -> (Value, Option<Value>) {
-        match &self.value {
-            CustomFieldValue::Text(s) | CustomFieldValue::TextArea(s) => {
-                (Value::String(s.clone()), None)
-            }
-            CustomFieldValue::Numeric(n) => (serde_json::to_value(n).unwrap(), None),
-            CustomFieldValue::Date(d) => (Value::String(d.format("%Y-%m-%d").to_string()), None),
-            CustomFieldValue::SingleList { item, other_value } => {
-                let value = serde_json::to_value(item).unwrap();
-                let other = other_value.as_ref().map(|s| Value::String(s.clone()));
-                (value, other)
-            }
-            CustomFieldValue::MultipleList { items, other_value } => {
-                let value = serde_json::to_value(items).unwrap();
-                let other = other_value.as_ref().map(|s| Value::String(s.clone()));
-                (value, other)
-            }
-            CustomFieldValue::CheckBox(items) => (serde_json::to_value(items).unwrap(), None),
-            CustomFieldValue::Radio { item, other_value } => {
-                let value = serde_json::to_value(item).unwrap();
-                let other = other_value.as_ref().map(|s| Value::String(s.clone()));
-                (value, other)
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -258,19 +229,5 @@ mod tests {
             }
             _ => panic!("Expected MultipleList variant"),
         }
-    }
-
-    #[test]
-    fn test_to_json_value() {
-        let field = CustomFieldWithValue {
-            id: CustomFieldId::new(1),
-            field_type_id: CustomFieldTypeId::Text,
-            name: "Test Field".to_string(),
-            value: CustomFieldValue::Text("Test Value".to_string()),
-        };
-
-        let (value, other) = field.to_json_value();
-        assert_eq!(value, Value::String("Test Value".to_string()));
-        assert_eq!(other, None);
     }
 }
