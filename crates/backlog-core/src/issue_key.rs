@@ -60,8 +60,9 @@ impl FromStr for IssueKey {
             // safety use from_str_unchecked: the constraint of the regex ISSUE_KEY_REGEXP ensures the project_key is valid
             let project_key = ProjectKey::from_str_unchecked(&m[1]);
 
-            // safety unwrap: the constraint of the regex ISSUE_KEY_REGEXP ensures key_id can be converted into u32 and is greater than zero
-            let key_id = u32::from_str(&m[2]).unwrap();
+            // Parse key_id, returning error if it exceeds u32::MAX
+            let key_id =
+                u32::from_str(&m[2]).map_err(|_| Error::InvalidIssueKey(key.to_string()))?;
 
             Ok(IssueKey::new(project_key, key_id))
         } else {
@@ -148,4 +149,25 @@ fn test_issue_key_deserialize() {
     // Test invalid issue key
     let result: Result<IssueKey, _> = serde_json::from_str("\"invalid-key\"");
     assert!(result.is_err());
+}
+
+#[test]
+fn test_issue_key_from_str_overflow() {
+    // key_id that exceeds u32::MAX should return error, not panic
+    let result = IssueKey::from_str("PROJ-9999999999999");
+    assert!(result.is_err());
+    assert_eq!(
+        result,
+        Err(Error::InvalidIssueKey("PROJ-9999999999999".to_string()))
+    );
+}
+
+#[test]
+fn test_issue_key_from_str_max_valid() {
+    // key_id at u32::MAX should be valid
+    let max_key = format!("PROJ-{}", u32::MAX);
+    let result = IssueKey::from_str(&max_key);
+    assert!(result.is_ok());
+    let issue_key = result.unwrap();
+    assert_eq!(issue_key.key_id, u32::MAX);
 }

@@ -13,7 +13,6 @@ pub enum NotificationOrder {
     Desc,
 }
 
-
 #[derive(Debug, Clone, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GetNotificationsParams {
