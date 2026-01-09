@@ -9,9 +9,10 @@ mod writable_tests {
     use backlog_project::api::{
         AddCategoryParams, AddIssueTypeParams, AddMilestoneParams, AddProjectAdministratorParams,
         AddProjectParams, AddProjectUserParams, AddStatusParams, DeleteCategoryParams,
-        DeleteProjectAdministratorParams, DeleteProjectParams, DeleteProjectUserParams,
-        DeleteStatusParams, ProjectApi, TextFormattingRule, UpdateCategoryParams,
-        UpdateProjectParams, UpdateStatusOrderParams, UpdateStatusParams,
+        DeleteIssueTypeParams, DeleteProjectAdministratorParams, DeleteProjectParams,
+        DeleteProjectUserParams, DeleteStatusParams, DeleteVersionParams, ProjectApi,
+        TextFormattingRule, UpdateCategoryParams, UpdateIssueTypeParams, UpdateProjectParams,
+        UpdateStatusOrderParams, UpdateStatusParams, UpdateVersionParams,
     };
     use backlog_project::{Category, IssueType, Milestone, Status};
     use chrono::TimeZone;
@@ -1546,6 +1547,400 @@ mod writable_tests {
 
         let params = DeleteProjectParams::new(ProjectKey::from_str("INVALID_PROJECT").unwrap());
         let result = project_api.delete_project(params).await;
+        assert!(result.is_err());
+        match result {
+            Err(ApiError::HttpStatus { status, .. }) => {
+                assert_eq!(status, 404);
+            }
+            _ => panic!("Expected HttpStatus error with 404"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_update_issue_type_success() {
+        let mock_server = MockServer::start().await;
+        let client = setup_client(&mock_server).await;
+        let project_api = ProjectApi::new(client);
+
+        let expected_issue_type = IssueType {
+            id: IssueTypeId::new(1),
+            project_id: ProjectId::new(123),
+            name: "Updated Bug".to_string(),
+            color: "#e30613".to_string(),
+            display_order: 1,
+            template_summary: None,
+            template_description: None,
+        };
+
+        Mock::given(method("PATCH"))
+            .and(path("/api/v2/projects/123/issueTypes/1"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&expected_issue_type))
+            .mount(&mock_server)
+            .await;
+
+        let mut params = UpdateIssueTypeParams::new(ProjectId::new(123), IssueTypeId::new(1));
+        params.name = Some("Updated Bug".to_string());
+
+        let result = project_api.update_issue_type(params).await;
+        assert!(result.is_ok());
+        let issue_type = result.unwrap();
+        assert_eq!(issue_type.name, "Updated Bug");
+        assert_eq!(issue_type.id, IssueTypeId::new(1));
+    }
+
+    #[tokio::test]
+    async fn test_update_issue_type_with_all_fields() {
+        let mock_server = MockServer::start().await;
+        let client = setup_client(&mock_server).await;
+        let project_api = ProjectApi::new(client);
+
+        let expected_issue_type = IssueType {
+            id: IssueTypeId::new(1),
+            project_id: ProjectId::new(123),
+            name: "Updated Feature".to_string(),
+            color: "#007e9a".to_string(),
+            display_order: 1,
+            template_summary: Some("Feature summary template".to_string()),
+            template_description: Some("Feature description template".to_string()),
+        };
+
+        Mock::given(method("PATCH"))
+            .and(path("/api/v2/projects/TEST_PROJECT/issueTypes/1"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&expected_issue_type))
+            .mount(&mock_server)
+            .await;
+
+        let mut params = UpdateIssueTypeParams::new(
+            ProjectKey::from_str("TEST_PROJECT").unwrap(),
+            IssueTypeId::new(1),
+        );
+        params.name = Some("Updated Feature".to_string());
+        params.color = Some(backlog_domain_models::IssueTypeColor::Blue);
+        params.template_summary = Some("Feature summary template".to_string());
+        params.template_description = Some("Feature description template".to_string());
+
+        let result = project_api.update_issue_type(params).await;
+        assert!(result.is_ok());
+        let issue_type = result.unwrap();
+        assert_eq!(issue_type.name, "Updated Feature");
+        assert_eq!(issue_type.color, "#007e9a");
+        assert_eq!(
+            issue_type.template_summary,
+            Some("Feature summary template".to_string())
+        );
+        assert_eq!(
+            issue_type.template_description,
+            Some("Feature description template".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn test_update_issue_type_not_found() {
+        let mock_server = MockServer::start().await;
+        let client = setup_client(&mock_server).await;
+        let project_api = ProjectApi::new(client);
+
+        let error_response = serde_json::json!({
+            "errors": [
+                {
+                    "message": "Issue type not found",
+                    "code": 7
+                }
+            ]
+        });
+
+        Mock::given(method("PATCH"))
+            .and(path("/api/v2/projects/123/issueTypes/999"))
+            .respond_with(ResponseTemplate::new(404).set_body_json(error_response))
+            .mount(&mock_server)
+            .await;
+
+        let mut params = UpdateIssueTypeParams::new(ProjectId::new(123), IssueTypeId::new(999));
+        params.name = Some("Updated Bug".to_string());
+
+        let result = project_api.update_issue_type(params).await;
+        assert!(result.is_err());
+        match result {
+            Err(ApiError::HttpStatus { status, .. }) => {
+                assert_eq!(status, 404);
+            }
+            _ => panic!("Expected HttpStatus error with 404"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_delete_issue_type_success() {
+        let mock_server = MockServer::start().await;
+        let client = setup_client(&mock_server).await;
+        let project_api = ProjectApi::new(client);
+
+        let expected_issue_type = IssueType {
+            id: IssueTypeId::new(1),
+            project_id: ProjectId::new(123),
+            name: "Deprecated Bug".to_string(),
+            color: "#e30613".to_string(),
+            display_order: 1,
+            template_summary: None,
+            template_description: None,
+        };
+
+        Mock::given(method("DELETE"))
+            .and(path("/api/v2/projects/123/issueTypes/1"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&expected_issue_type))
+            .mount(&mock_server)
+            .await;
+
+        let params = DeleteIssueTypeParams::new(
+            ProjectId::new(123),
+            IssueTypeId::new(1),
+            IssueTypeId::new(2),
+        );
+        let result = project_api.delete_issue_type(params).await;
+        assert!(result.is_ok());
+        let issue_type = result.unwrap();
+        assert_eq!(issue_type.name, "Deprecated Bug");
+        assert_eq!(issue_type.id, IssueTypeId::new(1));
+    }
+
+    #[tokio::test]
+    async fn test_delete_issue_type_not_found() {
+        let mock_server = MockServer::start().await;
+        let client = setup_client(&mock_server).await;
+        let project_api = ProjectApi::new(client);
+
+        let error_response = serde_json::json!({
+            "errors": [
+                {
+                    "message": "Issue type not found",
+                    "code": 7
+                }
+            ]
+        });
+
+        Mock::given(method("DELETE"))
+            .and(path("/api/v2/projects/TEST_PROJECT/issueTypes/999"))
+            .respond_with(ResponseTemplate::new(404).set_body_json(error_response))
+            .mount(&mock_server)
+            .await;
+
+        let params = DeleteIssueTypeParams::new(
+            ProjectKey::from_str("TEST_PROJECT").unwrap(),
+            IssueTypeId::new(999),
+            IssueTypeId::new(2),
+        );
+        let result = project_api.delete_issue_type(params).await;
+        assert!(result.is_err());
+        match result {
+            Err(ApiError::HttpStatus { status, .. }) => {
+                assert_eq!(status, 404);
+            }
+            _ => panic!("Expected HttpStatus error with 404"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_delete_issue_type_invalid_substitute() {
+        let mock_server = MockServer::start().await;
+        let client = setup_client(&mock_server).await;
+        let project_api = ProjectApi::new(client);
+
+        let error_response = serde_json::json!({
+            "errors": [
+                {
+                    "message": "Substitute issue type not found",
+                    "code": 7
+                }
+            ]
+        });
+
+        Mock::given(method("DELETE"))
+            .and(path("/api/v2/projects/123/issueTypes/1"))
+            .respond_with(ResponseTemplate::new(400).set_body_json(error_response))
+            .mount(&mock_server)
+            .await;
+
+        let params = DeleteIssueTypeParams::new(
+            ProjectId::new(123),
+            IssueTypeId::new(1),
+            IssueTypeId::new(999),
+        );
+        let result = project_api.delete_issue_type(params).await;
+        assert!(result.is_err());
+        match result {
+            Err(ApiError::HttpStatus { status, .. }) => {
+                assert_eq!(status, 400);
+            }
+            _ => panic!("Expected HttpStatus error with 400"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_update_version_success() {
+        let mock_server = MockServer::start().await;
+        let client = setup_client(&mock_server).await;
+        let project_api = ProjectApi::new(client);
+
+        let expected_version = Milestone {
+            id: MilestoneId::new(1),
+            project_id: ProjectId::new(123),
+            name: "Version 2.0".to_string(),
+            description: Some("Updated release".to_string()),
+            start_date: None,
+            release_due_date: None,
+            archived: false,
+            display_order: Some(1),
+        };
+
+        Mock::given(method("PATCH"))
+            .and(path("/api/v2/projects/123/versions/1"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&expected_version))
+            .mount(&mock_server)
+            .await;
+
+        let params =
+            UpdateVersionParams::new(ProjectId::new(123), MilestoneId::new(1), "Version 2.0");
+        let result = project_api.update_version(params).await;
+        assert!(result.is_ok());
+        let version = result.unwrap();
+        assert_eq!(version.name, "Version 2.0");
+        assert_eq!(version.id, MilestoneId::new(1));
+    }
+
+    #[tokio::test]
+    async fn test_update_version_with_dates() {
+        let mock_server = MockServer::start().await;
+        let client = setup_client(&mock_server).await;
+        let project_api = ProjectApi::new(client);
+
+        let expected_version = Milestone {
+            id: MilestoneId::new(1),
+            project_id: ProjectId::new(123),
+            name: "Version 3.0".to_string(),
+            description: Some("Release with dates".to_string()),
+            start_date: Some(chrono::Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap()),
+            release_due_date: Some(chrono::Utc.with_ymd_and_hms(2024, 12, 31, 0, 0, 0).unwrap()),
+            archived: true,
+            display_order: Some(1),
+        };
+
+        Mock::given(method("PATCH"))
+            .and(path("/api/v2/projects/TEST_PROJECT/versions/1"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&expected_version))
+            .mount(&mock_server)
+            .await;
+
+        let mut params = UpdateVersionParams::new(
+            ProjectKey::from_str("TEST_PROJECT").unwrap(),
+            MilestoneId::new(1),
+            "Version 3.0",
+        );
+        params.description = Some("Release with dates".to_string());
+        params.start_date = Some(backlog_core::ApiDate::new(
+            chrono::Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap(),
+        ));
+        params.release_due_date = Some(backlog_core::ApiDate::new(
+            chrono::Utc.with_ymd_and_hms(2024, 12, 31, 0, 0, 0).unwrap(),
+        ));
+        params.archived = Some(true);
+
+        let result = project_api.update_version(params).await;
+        assert!(result.is_ok());
+        let version = result.unwrap();
+        assert_eq!(version.name, "Version 3.0");
+        assert_eq!(version.description, Some("Release with dates".to_string()));
+        assert!(version.archived);
+    }
+
+    #[tokio::test]
+    async fn test_update_version_not_found() {
+        let mock_server = MockServer::start().await;
+        let client = setup_client(&mock_server).await;
+        let project_api = ProjectApi::new(client);
+
+        let error_response = serde_json::json!({
+            "errors": [
+                {
+                    "message": "Version not found",
+                    "code": 7
+                }
+            ]
+        });
+
+        Mock::given(method("PATCH"))
+            .and(path("/api/v2/projects/123/versions/999"))
+            .respond_with(ResponseTemplate::new(404).set_body_json(error_response))
+            .mount(&mock_server)
+            .await;
+
+        let params =
+            UpdateVersionParams::new(ProjectId::new(123), MilestoneId::new(999), "Version 4.0");
+        let result = project_api.update_version(params).await;
+        assert!(result.is_err());
+        match result {
+            Err(ApiError::HttpStatus { status, .. }) => {
+                assert_eq!(status, 404);
+            }
+            _ => panic!("Expected HttpStatus error with 404"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_delete_version_success() {
+        let mock_server = MockServer::start().await;
+        let client = setup_client(&mock_server).await;
+        let project_api = ProjectApi::new(client);
+
+        let expected_version = Milestone {
+            id: MilestoneId::new(1),
+            project_id: ProjectId::new(123),
+            name: "Version 1.0".to_string(),
+            description: Some("Deprecated version".to_string()),
+            start_date: None,
+            release_due_date: None,
+            archived: true,
+            display_order: Some(1),
+        };
+
+        Mock::given(method("DELETE"))
+            .and(path("/api/v2/projects/123/versions/1"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&expected_version))
+            .mount(&mock_server)
+            .await;
+
+        let params = DeleteVersionParams::new(ProjectId::new(123), MilestoneId::new(1));
+        let result = project_api.delete_version(params).await;
+        assert!(result.is_ok());
+        let version = result.unwrap();
+        assert_eq!(version.name, "Version 1.0");
+        assert_eq!(version.id, MilestoneId::new(1));
+    }
+
+    #[tokio::test]
+    async fn test_delete_version_not_found() {
+        let mock_server = MockServer::start().await;
+        let client = setup_client(&mock_server).await;
+        let project_api = ProjectApi::new(client);
+
+        let error_response = serde_json::json!({
+            "errors": [
+                {
+                    "message": "Version not found",
+                    "code": 7
+                }
+            ]
+        });
+
+        Mock::given(method("DELETE"))
+            .and(path("/api/v2/projects/TEST_PROJECT/versions/999"))
+            .respond_with(ResponseTemplate::new(404).set_body_json(error_response))
+            .mount(&mock_server)
+            .await;
+
+        let params = DeleteVersionParams::new(
+            ProjectKey::from_str("TEST_PROJECT").unwrap(),
+            MilestoneId::new(999),
+        );
+        let result = project_api.delete_version(params).await;
         assert!(result.is_err());
         match result {
             Err(ApiError::HttpStatus { status, .. }) => {
