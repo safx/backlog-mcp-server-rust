@@ -43,6 +43,9 @@ enum RawCustomFieldType {
     Untagged(RawUntaggedCustomFieldType),
 }
 
+// Custom Field Type IDs (Backlog API)
+// 1: Text, 2: TextArea, 3: Numeric, 4: Date
+// 5: SingleList, 6: MultipleList, 7: Checkbox, 8: Radio
 #[derive(Debug, Deserialize)]
 #[serde(tag = "typeId")]
 enum RawTaggedCustomFieldType {
@@ -64,9 +67,10 @@ enum RawTaggedCustomFieldType {
     Radio(RawListFieldType),
 }
 
+/// Common fields shared across all custom field types
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct RawTextFieldType {
+struct RawCustomFieldBase {
     id: CustomFieldId,
     project_id: ProjectId,
     name: String,
@@ -74,30 +78,42 @@ struct RawTextFieldType {
     required: bool,
     applicable_issue_types: Option<Vec<IssueTypeId>>,
     display_order: i64,
+}
+
+impl RawCustomFieldBase {
+    fn into_custom_field(self, settings: CustomFieldSettings) -> CustomFieldType {
+        CustomFieldType {
+            id: self.id,
+            project_id: self.project_id,
+            name: self.name,
+            description: self.description,
+            required: self.required,
+            applicable_issue_types: self.applicable_issue_types,
+            display_order: self.display_order,
+            settings,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RawTextFieldType {
+    #[serde(flatten)]
+    base: RawCustomFieldBase,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct RawTextAreaFieldType {
-    id: CustomFieldId,
-    project_id: ProjectId,
-    name: String,
-    description: String,
-    required: bool,
-    applicable_issue_types: Option<Vec<IssueTypeId>>,
-    display_order: i64,
+    #[serde(flatten)]
+    base: RawCustomFieldBase,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct RawNumericFieldType {
-    id: CustomFieldId,
-    project_id: ProjectId,
-    name: String,
-    description: String,
-    required: bool,
-    applicable_issue_types: Option<Vec<IssueTypeId>>,
-    display_order: i64,
+    #[serde(flatten)]
+    base: RawCustomFieldBase,
     min: Option<f64>,
     max: Option<f64>,
     initial_value: Option<f64>,
@@ -107,13 +123,8 @@ struct RawNumericFieldType {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct RawDateFieldType {
-    id: CustomFieldId,
-    project_id: ProjectId,
-    name: String,
-    description: String,
-    required: bool,
-    applicable_issue_types: Option<Vec<IssueTypeId>>,
-    display_order: i64,
+    #[serde(flatten)]
+    base: RawCustomFieldBase,
     min: Option<String>,
     max: Option<String>,
     initial_value_type: Option<InitialDate>,
@@ -124,18 +135,26 @@ struct RawDateFieldType {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct RawListFieldType {
-    id: CustomFieldId,
-    project_id: ProjectId,
-    name: String,
-    description: String,
-    required: bool,
-    applicable_issue_types: Option<Vec<IssueTypeId>>,
-    display_order: i64,
+    #[serde(flatten)]
+    base: RawCustomFieldBase,
     items: Vec<ListItem>,
     #[serde(default)]
     allow_add_item: Option<bool>,
     #[serde(default)]
     allow_input: Option<bool>,
+}
+
+impl RawListFieldType {
+    fn into_list_settings(self) -> (RawCustomFieldBase, ListSettings) {
+        (
+            self.base,
+            ListSettings {
+                items: self.items,
+                allow_input: self.allow_input,
+                allow_add_item: self.allow_add_item,
+            },
+        )
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -315,161 +334,49 @@ impl CustomFieldType {
     where
         D: Deserializer<'de>,
     {
+        use std::str::FromStr;
+
         let (base, settings) = match tagged {
-            RawTaggedCustomFieldType::Text(raw) => (
-                (
-                    raw.id,
-                    raw.project_id,
-                    raw.name,
-                    raw.description,
-                    raw.required,
-                    raw.applicable_issue_types,
-                    raw.display_order,
-                ),
-                CustomFieldSettings::Text,
-            ),
-            RawTaggedCustomFieldType::TextArea(raw) => (
-                (
-                    raw.id,
-                    raw.project_id,
-                    raw.name,
-                    raw.description,
-                    raw.required,
-                    raw.applicable_issue_types,
-                    raw.display_order,
-                ),
-                CustomFieldSettings::TextArea,
-            ),
-            RawTaggedCustomFieldType::Numeric(raw) => {
-                let settings = NumericSettings {
+            RawTaggedCustomFieldType::Text(raw) => (raw.base, CustomFieldSettings::Text),
+            RawTaggedCustomFieldType::TextArea(raw) => (raw.base, CustomFieldSettings::TextArea),
+            RawTaggedCustomFieldType::Numeric(raw) => (
+                raw.base,
+                CustomFieldSettings::Numeric(NumericSettings {
                     min: raw.min,
                     max: raw.max,
                     initial_value: raw.initial_value,
                     unit: raw.unit,
-                };
-                (
-                    (
-                        raw.id,
-                        raw.project_id,
-                        raw.name,
-                        raw.description,
-                        raw.required,
-                        raw.applicable_issue_types,
-                        raw.display_order,
-                    ),
-                    CustomFieldSettings::Numeric(settings),
-                )
-            }
-            RawTaggedCustomFieldType::Date(raw) => {
-                use std::str::FromStr;
-                let settings = DateSettings {
+                }),
+            ),
+            RawTaggedCustomFieldType::Date(raw) => (
+                raw.base,
+                CustomFieldSettings::Date(DateSettings {
                     min: raw.min.and_then(|s| Date::from_str(&s).ok()),
                     max: raw.max.and_then(|s| Date::from_str(&s).ok()),
                     initial_value_type: raw.initial_value_type,
                     initial_shift: raw.initial_shift,
                     initial_date: raw.initial_date.and_then(|s| Date::from_str(&s).ok()),
-                };
-                (
-                    (
-                        raw.id,
-                        raw.project_id,
-                        raw.name,
-                        raw.description,
-                        raw.required,
-                        raw.applicable_issue_types,
-                        raw.display_order,
-                    ),
-                    CustomFieldSettings::Date(settings),
-                )
-            }
+                }),
+            ),
             RawTaggedCustomFieldType::SingleList(raw) => {
-                let settings = ListSettings {
-                    items: raw.items,
-                    allow_input: raw.allow_input,
-                    allow_add_item: raw.allow_add_item,
-                };
-                (
-                    (
-                        raw.id,
-                        raw.project_id,
-                        raw.name,
-                        raw.description,
-                        raw.required,
-                        raw.applicable_issue_types,
-                        raw.display_order,
-                    ),
-                    CustomFieldSettings::SingleList(settings),
-                )
+                let (base, settings) = raw.into_list_settings();
+                (base, CustomFieldSettings::SingleList(settings))
             }
             RawTaggedCustomFieldType::MultipleList(raw) => {
-                let settings = ListSettings {
-                    items: raw.items,
-                    allow_input: raw.allow_input,
-                    allow_add_item: raw.allow_add_item,
-                };
-                (
-                    (
-                        raw.id,
-                        raw.project_id,
-                        raw.name,
-                        raw.description,
-                        raw.required,
-                        raw.applicable_issue_types,
-                        raw.display_order,
-                    ),
-                    CustomFieldSettings::MultipleList(settings),
-                )
+                let (base, settings) = raw.into_list_settings();
+                (base, CustomFieldSettings::MultipleList(settings))
             }
             RawTaggedCustomFieldType::Checkbox(raw) => {
-                let settings = ListSettings {
-                    items: raw.items,
-                    allow_input: raw.allow_input,
-                    allow_add_item: raw.allow_add_item,
-                };
-                (
-                    (
-                        raw.id,
-                        raw.project_id,
-                        raw.name,
-                        raw.description,
-                        raw.required,
-                        raw.applicable_issue_types,
-                        raw.display_order,
-                    ),
-                    CustomFieldSettings::Checkbox(settings),
-                )
+                let (base, settings) = raw.into_list_settings();
+                (base, CustomFieldSettings::Checkbox(settings))
             }
             RawTaggedCustomFieldType::Radio(raw) => {
-                let settings = ListSettings {
-                    items: raw.items,
-                    allow_input: raw.allow_input,
-                    allow_add_item: raw.allow_add_item,
-                };
-                (
-                    (
-                        raw.id,
-                        raw.project_id,
-                        raw.name,
-                        raw.description,
-                        raw.required,
-                        raw.applicable_issue_types,
-                        raw.display_order,
-                    ),
-                    CustomFieldSettings::Radio(settings),
-                )
+                let (base, settings) = raw.into_list_settings();
+                (base, CustomFieldSettings::Radio(settings))
             }
         };
 
-        Ok(CustomFieldType {
-            id: base.0,
-            project_id: base.1,
-            name: base.2,
-            description: base.3,
-            required: base.4,
-            applicable_issue_types: base.5,
-            display_order: base.6,
-            settings,
-        })
+        Ok(base.into_custom_field(settings))
     }
 }
 
