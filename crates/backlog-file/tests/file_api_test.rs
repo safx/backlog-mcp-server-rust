@@ -58,8 +58,7 @@ async fn test_get_shared_files_list_success() {
     };
 
     let result = file_api.get_shared_files_list(params).await;
-    assert!(result.is_ok());
-    let files = result.unwrap();
+    let files = result.expect("get_shared_files_list should succeed");
     assert_eq!(files.len(), 1);
     assert_eq!(files[0].name, "test.txt");
     match &files[0].content {
@@ -94,8 +93,8 @@ async fn test_get_shared_files_list_empty() {
         count: None,
     };
     let result = file_api.get_shared_files_list(params).await;
-    assert!(result.is_ok());
-    assert!(result.unwrap().is_empty());
+    let files = result.expect("get_shared_files_list with empty result should succeed");
+    assert!(files.is_empty());
 }
 
 #[tokio::test]
@@ -169,8 +168,8 @@ async fn test_get_shared_files_list_with_custom_params() {
     };
 
     let result = file_api.get_shared_files_list(params).await;
-    assert!(result.is_ok());
-    assert!(result.unwrap().is_empty());
+    let files = result.expect("get_shared_files_list with custom params should succeed");
+    assert!(files.is_empty());
 }
 
 #[tokio::test]
@@ -197,8 +196,7 @@ async fn test_get_file_success() {
 
     let params = GetFileParams::new(project_id, shared_file_id);
     let result = file_api.get_file(params).await;
-    assert!(result.is_ok());
-    let downloaded_file = result.unwrap();
+    let downloaded_file = result.expect("get_file should succeed");
     assert_eq!(downloaded_file.filename, "test.txt");
     assert_eq!(downloaded_file.content_type, "text/plain");
     assert_eq!(downloaded_file.bytes.as_ref(), file_content);
@@ -239,4 +237,159 @@ async fn test_get_file_not_found() {
     } else {
         panic!("Expected ApiError::HttpStatus, got {result:?}");
     }
+}
+
+#[tokio::test]
+async fn test_get_shared_files_list_with_directory() {
+    let server = wiremock::MockServer::start().await;
+    let file_api = setup_file_api(&server).await;
+
+    let project_id = ProjectId::new(123);
+    let dir_path = "test-dir";
+
+    let user = create_mock_user(1, "testuser");
+
+    // ディレクトリのレスポンス（sizeフィールドなし）
+    let expected_files = vec![SharedFile {
+        id: SharedFileId::new(1),
+        project_id: ProjectId(123),
+        dir: "/".to_string(),
+        name: "subdir".to_string(),
+        created_user: user.clone(),
+        created: Utc.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap(),
+        updated_user: None,
+        updated: None,
+        content: backlog_file::models::FileContent::Directory,
+    }];
+
+    Mock::given(method("GET"))
+        .and(path(format!(
+            "/api/v2/projects/{}/files/metadata/{}",
+            project_id.value(),
+            dir_path
+        )))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&expected_files))
+        .mount(&server)
+        .await;
+
+    let params = GetSharedFilesListParams {
+        project_id_or_key: project_id.into(),
+        path: dir_path.to_string(),
+        order: None,
+        offset: None,
+        count: None,
+    };
+
+    let result = file_api.get_shared_files_list(params).await;
+    assert!(result.is_ok());
+    let files = result.expect("get_shared_files_list with directory should succeed");
+    assert_eq!(files.len(), 1);
+    assert_eq!(files[0].name, "subdir");
+
+    // ディレクトリバリアントの確認
+    match &files[0].content {
+        backlog_file::models::FileContent::Directory => {}
+        backlog_file::models::FileContent::File { size } => {
+            panic!("Expected Directory, got File with size {size}")
+        }
+    }
+}
+
+#[tokio::test]
+async fn test_get_shared_files_list_unauthorized() {
+    let server = wiremock::MockServer::start().await;
+    let file_api = setup_file_api(&server).await;
+
+    let project_id = ProjectId::new(123);
+    let dir_path = "test-dir";
+
+    Mock::given(method("GET"))
+        .and(path(format!(
+            "/api/v2/projects/{}/files/metadata/{}",
+            project_id.value(),
+            dir_path
+        )))
+        .respond_with(ResponseTemplate::new(401).set_body_json(serde_json::json!({
+            "errors": [{"message": "Authentication required.", "code": 11, "moreInfo": ""}]
+        })))
+        .mount(&server)
+        .await;
+
+    let params = GetSharedFilesListParams {
+        project_id_or_key: project_id.into(),
+        path: dir_path.to_string(),
+        order: None,
+        offset: None,
+        count: None,
+    };
+
+    let result = file_api.get_shared_files_list(params).await;
+    assert!(result.is_err());
+    if let Err(ApiError::HttpStatus { status, .. }) = result {
+        assert_eq!(status, 401);
+    } else {
+        panic!("Expected ApiError::HttpStatus with 401");
+    }
+}
+
+#[tokio::test]
+async fn test_get_shared_files_list_forbidden() {
+    let server = wiremock::MockServer::start().await;
+    let file_api = setup_file_api(&server).await;
+
+    let project_id = ProjectId::new(123);
+    let dir_path = "test-dir";
+
+    Mock::given(method("GET"))
+        .and(path(format!(
+            "/api/v2/projects/{}/files/metadata/{}",
+            project_id.value(),
+            dir_path
+        )))
+        .respond_with(
+            ResponseTemplate::new(403).set_body_json(serde_json::json!({
+                "errors": [{"message": "No access permission for this resource.", "code": 11, "moreInfo": ""}]
+            })),
+        )
+        .mount(&server)
+        .await;
+
+    let params = GetSharedFilesListParams {
+        project_id_or_key: project_id.into(),
+        path: dir_path.to_string(),
+        order: None,
+        offset: None,
+        count: None,
+    };
+
+    let result = file_api.get_shared_files_list(params).await;
+    assert!(result.is_err());
+    if let Err(ApiError::HttpStatus { status, .. }) = result {
+        assert_eq!(status, 403);
+    } else {
+        panic!("Expected ApiError::HttpStatus with 403");
+    }
+}
+
+#[tokio::test]
+async fn test_get_file_server_error() {
+    let server = wiremock::MockServer::start().await;
+    let file_api = setup_file_api(&server).await;
+
+    let project_id = ProjectId::new(123);
+    let shared_file_id = SharedFileId::new(456);
+
+    Mock::given(method("GET"))
+        .and(path(format!(
+            "/api/v2/projects/{}/files/{}",
+            project_id.value(),
+            shared_file_id.value()
+        )))
+        .respond_with(ResponseTemplate::new(500))
+        .mount(&server)
+        .await;
+
+    let params = GetFileParams::new(project_id, shared_file_id);
+    let result = file_api.get_file(params).await;
+    assert!(result.is_err());
 }
