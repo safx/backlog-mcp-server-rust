@@ -74,9 +74,10 @@ impl IntoResponse for NoContentResponse {
                     .text()
                     .await
                     .unwrap_or_else(|e| format!("Failed to read error body: {e}"));
-                Err(ApiError::InvalidBuildParameter(format!(
-                    "Expected 204 No Content, got {status}: {error_body}"
-                )))
+                Err(ApiError::UnexpectedStatus {
+                    status: status.as_u16(),
+                    body: error_body,
+                })
             }
         }
     }
@@ -192,15 +193,16 @@ impl Client {
         let url = self
             .base_url
             .join(&path)
-            .map_err(|e| ApiError::InvalidBuildParameter(format!("Failed to build URL: {e}")))?;
+            .map_err(|e| ApiError::UrlConstruction(format!("Failed to build URL: {e}")))?;
         let file_path = params.file_path().clone();
         let field_name = params.file_field_name().to_string();
         let additional_fields = params.additional_fields();
 
         // ファイル読み込み
-        let file_content = fs::read(&file_path)
-            .await
-            .map_err(|e| ApiError::InvalidBuildParameter(format!("Failed to read file: {e}")))?;
+        let file_content = fs::read(&file_path).await.map_err(|e| ApiError::FileRead {
+            path: file_path.to_string_lossy().to_string(),
+            message: e.to_string(),
+        })?;
 
         let filename = file_path
             .file_name()
@@ -218,9 +220,12 @@ impl Client {
             form = form.text(key, value);
         }
 
-        let request = self.client.post(url).multipart(form).build().map_err(|e| {
-            ApiError::InvalidBuildParameter(format!("Failed to build request: {e}"))
-        })?;
+        let request = self
+            .client
+            .post(url)
+            .multipart(form)
+            .build()
+            .map_err(|e| ApiError::RequestBuild(format!("Failed to build request: {e}")))?;
 
         self.execute_unified(request, JsonResponse::<T>::new())
             .await
@@ -240,9 +245,9 @@ impl Client {
             let headers = request.headers_mut();
             headers.insert(
                 reqwest::header::AUTHORIZATION,
-                format!("Bearer {token}").parse().map_err(|e| {
-                    ApiError::InvalidBuildParameter(format!("Invalid auth token: {e}"))
-                })?,
+                format!("Bearer {token}")
+                    .parse()
+                    .map_err(|e| ApiError::InvalidAuthToken(format!("Invalid auth token: {e}")))?,
             );
         }
 
@@ -276,8 +281,10 @@ impl Client {
                     });
                 }
                 Err(_) => {
-                    let summary = format!("HTTP Error {status} with body: {error_body_text}");
-                    return Err(ApiError::InvalidBuildParameter(summary));
+                    return Err(ApiError::UnparseableErrorResponse {
+                        status,
+                        body: error_body_text,
+                    });
                 }
             }
         }

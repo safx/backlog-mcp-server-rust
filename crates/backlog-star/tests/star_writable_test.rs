@@ -177,6 +177,6 @@ mod tests {
 
         assert!(result.is_err());
         let error_message = result.unwrap_err().to_string();
-        assert!(error_message.contains("Expected 204 No Content"));
+        assert!(error_message.contains("Unexpected HTTP status 200"));
     }
 }
