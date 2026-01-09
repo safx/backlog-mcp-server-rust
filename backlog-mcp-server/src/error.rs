@@ -87,6 +87,33 @@ impl From<Error> for McpError {
                         );
                         McpError::internal_error(detailed_message, None) // Internal because the server got a 200 OK but couldn't parse it.
                     }
+                    ApiError::BuilderFieldMissing { field } => McpError::invalid_params(
+                        format!("Required parameter '{field}' is missing"),
+                        None,
+                    ),
+                    ApiError::UrlConstruction(msg) => {
+                        McpError::internal_error(format!("URL construction failed: {msg}"), None)
+                    }
+                    ApiError::FileRead { path, message } => McpError::internal_error(
+                        format!("Failed to read file '{path}': {message}"),
+                        None,
+                    ),
+                    ApiError::RequestBuild(msg) => {
+                        McpError::internal_error(format!("Failed to build request: {msg}"), None)
+                    }
+                    ApiError::InvalidAuthToken(msg) => {
+                        McpError::invalid_params(format!("Invalid auth token: {msg}"), None)
+                    }
+                    ApiError::UnexpectedStatus { status, body } => McpError::invalid_request(
+                        format!("Unexpected HTTP status {status}: {body}"),
+                        None,
+                    ),
+                    ApiError::UnparseableErrorResponse { status, body } => {
+                        McpError::invalid_request(
+                            format!("HTTP error {status} with unparseable response: {body}"),
+                            None,
+                        )
+                    }
                     _ => McpError::invalid_request(api_error.to_string(), None), // Fallback for other ApiError variants
                 }
             }

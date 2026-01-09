@@ -19,8 +19,33 @@ pub enum Error {
     #[error("Validation error: {0}")]
     Validation(#[from] backlog_core::Error),
 
-    #[error("Invalid build parameter error: {0}")]
-    InvalidBuildParameter(String),
+    /// Builder required field missing (from derive_builder)
+    #[error("Builder error: required field '{field}' not set")]
+    BuilderFieldMissing { field: String },
+
+    /// URL path construction failed
+    #[error("Failed to construct URL: {0}")]
+    UrlConstruction(String),
+
+    /// File read operation failed
+    #[error("Failed to read file '{path}': {message}")]
+    FileRead { path: String, message: String },
+
+    /// HTTP request building failed
+    #[error("Failed to build HTTP request: {0}")]
+    RequestBuild(String),
+
+    /// Authentication token contains invalid characters
+    #[error("Invalid authentication token: {0}")]
+    InvalidAuthToken(String),
+
+    /// Received unexpected HTTP status code
+    #[error("Unexpected HTTP status {status}: {body}")]
+    UnexpectedStatus { status: u16, body: String },
+
+    /// Error response body could not be parsed
+    #[error("HTTP error {status} with unparseable body: {body}")]
+    UnparseableErrorResponse { status: u16, body: String },
 
     #[error("Serialization error: {0}")]
     SerializationError(String),
@@ -38,7 +63,9 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 impl From<UninitializedFieldError> for Error {
     fn from(err: UninitializedFieldError) -> Self {
-        Self::InvalidBuildParameter(err.to_string())
+        Self::BuilderFieldMissing {
+            field: err.field_name().to_string(),
+        }
     }
 }
 
