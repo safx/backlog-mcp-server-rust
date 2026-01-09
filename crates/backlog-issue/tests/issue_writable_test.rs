@@ -1,7 +1,9 @@
 #[cfg(feature = "writable")]
 mod writable_tests {
     use backlog_api_core::bytes::Bytes;
-    use backlog_core::identifier::{AttachmentId, CommentId, SharedFileId, UserId};
+    use backlog_core::identifier::{
+        AttachmentId, CommentId, Identifier, IssueId, SharedFileId, UserId,
+    };
     use backlog_core::{IssueIdOrKey, IssueKey, Language, Role, User};
     use backlog_issue::api::IssueApi;
     use backlog_issue::models::{Attachment, Comment, FileContent, SharedFile};
@@ -957,5 +959,85 @@ mod writable_tests {
         let result = issue_api.delete_issue(params).await;
 
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_delete_issue_by_id_success() {
+        let mock_server = MockServer::start().await;
+        let client = setup_client(&mock_server).await;
+        let issue_api = IssueApi::new(client);
+
+        let issue_id = IssueId::new(456);
+
+        // 削除される Issue のモックレスポンス
+        let expected_issue = serde_json::json!({
+            "id": 456,
+            "projectId": 1,
+            "issueKey": "TEST-456",
+            "keyId": 456,
+            "summary": "Issue to be deleted by ID",
+            "description": "This issue will be deleted using its ID",
+            "issueType": {
+                "id": 1,
+                "projectId": 1,
+                "name": "Bug",
+                "color": "#ff0000",
+                "displayOrder": 0
+            },
+            "priority": {"id": 2, "name": "Normal"},
+            "status": {
+                "id": 1,
+                "projectId": 1,
+                "name": "Open",
+                "color": "#ff0000",
+                "displayOrder": 0
+            },
+            "assignee": null,
+            "category": [],
+            "versions": [],
+            "milestone": [],
+            "startDate": null,
+            "dueDate": null,
+            "estimatedHours": null,
+            "actualHours": null,
+            "parentIssueId": null,
+            "createdUser": {
+                "id": 1,
+                "userId": "admin",
+                "name": "Admin",
+                "roleType": 1,
+                "lang": null,
+                "mailAddress": "admin@example.com",
+                "lastLoginTime": null
+            },
+            "created": "2024-01-01T00:00:00Z",
+            "updatedUser": {
+                "id": 1,
+                "userId": "admin",
+                "name": "Admin",
+                "roleType": 1,
+                "lang": null,
+                "mailAddress": "admin@example.com",
+                "lastLoginTime": null
+            },
+            "updated": "2024-01-01T00:00:00Z",
+            "customFields": [],
+            "attachments": [],
+            "sharedFiles": [],
+            "stars": []
+        });
+
+        Mock::given(method("DELETE"))
+            .and(path(format!("/api/v2/issues/{}", issue_id.value())))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&expected_issue))
+            .mount(&mock_server)
+            .await;
+
+        let params = DeleteIssueParams::new(issue_id);
+        let result = issue_api.delete_issue(params).await;
+
+        assert!(result.is_ok());
+        let issue = result.expect("delete_issue by id should succeed");
+        assert_eq!(issue.id, issue_id);
     }
 }
