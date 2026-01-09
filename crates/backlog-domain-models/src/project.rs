@@ -19,3 +19,18 @@ pub struct Project {
     pub display_order: i32,
     pub use_dev_attributes: bool,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_project_deserialize() {
+        let json = r##"{"id":1,"projectKey":"TEST","name":"Test Project","chartEnabled":true,"subtaskingEnabled":true,"projectLeaderCanEditProjectLeader":false,"useWiki":true,"useFileSharing":true,"useWikiTreeView":false,"useOriginalImageSizeAtWiki":false,"textFormattingRule":"markdown","archived":false,"displayOrder":0,"useDevAttributes":false}"##;
+        let project: Project =
+            serde_json::from_str(json).expect("should deserialize Project from JSON");
+        assert_eq!(project.name, "Test Project");
+        assert!(project.chart_enabled);
+        assert!(project.use_wiki);
+    }
+}

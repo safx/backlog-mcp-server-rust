@@ -139,3 +139,107 @@ impl FromStr for IssueTypeColor {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json;
+
+    #[test]
+    fn test_issue_type_color_as_hex() {
+        assert_eq!(IssueTypeColor::Red.as_hex(), "#e30000");
+        assert_eq!(IssueTypeColor::Blue.as_hex(), "#2779ca");
+        assert_eq!(IssueTypeColor::Gray.as_hex(), "#666665");
+    }
+
+    #[test]
+    fn test_issue_type_color_name() {
+        assert_eq!(IssueTypeColor::Red.name(), "red");
+        assert_eq!(IssueTypeColor::DarkRed.name(), "dark-red");
+        assert_eq!(IssueTypeColor::Gray.name(), "gray");
+    }
+
+    #[test]
+    fn test_issue_type_color_from_str_hex() {
+        assert_eq!(
+            IssueTypeColor::from_str("#e30000").expect("should parse hex color"),
+            IssueTypeColor::Red
+        );
+        assert_eq!(
+            IssueTypeColor::from_str("#2779ca").expect("should parse hex color"),
+            IssueTypeColor::Blue
+        );
+        assert_eq!(
+            IssueTypeColor::from_str("#666665").expect("should parse hex color"),
+            IssueTypeColor::Gray
+        );
+    }
+
+    #[test]
+    fn test_issue_type_color_from_str_name() {
+        assert_eq!(
+            IssueTypeColor::from_str("red").expect("should parse color name"),
+            IssueTypeColor::Red
+        );
+        assert_eq!(
+            IssueTypeColor::from_str("dark-red").expect("should parse color name"),
+            IssueTypeColor::DarkRed
+        );
+        assert_eq!(
+            IssueTypeColor::from_str("gray").expect("should parse color name"),
+            IssueTypeColor::Gray
+        );
+    }
+
+    #[test]
+    fn test_issue_type_color_from_str_invalid() {
+        assert!(IssueTypeColor::from_str("invalid").is_err());
+        assert!(IssueTypeColor::from_str("#000000").is_err());
+    }
+
+    #[test]
+    fn test_issue_type_color_all_colors() {
+        let colors = IssueTypeColor::all_colors();
+        assert_eq!(colors.len(), 10);
+        assert!(colors.contains(&IssueTypeColor::Red));
+        assert!(colors.contains(&IssueTypeColor::Gray));
+    }
+
+    #[test]
+    fn test_issue_type_color_display() {
+        assert_eq!(IssueTypeColor::Red.to_string(), "#e30000");
+        assert_eq!(IssueTypeColor::Blue.to_string(), "#2779ca");
+    }
+
+    #[test]
+    fn test_issue_type_color_serialize() {
+        let color = IssueTypeColor::Red;
+        let json = serde_json::to_string(&color).expect("should serialize color");
+        assert_eq!(json, r##""#e30000""##);
+    }
+
+    #[test]
+    fn test_issue_type_color_deserialize() {
+        let json = r##""#2779ca""##;
+        let color: IssueTypeColor =
+            serde_json::from_str(json).expect("should deserialize color from JSON");
+        assert_eq!(color, IssueTypeColor::Blue);
+    }
+
+    #[test]
+    fn test_issue_type_deserialize() {
+        let json = r##"{"id":1,"projectId":100,"name":"Bug","color":"#e30000","displayOrder":0}"##;
+        let issue_type: IssueType =
+            serde_json::from_str(json).expect("should deserialize IssueType from JSON");
+        assert_eq!(issue_type.name, "Bug");
+        assert_eq!(issue_type.color, "#e30000");
+    }
+
+    #[test]
+    fn test_issue_type_deserialize_with_templates() {
+        let json = r##"{"id":2,"projectId":100,"name":"Task","color":"#2779ca","displayOrder":1,"templateSummary":"Summary","templateDescription":"Description"}"##;
+        let issue_type: IssueType =
+            serde_json::from_str(json).expect("should deserialize IssueType with templates");
+        assert_eq!(issue_type.template_summary, Some("Summary".to_string()));
+    }
+}

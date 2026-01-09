@@ -12,3 +12,16 @@ pub struct Resolution {
     pub id: ResolutionId,
     pub name: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_resolution_deserialize() {
+        let json = r##"{"id":1,"name":"Fixed"}"##;
+        let resolution: Resolution =
+            serde_json::from_str(json).expect("should deserialize Resolution from JSON");
+        assert_eq!(resolution.name, "Fixed");
+    }
+}
