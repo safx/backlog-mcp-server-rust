@@ -12,3 +12,16 @@ pub struct Priority {
     pub id: PriorityId,
     pub name: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_priority_deserialize() {
+        let json = r##"{"id":2,"name":"Normal"}"##;
+        let priority: Priority =
+            serde_json::from_str(json).expect("should deserialize Priority from JSON");
+        assert_eq!(priority.name, "Normal");
+    }
+}

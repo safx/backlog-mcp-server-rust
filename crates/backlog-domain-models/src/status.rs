@@ -20,3 +20,18 @@ pub struct Status {
     /// Order in which the status is displayed.
     pub display_order: i64,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_status_deserialize() {
+        let json =
+            r##"{"id":1,"projectId":100,"name":"Open","color":"#ea2c00","displayOrder":1000}"##;
+        let status: Status =
+            serde_json::from_str(json).expect("should deserialize Status from JSON");
+        assert_eq!(status.name, "Open");
+        assert_eq!(status.color, "#ea2c00");
+    }
+}

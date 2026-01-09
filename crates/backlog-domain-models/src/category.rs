@@ -14,3 +14,17 @@ pub struct Category {
     pub name: String,
     pub display_order: i32,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_category_deserialize() {
+        let json = r##"{"id":1,"projectId":100,"name":"Backend","displayOrder":0}"##;
+        let category: Category =
+            serde_json::from_str(json).expect("should deserialize Category from JSON");
+        assert_eq!(category.name, "Backend");
+        assert_eq!(category.display_order, 0);
+    }
+}
