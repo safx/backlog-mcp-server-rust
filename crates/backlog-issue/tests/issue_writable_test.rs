@@ -6,7 +6,7 @@ mod writable_tests {
     use backlog_issue::api::IssueApi;
     use backlog_issue::models::{Attachment, Comment, FileContent, SharedFile};
     use backlog_issue::{
-        AddCommentParamsBuilder, DeleteAttachmentParams, DeleteCommentParams,
+        AddCommentParamsBuilder, DeleteAttachmentParams, DeleteCommentParams, DeleteIssueParams,
         GetAttachmentFileParams, LinkSharedFilesToIssueParamsBuilder, UnlinkSharedFileParams,
         UpdateCommentParams,
     };
@@ -795,5 +795,167 @@ mod writable_tests {
         assert_eq!(attachment.id, AttachmentId::new(12345));
         assert_eq!(attachment.name, "deleted_file.pdf");
         assert_eq!(attachment.size, 1024);
+    }
+
+    #[tokio::test]
+    async fn test_delete_issue_success() {
+        let mock_server = MockServer::start().await;
+        let client = setup_client(&mock_server).await;
+        let issue_api = IssueApi::new(client);
+
+        let issue_key = "TEST-123";
+
+        // 削除される Issue のモックレスポンス
+        let expected_issue = serde_json::json!({
+            "id": 123,
+            "projectId": 1,
+            "issueKey": issue_key,
+            "keyId": 123,
+            "summary": "Deleted Issue",
+            "description": "This issue will be deleted",
+            "issueType": {
+                "id": 1,
+                "projectId": 1,
+                "name": "Bug",
+                "color": "#ff0000",
+                "displayOrder": 0
+            },
+            "priority": {"id": 2, "name": "Normal"},
+            "status": {
+                "id": 1,
+                "projectId": 1,
+                "name": "Open",
+                "color": "#ff0000",
+                "displayOrder": 0
+            },
+            "assignee": null,
+            "category": [],
+            "versions": [],
+            "milestone": [],
+            "startDate": null,
+            "dueDate": null,
+            "estimatedHours": null,
+            "actualHours": null,
+            "parentIssueId": null,
+            "createdUser": {
+                "id": 1,
+                "userId": "admin",
+                "name": "Admin",
+                "roleType": 1,
+                "lang": null,
+                "mailAddress": "admin@example.com",
+                "lastLoginTime": null
+            },
+            "created": "2024-01-01T00:00:00Z",
+            "updatedUser": {
+                "id": 1,
+                "userId": "admin",
+                "name": "Admin",
+                "roleType": 1,
+                "lang": null,
+                "mailAddress": "admin@example.com",
+                "lastLoginTime": null
+            },
+            "updated": "2024-01-01T00:00:00Z",
+            "customFields": [],
+            "attachments": [],
+            "sharedFiles": [],
+            "stars": []
+        });
+
+        Mock::given(method("DELETE"))
+            .and(path(format!("/api/v2/issues/{issue_key}")))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&expected_issue))
+            .mount(&mock_server)
+            .await;
+
+        let issue_key_parsed = issue_key
+            .parse::<IssueKey>()
+            .expect("issue_key should parse successfully");
+        let params = DeleteIssueParams::new(issue_key_parsed.clone());
+        let result = issue_api.delete_issue(params).await;
+
+        assert!(result.is_ok());
+        let issue = result.expect("delete_issue should succeed");
+        assert_eq!(issue.issue_key, issue_key_parsed);
+        assert_eq!(issue.summary, "Deleted Issue");
+    }
+
+    #[tokio::test]
+    async fn test_delete_issue_not_found() {
+        let mock_server = MockServer::start().await;
+        let client = setup_client(&mock_server).await;
+        let issue_api = IssueApi::new(client);
+
+        let issue_key = "INVALID-999";
+
+        Mock::given(method("DELETE"))
+            .and(path(format!("/api/v2/issues/{issue_key}")))
+            .respond_with(ResponseTemplate::new(404).set_body_json(serde_json::json!({
+                "errors": [{"message": "No issue for the issueKey."}]
+            })))
+            .mount(&mock_server)
+            .await;
+
+        let params = DeleteIssueParams::new(
+            issue_key
+                .parse::<IssueKey>()
+                .expect("issue_key should parse successfully"),
+        );
+        let result = issue_api.delete_issue(params).await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_delete_issue_forbidden() {
+        let mock_server = MockServer::start().await;
+        let client = setup_client(&mock_server).await;
+        let issue_api = IssueApi::new(client);
+
+        let issue_key = "TEST-456";
+
+        Mock::given(method("DELETE"))
+            .and(path(format!("/api/v2/issues/{issue_key}")))
+            .respond_with(ResponseTemplate::new(403).set_body_json(serde_json::json!({
+                "errors": [{"message": "No delete permission for the issue."}]
+            })))
+            .mount(&mock_server)
+            .await;
+
+        let params = DeleteIssueParams::new(
+            issue_key
+                .parse::<IssueKey>()
+                .expect("issue_key should parse successfully"),
+        );
+        let result = issue_api.delete_issue(params).await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_delete_issue_server_error() {
+        let mock_server = MockServer::start().await;
+        let client = setup_client(&mock_server).await;
+        let issue_api = IssueApi::new(client);
+
+        let issue_key = "TEST-789";
+
+        Mock::given(method("DELETE"))
+            .and(path(format!("/api/v2/issues/{issue_key}")))
+            .respond_with(ResponseTemplate::new(500).set_body_json(serde_json::json!({
+                "errors": [{"message": "Internal server error"}]
+            })))
+            .mount(&mock_server)
+            .await;
+
+        let params = DeleteIssueParams::new(
+            issue_key
+                .parse::<IssueKey>()
+                .expect("issue_key should parse successfully"),
+        );
+        let result = issue_api.delete_issue(params).await;
+
+        assert!(result.is_err());
     }
 }
