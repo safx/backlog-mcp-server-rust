@@ -1,1 +1,0 @@
-Implement according to your plan with **t-wada's** TDD process.
