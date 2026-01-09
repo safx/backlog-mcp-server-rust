@@ -3,8 +3,9 @@ use backlog_core::{IssueKey, identifier::Identifier};
 use common::*;
 
 use backlog_issue::{
-    CommentOrder, CountCommentParams, GetAttachmentListParams, GetCommentListParamsBuilder,
-    GetCommentParams, GetIssueListParamsBuilder, GetParticipantListParams, GetSharedFileListParams,
+    CommentOrder, CountCommentParams, CountIssueParamsBuilder, GetAttachmentListParams,
+    GetCommentListParamsBuilder, GetCommentParams, GetIssueListParamsBuilder,
+    GetParticipantListParams, GetSharedFileListParams,
 };
 
 fn create_mock_user(id: u32, name: &str) -> User {
@@ -445,4 +446,72 @@ async fn test_get_comment_success() {
     let comment = result.unwrap();
     assert_eq!(comment.id, CommentId::new(123));
     assert_eq!(comment.content, Some("This is a test comment".to_string()));
+}
+
+#[tokio::test]
+async fn test_count_issue_success() {
+    let mock_server = wiremock::MockServer::start().await;
+    let issue_api = setup_issue_api(&mock_server).await;
+
+    Mock::given(method("GET"))
+        .and(path("/api/v2/issues/count"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "count": 42
+        })))
+        .mount(&mock_server)
+        .await;
+
+    let params = CountIssueParamsBuilder::default()
+        .build()
+        .expect("CountIssueParams build should succeed");
+    let result = issue_api.count_issue(params).await;
+
+    assert!(result.is_ok());
+    let response = result.expect("count_issue should succeed");
+    assert_eq!(response.count, 42);
+}
+
+#[tokio::test]
+async fn test_count_issue_with_project_id() {
+    let mock_server = wiremock::MockServer::start().await;
+    let issue_api = setup_issue_api(&mock_server).await;
+    let project_id = ProjectId::new(123);
+
+    Mock::given(method("GET"))
+        .and(path("/api/v2/issues/count"))
+        .and(query_param("projectId[]", project_id.to_string()))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "count": 10
+        })))
+        .mount(&mock_server)
+        .await;
+
+    let params = CountIssueParamsBuilder::default()
+        .project_id(vec![project_id])
+        .build()
+        .expect("CountIssueParams with project_id should build");
+    let result = issue_api.count_issue(params).await;
+
+    assert!(result.is_ok());
+    let response = result.expect("count_issue with project_id should succeed");
+    assert_eq!(response.count, 10);
+}
+
+#[tokio::test]
+async fn test_count_issue_server_error() {
+    let mock_server = wiremock::MockServer::start().await;
+    let issue_api = setup_issue_api(&mock_server).await;
+
+    Mock::given(method("GET"))
+        .and(path("/api/v2/issues/count"))
+        .respond_with(ResponseTemplate::new(500))
+        .mount(&mock_server)
+        .await;
+
+    let params = CountIssueParamsBuilder::default()
+        .build()
+        .expect("CountIssueParams build should succeed");
+    let result = issue_api.count_issue(params).await;
+
+    assert!(result.is_err());
 }
