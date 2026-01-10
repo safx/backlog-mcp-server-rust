@@ -1736,6 +1736,18 @@ fn truncate_text(text: &str, max_length: usize) -> String {
     }
 }
 
+fn date_to_start_of_day(date: NaiveDate) -> DateTime<Utc> {
+    date.and_hms_opt(0, 0, 0)
+        .expect("00:00:00 is always valid")
+        .and_utc()
+}
+
+fn date_to_end_of_day(date: NaiveDate) -> DateTime<Utc> {
+    date.and_hms_opt(23, 59, 59)
+        .expect("23:59:59 is always valid")
+        .and_utc()
+}
+
 fn format_bytes(bytes: u64) -> String {
     const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
     let mut size = bytes as f64;
@@ -2294,7 +2306,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         NaiveDate::parse_from_str(&start_date_since, "%Y-%m-%d").map_err(|_| {
                             format!("Invalid start-date-since format: {start_date_since}")
                         })?;
-                    let datetime = date.and_hms_opt(0, 0, 0).unwrap().and_utc();
+                    let datetime = date_to_start_of_day(date);
                     builder.start_date_since(ApiDate::from(datetime));
                 }
                 if let Some(start_date_until) = params.start_date_until {
@@ -2302,19 +2314,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         NaiveDate::parse_from_str(&start_date_until, "%Y-%m-%d").map_err(|_| {
                             format!("Invalid start-date-until format: {start_date_until}")
                         })?;
-                    let datetime = date.and_hms_opt(23, 59, 59).unwrap().and_utc();
+                    let datetime = date_to_end_of_day(date);
                     builder.start_date_until(ApiDate::from(datetime));
                 }
                 if let Some(due_date_since) = params.due_date_since {
                     let date = NaiveDate::parse_from_str(&due_date_since, "%Y-%m-%d")
                         .map_err(|_| format!("Invalid due-date-since format: {due_date_since}"))?;
-                    let datetime = date.and_hms_opt(0, 0, 0).unwrap().and_utc();
+                    let datetime = date_to_start_of_day(date);
                     builder.due_date_since(ApiDate::from(datetime));
                 }
                 if let Some(due_date_until) = params.due_date_until {
                     let date = NaiveDate::parse_from_str(&due_date_until, "%Y-%m-%d")
                         .map_err(|_| format!("Invalid due-date-until format: {due_date_until}"))?;
-                    let datetime = date.and_hms_opt(23, 59, 59).unwrap().and_utc();
+                    let datetime = date_to_end_of_day(date);
                     builder.due_date_until(ApiDate::from(datetime));
                 }
 
@@ -2557,7 +2569,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 // Handle custom fields
                 let custom_fields_map = if let Some(json_path) = &create_args.custom_fields_json {
-                    match custom_fields::parse_custom_fields_json(json_path.to_str().unwrap()) {
+                    let path_str = json_path
+                        .to_str()
+                        .ok_or_else(|| format!("Invalid UTF-8 in file path: {:?}", json_path))?;
+                    match custom_fields::parse_custom_fields_json(path_str) {
                         Ok(fields) => Some(fields),
                         Err(e) => {
                             eprintln!("Error parsing custom fields JSON: {e}");
@@ -2639,7 +2654,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 // Handle custom fields
                 let custom_fields_map = if let Some(json_path) = &update_args.custom_fields_json {
-                    match custom_fields::parse_custom_fields_json(json_path.to_str().unwrap()) {
+                    let path_str = json_path
+                        .to_str()
+                        .ok_or_else(|| format!("Invalid UTF-8 in file path: {:?}", json_path))?;
+                    match custom_fields::parse_custom_fields_json(path_str) {
                         Ok(fields) => Some(fields),
                         Err(e) => {
                             eprintln!("Error parsing custom fields JSON: {e}");
@@ -3203,7 +3221,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 {
                     Ok(disk_usage) => {
                         if format == "json" {
-                            println!("{}", serde_json::to_string_pretty(&disk_usage).unwrap());
+                            match serde_json::to_string_pretty(&disk_usage) {
+                                Ok(json) => println!("{}", json),
+                                Err(e) => eprintln!("Failed to serialize to JSON: {}", e),
+                            }
                         } else {
                             // Table format
                             fn format_bytes(bytes: i64) -> String {
@@ -3310,7 +3331,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 match client.space().get_licence(GetLicenceParams::new()).await {
                     Ok(licence) => {
                         if format == "json" {
-                            println!("{}", serde_json::to_string_pretty(&licence).unwrap());
+                            match serde_json::to_string_pretty(&licence) {
+                                Ok(json) => println!("{}", json),
+                                Err(e) => eprintln!("Failed to serialize to JSON: {}", e),
+                            }
                         } else {
                             // Table format
                             println!("Space Licence Information");
@@ -3702,7 +3726,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let mut confirmation = String::new();
                 std::io::stdin()
                     .read_line(&mut confirmation)
-                    .expect("Failed to read confirmation");
+                    .map_err(|e| format!("Failed to read confirmation: {}", e))?;
 
                 if confirmation.trim() != "yes" {
                     println!("Project deletion cancelled.");
@@ -5443,7 +5467,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(since_str) = since {
                     match NaiveDate::parse_from_str(&since_str, "%Y-%m-%d") {
                         Ok(date) => {
-                            let datetime = date.and_hms_opt(0, 0, 0).unwrap().and_utc();
+                            let datetime = date_to_start_of_day(date);
                             params = params.with_since(ApiDate::from(datetime));
                             println!("Counting stars from: {since_str}");
                         }
@@ -5459,7 +5483,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(until_str) = until {
                     match NaiveDate::parse_from_str(&until_str, "%Y-%m-%d") {
                         Ok(date) => {
-                            let datetime = date.and_hms_opt(23, 59, 59).unwrap().and_utc();
+                            let datetime = date_to_end_of_day(date);
                             params = params.with_until(ApiDate::from(datetime));
                             println!("Counting stars until: {until_str}");
                         }
@@ -5765,7 +5789,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
 
-                let params = params.build().unwrap();
+                let params = params.build()?;
 
                 match client.user().get_watching_list(user_id, params).await {
                     Ok(watchings) => {
@@ -6348,10 +6372,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         "Are you sure you want to delete attachment {attachment_id} from wiki {wiki_id}? [y/N]: "
                     );
                     use std::io::{self, Write};
-                    io::stdout().flush().unwrap();
+                    io::stdout()
+                        .flush()
+                        .map_err(|e| format!("Failed to flush stdout: {}", e))?;
 
                     let mut input = String::new();
-                    io::stdin().read_line(&mut input).unwrap();
+                    io::stdin()
+                        .read_line(&mut input)
+                        .map_err(|e| format!("Failed to read input: {}", e))?;
                     let input = input.trim().to_lowercase();
 
                     if input != "y" && input != "yes" {
