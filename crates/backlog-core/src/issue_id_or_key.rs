@@ -3,6 +3,7 @@ use crate::identifier::{Identifier, IssueId};
 use crate::issue_key::IssueKey;
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::num::NonZeroU32;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -16,13 +17,9 @@ impl FromStr for IssueIdOrKey {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // Try to parse as IssueId (u32) first
-        if let Ok(id_val) = u32::from_str(s)
-            && id_val > 0
-        {
-            return Ok(IssueIdOrKey::Id(IssueId::new(id_val)));
+        if let Ok(id_val) = NonZeroU32::from_str(s) {
+            return Ok(IssueIdOrKey::Id(IssueId::new(id_val.into())));
         }
-        // If not a u32 or not > 0, try to parse as IssueKey
         match IssueKey::from_str(s) {
             Ok(key) => Ok(IssueIdOrKey::Key(key)),
             Err(_) => Err(Error::InvalidIssueIdOrKey(s.to_string())),

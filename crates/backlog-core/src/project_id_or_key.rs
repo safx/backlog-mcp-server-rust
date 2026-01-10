@@ -3,7 +3,7 @@ use crate::{
     identifier::{Identifier, ProjectId},
 };
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
+use std::{num::NonZeroU32, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -16,9 +16,9 @@ pub enum ProjectIdOrKey {
 impl FromStr for ProjectIdOrKey {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match (u32::from_str(s), ProjectKey::from_str(s)) {
-            (Ok(id), Ok(key)) if id > 0 => Ok(Self::EitherIdOrKey(ProjectId::new(id), key)),
-            (Ok(id), Err(_)) if id > 0 => Ok(Self::Id(ProjectId::new(id))),
+        match (NonZeroU32::from_str(s), ProjectKey::from_str(s)) {
+            (Ok(id), Ok(key)) => Ok(Self::EitherIdOrKey(ProjectId::new(id.into()), key)),
+            (Ok(id), Err(_)) => Ok(Self::Id(ProjectId::new(id.into()))),
             (Err(_), Ok(key)) => Ok(Self::Key(key)),
             _ => Err(Error::InvalidProjectIdOrKey(s.to_string())),
         }
@@ -67,12 +67,18 @@ mod tests {
     }
 
     #[test]
+    fn test_project_id_or_key_from_str_key_zero() {
+        // Zero is not a valid ProjectId, so it should parse as Key
+        let id_or_key = ProjectIdOrKey::from_str("0").unwrap();
+        assert!(matches!(id_or_key, ProjectIdOrKey::Key(_)));
+    }
+
+    #[test]
     fn test_project_id_or_key_from_str_invalid() {
         // Invalid formats
         assert!(ProjectIdOrKey::from_str("").is_err());
         assert!(ProjectIdOrKey::from_str("invalid-key").is_err()); // Hyphen not allowed
         assert!(ProjectIdOrKey::from_str("lowercase").is_err()); // Lowercase not allowed
-        assert!(ProjectIdOrKey::from_str("0").is_err()); // Zero not allowed
     }
 
     #[test]
