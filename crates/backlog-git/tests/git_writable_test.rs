@@ -59,8 +59,9 @@ mod writable_tests {
             .await;
 
         let params = AddPullRequestParams::new(
-            ProjectIdOrKey::from_str("TEST").unwrap(),
-            RepositoryIdOrName::from_str("test-repo").unwrap(),
+            ProjectIdOrKey::from_str("TEST").expect("TEST is a valid project key"),
+            RepositoryIdOrName::from_str("test-repo")
+                .expect("test-repo is a valid repository name"),
             "Test PR".to_string(),
             "Test description".to_string(),
             "main".to_string(),
@@ -68,8 +69,7 @@ mod writable_tests {
         );
 
         let result = api.add_pull_request(params).await;
-        assert!(result.is_ok());
-        let pull_request = result.unwrap();
+        let pull_request = result.expect("add_pull_request should succeed");
         assert_eq!(pull_request.summary, "Test PR");
         assert_eq!(pull_request.number.value(), 1);
     }
@@ -111,8 +111,9 @@ mod writable_tests {
             .await;
 
         let params = AddPullRequestParams::new(
-            ProjectIdOrKey::from_str("TEST").unwrap(),
-            RepositoryIdOrName::from_str("test-repo").unwrap(),
+            ProjectIdOrKey::from_str("TEST").expect("TEST is a valid project key"),
+            RepositoryIdOrName::from_str("test-repo")
+                .expect("test-repo is a valid repository name"),
             "Feature PR".to_string(),
             "New feature".to_string(),
             "main".to_string(),
@@ -123,8 +124,7 @@ mod writable_tests {
         .notified_user_ids(vec![UserId::new(789)]);
 
         let result = api.add_pull_request(params).await;
-        assert!(result.is_ok());
-        let pull_request = result.unwrap();
+        let pull_request = result.expect("add_pull_request with optional params should succeed");
         assert_eq!(pull_request.summary, "Feature PR");
     }
 
@@ -162,15 +162,15 @@ mod writable_tests {
             .await;
 
         let params = AddPullRequestCommentParams::new(
-            ProjectIdOrKey::from_str("TEST").unwrap(),
-            RepositoryIdOrName::from_str("test-repo").unwrap(),
+            ProjectIdOrKey::from_str("TEST").expect("TEST is a valid project key"),
+            RepositoryIdOrName::from_str("test-repo")
+                .expect("test-repo is a valid repository name"),
             PullRequestNumber::new(1),
             "Test comment".to_string(),
         );
 
         let result = api.add_pull_request_comment(params).await;
-        assert!(result.is_ok());
-        let comment = result.unwrap();
+        let comment = result.expect("add_pull_request_comment should succeed");
         assert_eq!(comment.content, "Test comment");
     }
 
@@ -211,16 +211,16 @@ mod writable_tests {
             .await;
 
         let params = UpdatePullRequestParams::new(
-            ProjectIdOrKey::from_str("TEST").unwrap(),
-            RepositoryIdOrName::from_str("test-repo").unwrap(),
+            ProjectIdOrKey::from_str("TEST").expect("TEST is a valid project key"),
+            RepositoryIdOrName::from_str("test-repo")
+                .expect("test-repo is a valid repository name"),
             PullRequestNumber::new(1),
         )
         .summary("Updated PR".to_string())
         .description("Updated description".to_string());
 
         let result = api.update_pull_request(params).await;
-        assert!(result.is_ok());
-        let pull_request = result.unwrap();
+        let pull_request = result.expect("update_pull_request should succeed");
         assert_eq!(pull_request.summary, "Updated PR");
     }
 
@@ -258,16 +258,16 @@ mod writable_tests {
             .await;
 
         let params = UpdatePullRequestCommentParams::new(
-            ProjectIdOrKey::from_str("TEST").unwrap(),
-            RepositoryIdOrName::from_str("test-repo").unwrap(),
+            ProjectIdOrKey::from_str("TEST").expect("TEST is a valid project key"),
+            RepositoryIdOrName::from_str("test-repo")
+                .expect("test-repo is a valid repository name"),
             PullRequestNumber::new(1),
             PullRequestCommentId::new(1),
             "Updated comment".to_string(),
         );
 
         let result = api.update_pull_request_comment(params).await;
-        assert!(result.is_ok());
-        let comment = result.unwrap();
+        let comment = result.expect("update_pull_request_comment should succeed");
         assert_eq!(comment.content, "Updated comment");
     }
 
@@ -291,15 +291,15 @@ mod writable_tests {
             .await;
 
         let params = DeletePullRequestAttachmentParams::new(
-            ProjectIdOrKey::from_str("TEST").unwrap(),
-            RepositoryIdOrName::from_str("test-repo").unwrap(),
+            ProjectIdOrKey::from_str("TEST").expect("TEST is a valid project key"),
+            RepositoryIdOrName::from_str("test-repo")
+                .expect("test-repo is a valid repository name"),
             PullRequestNumber::new(1),
             PullRequestAttachmentId::new(1),
         );
 
         let result = api.delete_pull_request_attachment(params).await;
-        assert!(result.is_ok());
-        let attachment = result.unwrap();
+        let attachment = result.expect("delete_pull_request_attachment should succeed");
         assert_eq!(attachment.name, "test.txt");
     }
 
@@ -320,8 +320,9 @@ mod writable_tests {
             .await;
 
         let params = AddPullRequestParams::new(
-            ProjectIdOrKey::from_str("TEST").unwrap(),
-            RepositoryIdOrName::from_str("test-repo").unwrap(),
+            ProjectIdOrKey::from_str("TEST").expect("TEST is a valid project key"),
+            RepositoryIdOrName::from_str("test-repo")
+                .expect("test-repo is a valid repository name"),
             "Test PR".to_string(),
             "Test description".to_string(),
             "main".to_string(),
