@@ -1,6 +1,6 @@
 //! Project user and administrator management commands
 
-use crate::commands::common::{parse_project_id_or_key, CliResult};
+use crate::commands::common::{CliResult, parse_project_id_or_key};
 use backlog_api_client::client::BacklogApiClient;
 use backlog_project::{GetProjectUserListParams, api::GetProjectAdministratorListParams};
 

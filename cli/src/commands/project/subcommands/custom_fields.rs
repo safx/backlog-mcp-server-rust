@@ -1,6 +1,6 @@
 //! Project custom field management commands
 
-use crate::commands::common::{parse_project_id_or_key, CliResult};
+use crate::commands::common::{CliResult, parse_project_id_or_key};
 use backlog_api_client::client::BacklogApiClient;
 use backlog_core::identifier::{CustomFieldId, CustomFieldItemId, IssueTypeId};
 use backlog_project::GetCustomFieldListParams;
@@ -149,13 +149,13 @@ pub async fn add(
         "date" => {
             let min_date_parsed = min_date
                 .as_ref()
-                .and_then(|d| str::parse::< backlog_core::Date>(d).ok());
+                .and_then(|d| str::parse::<backlog_core::Date>(d).ok());
             let max_date_parsed = max_date
                 .as_ref()
-                .and_then(|d| str::parse::< backlog_core::Date>(d).ok());
+                .and_then(|d| str::parse::<backlog_core::Date>(d).ok());
             let initial_date_parsed = initial_date
                 .as_ref()
-                .and_then(|d| str::parse::< backlog_core::Date>(d).ok());
+                .and_then(|d| str::parse::<backlog_core::Date>(d).ok());
 
             params = params.with_date_settings(
                 min_date_parsed,
@@ -263,13 +263,13 @@ pub async fn update(
     {
         let min_date_parsed = min_date
             .as_ref()
-            .and_then(|d| str::parse::< backlog_core::Date>(d).ok());
+            .and_then(|d| str::parse::<backlog_core::Date>(d).ok());
         let max_date_parsed = max_date
             .as_ref()
-            .and_then(|d| str::parse::< backlog_core::Date>(d).ok());
+            .and_then(|d| str::parse::<backlog_core::Date>(d).ok());
         let initial_date_parsed = initial_date
             .as_ref()
-            .and_then(|d| str::parse::< backlog_core::Date>(d).ok());
+            .and_then(|d| str::parse::<backlog_core::Date>(d).ok());
 
         params = params.with_date_settings(
             min_date_parsed,
@@ -422,12 +422,8 @@ pub async fn update_item(
 
     let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
     let field_id = CustomFieldId::new(custom_field_id);
-    let params = UpdateListItemToCustomFieldParams::new(
-        proj_id_or_key,
-        field_id,
-        item_id,
-        name.to_string(),
-    );
+    let params =
+        UpdateListItemToCustomFieldParams::new(proj_id_or_key, field_id, item_id, name.to_string());
 
     match client
         .project()

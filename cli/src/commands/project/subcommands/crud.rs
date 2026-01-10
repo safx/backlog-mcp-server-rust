@@ -1,6 +1,6 @@
 //! Project CRUD (Create, Update, Delete) operations
 
-use crate::commands::common::{parse_project_id_or_key, CliResult};
+use crate::commands::common::{CliResult, parse_project_id_or_key};
 use backlog_api_client::client::BacklogApiClient;
 
 #[cfg(feature = "project_writable")]
@@ -138,7 +138,8 @@ pub async fn update(
         params.subtasking_enabled = Some(subtasking_enabled);
     }
     if let Some(project_leader_can_edit_project_leader) = project_leader_can_edit_project_leader {
-        params.project_leader_can_edit_project_leader = Some(project_leader_can_edit_project_leader);
+        params.project_leader_can_edit_project_leader =
+            Some(project_leader_can_edit_project_leader);
     }
     if let Some(use_wiki) = use_wiki {
         params.use_wiki = Some(use_wiki);

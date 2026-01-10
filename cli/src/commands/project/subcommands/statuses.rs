@@ -1,6 +1,6 @@
 //! Project status management commands
 
-use crate::commands::common::{parse_project_id_or_key, CliResult};
+use crate::commands::common::{CliResult, parse_project_id_or_key};
 use backlog_api_client::client::BacklogApiClient;
 use backlog_core::identifier::StatusId;
 use backlog_project::GetStatusListParams;
@@ -8,7 +8,9 @@ use backlog_project::GetStatusListParams;
 #[cfg(feature = "project_writable")]
 use backlog_domain_models::StatusColor;
 #[cfg(feature = "project_writable")]
-use backlog_project::api::{AddStatusParams, DeleteStatusParams, UpdateStatusParams, UpdateStatusOrderParams};
+use backlog_project::api::{
+    AddStatusParams, DeleteStatusParams, UpdateStatusOrderParams, UpdateStatusParams,
+};
 #[cfg(feature = "project_writable")]
 use std::str::FromStr;
 

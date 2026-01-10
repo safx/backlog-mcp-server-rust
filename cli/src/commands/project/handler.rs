@@ -399,7 +399,9 @@ pub async fn execute(client: &BacklogApiClient, args: ProjectArgs) -> CliResult<
             status_id,
             name,
             color,
-        } => subcommands::statuses::update(client, &project_id_or_key, status_id, name, color).await,
+        } => {
+            subcommands::statuses::update(client, &project_id_or_key, status_id, name, color).await
+        }
         #[cfg(feature = "project_writable")]
         ProjectCommands::StatusDelete {
             project_id_or_key,

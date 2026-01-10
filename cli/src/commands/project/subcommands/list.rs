@@ -1,8 +1,10 @@
 //! Project list and detail viewing commands
 
-use crate::commands::common::{parse_project_id_or_key, CliResult};
+use crate::commands::common::{CliResult, parse_project_id_or_key};
 use backlog_api_client::client::BacklogApiClient;
-use backlog_project::{GetProjectDetailParams, GetProjectListParams, GetRecentlyViewedProjectsParamsBuilder};
+use backlog_project::{
+    GetProjectDetailParams, GetProjectListParams, GetRecentlyViewedProjectsParamsBuilder,
+};
 
 /// List all projects
 pub async fn list(client: &BacklogApiClient) -> CliResult<()> {

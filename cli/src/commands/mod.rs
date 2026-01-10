@@ -1,5 +1,8 @@
 pub mod common;
 
+#[cfg(feature = "issue")]
+pub mod issue;
+
 #[cfg(feature = "project")]
 pub mod project;
 

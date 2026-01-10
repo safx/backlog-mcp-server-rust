@@ -1,6 +1,6 @@
 //! Project category management commands
 
-use crate::commands::common::{parse_project_id_or_key, CliResult};
+use crate::commands::common::{CliResult, parse_project_id_or_key};
 use backlog_api_client::client::BacklogApiClient;
 use backlog_core::identifier::CategoryId;
 use backlog_project::GetCategoryListParams;
@@ -36,11 +36,7 @@ pub async fn list(client: &BacklogApiClient, project_id_or_key: &str) -> CliResu
 
 /// Add a category to a project
 #[cfg(feature = "project_writable")]
-pub async fn add(
-    client: &BacklogApiClient,
-    project_id_or_key: &str,
-    name: &str,
-) -> CliResult<()> {
+pub async fn add(client: &BacklogApiClient, project_id_or_key: &str, name: &str) -> CliResult<()> {
     println!("Adding category '{name}' to project: {project_id_or_key}");
 
     let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
@@ -69,9 +65,7 @@ pub async fn update(
     category_id: u32,
     name: &str,
 ) -> CliResult<()> {
-    println!(
-        "Updating category {category_id} in project {project_id_or_key} to name '{name}'"
-    );
+    println!("Updating category {category_id} in project {project_id_or_key} to name '{name}'");
 
     let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
     let cat_id = CategoryId::new(category_id);

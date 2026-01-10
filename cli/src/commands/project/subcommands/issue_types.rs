@@ -1,14 +1,14 @@
 //! Project issue type management commands
 
-use crate::commands::common::{parse_project_id_or_key, CliResult};
+use crate::commands::common::{CliResult, parse_project_id_or_key};
 use backlog_api_client::client::BacklogApiClient;
 use backlog_core::identifier::IssueTypeId;
 use backlog_project::GetIssueTypeListParams;
 
 #[cfg(feature = "project_writable")]
-use backlog_project::api::{AddIssueTypeParams, DeleteIssueTypeParams, UpdateIssueTypeParams};
-#[cfg(feature = "project_writable")]
 use backlog_domain_models::IssueTypeColor;
+#[cfg(feature = "project_writable")]
+use backlog_project::api::{AddIssueTypeParams, DeleteIssueTypeParams, UpdateIssueTypeParams};
 
 /// List issue types for a project
 pub async fn list(client: &BacklogApiClient, project_id_or_key: &str) -> CliResult<()> {

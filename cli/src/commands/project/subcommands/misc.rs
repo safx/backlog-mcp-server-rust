@@ -1,6 +1,6 @@
 //! Miscellaneous project commands (priorities, resolutions, icon, disk usage)
 
-use crate::commands::common::{format_bytes, parse_project_id_or_key, CliResult};
+use crate::commands::common::{CliResult, format_bytes, parse_project_id_or_key};
 use backlog_api_client::client::BacklogApiClient;
 use backlog_project::api::{GetProjectDiskUsageParams, GetProjectIconParams};
 use std::path::Path;
