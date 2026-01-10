@@ -12,6 +12,7 @@ use backlog_api_core::Result;
 use backlog_core::{ProjectIdOrKey, id::WebhookId};
 use client::Client;
 
+#[derive(Debug, Clone)]
 pub struct WebhookApi(Client);
 
 impl WebhookApi {

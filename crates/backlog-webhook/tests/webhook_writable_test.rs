@@ -15,7 +15,11 @@ mod tests {
     #[tokio::test]
     async fn test_update_webhook_params_path() {
         let params = UpdateWebhookParams {
-            project_id_or_key: ProjectIdOrKey::from("TEST".parse::<ProjectKey>().unwrap()),
+            project_id_or_key: ProjectIdOrKey::from(
+                "TEST"
+                    .parse::<ProjectKey>()
+                    .expect("TEST is a valid project key"),
+            ),
             webhook_id: WebhookId::new(123),
             name: None,
             description: None,
@@ -40,7 +44,11 @@ mod tests {
     #[tokio::test]
     async fn test_update_webhook_params_form() {
         let params = UpdateWebhookParams {
-            project_id_or_key: ProjectIdOrKey::from("TEST".parse::<ProjectKey>().unwrap()),
+            project_id_or_key: ProjectIdOrKey::from(
+                "TEST"
+                    .parse::<ProjectKey>()
+                    .expect("TEST is a valid project key"),
+            ),
             webhook_id: WebhookId::new(123),
             name: Some("Updated Webhook".to_string()),
             description: Some("Updated description".to_string()),
@@ -73,7 +81,11 @@ mod tests {
     #[tokio::test]
     async fn test_update_webhook_minimal_params() {
         let params = UpdateWebhookParams {
-            project_id_or_key: ProjectIdOrKey::from("TEST".parse::<ProjectKey>().unwrap()),
+            project_id_or_key: ProjectIdOrKey::from(
+                "TEST"
+                    .parse::<ProjectKey>()
+                    .expect("TEST is a valid project key"),
+            ),
             webhook_id: WebhookId::new(123),
             name: Some("New Name".to_string()),
             description: None,
@@ -102,21 +114,25 @@ mod tests {
             .await;
 
         let client = client::Client::new(&mock_server.uri())
-            .unwrap()
+            .expect("mock server URI should be valid")
             .with_api_key("test-api-key");
         let api = WebhookApi::new(client);
 
         let params = UpdateWebhookParamsBuilder::default()
-            .project_id_or_key(ProjectIdOrKey::from("TEST".parse::<ProjectKey>().unwrap()))
+            .project_id_or_key(ProjectIdOrKey::from(
+                "TEST"
+                    .parse::<ProjectKey>()
+                    .expect("TEST is a valid project key"),
+            ))
             .webhook_id(WebhookId::new(1))
             .name("Updated Webhook")
             .build()
-            .unwrap();
+            .expect("builder should create valid params");
 
         let result = api.execute_update_webhook(params).await;
         assert!(result.is_ok(), "Error: {:?}", result.err());
 
-        let webhook = result.unwrap();
+        let webhook = result.expect("update_webhook should return updated webhook");
         assert_eq!(webhook.id, 1);
     }
 
@@ -124,7 +140,11 @@ mod tests {
     async fn test_update_webhook_builder_pattern() {
         let mut builder = UpdateWebhookParamsBuilder::default();
         let params = builder
-            .project_id_or_key(ProjectIdOrKey::from("TEST".parse::<ProjectKey>().unwrap()))
+            .project_id_or_key(ProjectIdOrKey::from(
+                "TEST"
+                    .parse::<ProjectKey>()
+                    .expect("TEST is a valid project key"),
+            ))
             .webhook_id(WebhookId::new(123))
             .name("Test Webhook")
             .description("Test Description")
@@ -132,7 +152,7 @@ mod tests {
             .all_event(false)
             .activity_type_ids(vec![ActivityTypeId::new(1), ActivityTypeId::new(2)])
             .build()
-            .unwrap();
+            .expect("builder should create valid params");
 
         assert_eq!(params.name, Some("Test Webhook".to_string()));
         assert_eq!(params.description, Some("Test Description".to_string()));
@@ -141,13 +161,23 @@ mod tests {
             Some("https://example.com/hook".to_string())
         );
         assert_eq!(params.all_event, Some(false));
-        assert_eq!(params.activity_type_ids.unwrap().len(), 2);
+        assert_eq!(
+            params
+                .activity_type_ids
+                .expect("activity_type_ids should be set")
+                .len(),
+            2
+        );
     }
 
     #[tokio::test]
     async fn test_update_webhook_all_event_false_with_activity_types() {
         let params = UpdateWebhookParams {
-            project_id_or_key: ProjectIdOrKey::from("TEST".parse::<ProjectKey>().unwrap()),
+            project_id_or_key: ProjectIdOrKey::from(
+                "TEST"
+                    .parse::<ProjectKey>()
+                    .expect("TEST is a valid project key"),
+            ),
             webhook_id: WebhookId::new(123),
             name: None,
             description: None,
@@ -181,16 +211,20 @@ mod tests {
             .await;
 
         let client = client::Client::new(&mock_server.uri())
-            .unwrap()
+            .expect("mock server URI should be valid")
             .with_api_key("test-api-key");
         let api = WebhookApi::new(client);
 
         let params = UpdateWebhookParamsBuilder::default()
-            .project_id_or_key(ProjectIdOrKey::from("TEST".parse::<ProjectKey>().unwrap()))
+            .project_id_or_key(ProjectIdOrKey::from(
+                "TEST"
+                    .parse::<ProjectKey>()
+                    .expect("TEST is a valid project key"),
+            ))
             .webhook_id(WebhookId::new(999))
             .name("Updated Webhook")
             .build()
-            .unwrap();
+            .expect("builder should create valid params");
 
         let result = api.execute_update_webhook(params).await;
         assert!(result.is_err());
@@ -202,7 +236,11 @@ mod tests {
         use backlog_webhook::AddWebhookParams;
 
         let params = AddWebhookParams {
-            project_id_or_key: ProjectIdOrKey::from("TEST".parse::<ProjectKey>().unwrap()),
+            project_id_or_key: ProjectIdOrKey::from(
+                "TEST"
+                    .parse::<ProjectKey>()
+                    .expect("TEST is a valid project key"),
+            ),
             name: "Test Webhook".to_string(),
             hook_url: "https://example.com/webhook".to_string(),
             description: None,
@@ -227,7 +265,11 @@ mod tests {
         use backlog_webhook::AddWebhookParams;
 
         let params = AddWebhookParams {
-            project_id_or_key: ProjectIdOrKey::from("TEST".parse::<ProjectKey>().unwrap()),
+            project_id_or_key: ProjectIdOrKey::from(
+                "TEST"
+                    .parse::<ProjectKey>()
+                    .expect("TEST is a valid project key"),
+            ),
             name: "New Webhook".to_string(),
             hook_url: "https://example.com/new-webhook".to_string(),
             description: Some("Test webhook description".to_string()),
@@ -264,7 +306,11 @@ mod tests {
         use backlog_webhook::AddWebhookParams;
 
         let params = AddWebhookParams {
-            project_id_or_key: ProjectIdOrKey::from("TEST".parse::<ProjectKey>().unwrap()),
+            project_id_or_key: ProjectIdOrKey::from(
+                "TEST"
+                    .parse::<ProjectKey>()
+                    .expect("TEST is a valid project key"),
+            ),
             name: "Minimal Webhook".to_string(),
             hook_url: "https://example.com/minimal".to_string(),
             description: None,
@@ -303,23 +349,27 @@ mod tests {
             .await;
 
         let client = client::Client::new(&mock_server.uri())
-            .unwrap()
+            .expect("mock server URI should be valid")
             .with_api_key("test-api-key");
         let api = WebhookApi::new(client);
 
         use backlog_webhook::AddWebhookParamsBuilder;
 
         let params = AddWebhookParamsBuilder::default()
-            .project_id_or_key(ProjectIdOrKey::from("TEST".parse::<ProjectKey>().unwrap()))
+            .project_id_or_key(ProjectIdOrKey::from(
+                "TEST"
+                    .parse::<ProjectKey>()
+                    .expect("TEST is a valid project key"),
+            ))
             .name("New Webhook")
             .hook_url("https://example.com/webhook")
             .build()
-            .unwrap();
+            .expect("builder should create valid params");
 
         let result = api.execute_add_webhook(params).await;
         assert!(result.is_ok(), "Error: {:?}", result.err());
 
-        let webhook = result.unwrap();
+        let webhook = result.expect("add_webhook should return created webhook");
         assert_eq!(webhook.id, 1);
         assert_eq!(webhook.name, "webhook1");
     }
@@ -330,14 +380,18 @@ mod tests {
 
         let mut builder = AddWebhookParamsBuilder::default();
         let params = builder
-            .project_id_or_key(ProjectIdOrKey::from("TEST".parse::<ProjectKey>().unwrap()))
+            .project_id_or_key(ProjectIdOrKey::from(
+                "TEST"
+                    .parse::<ProjectKey>()
+                    .expect("TEST is a valid project key"),
+            ))
             .name("Builder Test Webhook")
             .hook_url("https://example.com/builder")
             .description("Built with builder pattern")
             .all_event(true)
             .activity_type_ids(vec![ActivityTypeId::new(1), ActivityTypeId::new(2)])
             .build()
-            .unwrap();
+            .expect("builder should create valid params");
 
         assert_eq!(params.name, "Builder Test Webhook".to_string());
         assert_eq!(params.hook_url, "https://example.com/builder".to_string());
@@ -346,7 +400,13 @@ mod tests {
             Some("Built with builder pattern".to_string())
         );
         assert_eq!(params.all_event, Some(true));
-        assert_eq!(params.activity_type_ids.unwrap().len(), 2);
+        assert_eq!(
+            params
+                .activity_type_ids
+                .expect("activity_type_ids should be set")
+                .len(),
+            2
+        );
     }
 
     #[tokio::test]
@@ -355,7 +415,11 @@ mod tests {
 
         // Test when all_event is true but activity_type_ids are also specified
         let params = AddWebhookParams {
-            project_id_or_key: ProjectIdOrKey::from("TEST".parse::<ProjectKey>().unwrap()),
+            project_id_or_key: ProjectIdOrKey::from(
+                "TEST"
+                    .parse::<ProjectKey>()
+                    .expect("TEST is a valid project key"),
+            ),
             name: "All Event Webhook".to_string(),
             hook_url: "https://example.com/all-events".to_string(),
             description: None,
@@ -383,7 +447,7 @@ mod tests {
             .await;
 
         let client = client::Client::new(&mock_server.uri())
-            .unwrap()
+            .expect("mock server URI should be valid")
             .with_api_key("test-api-key");
         let api = WebhookApi::new(client);
 
@@ -391,12 +455,14 @@ mod tests {
 
         let params = AddWebhookParamsBuilder::default()
             .project_id_or_key(ProjectIdOrKey::from(
-                "INVALID".parse::<ProjectKey>().unwrap(),
+                "INVALID"
+                    .parse::<ProjectKey>()
+                    .expect("INVALID is a valid project key"),
             ))
             .name("Test Webhook")
             .hook_url("https://example.com/webhook")
             .build()
-            .unwrap();
+            .expect("builder should create valid params");
 
         let result = api.execute_add_webhook(params).await;
         assert!(result.is_err());
@@ -408,7 +474,11 @@ mod tests {
         use backlog_webhook::DeleteWebhookParams;
 
         let params = DeleteWebhookParams::new(
-            ProjectIdOrKey::from("TEST".parse::<ProjectKey>().unwrap()),
+            ProjectIdOrKey::from(
+                "TEST"
+                    .parse::<ProjectKey>()
+                    .expect("TEST is a valid project key"),
+            ),
             WebhookId::new(123),
         );
         assert_eq!(params.path(), "/api/v2/projects/TEST/webhooks/123");
@@ -426,7 +496,11 @@ mod tests {
         use backlog_webhook::DeleteWebhookParams;
 
         let params = DeleteWebhookParams::new(
-            ProjectIdOrKey::from("TEST".parse::<ProjectKey>().unwrap()),
+            ProjectIdOrKey::from(
+                "TEST"
+                    .parse::<ProjectKey>()
+                    .expect("TEST is a valid project key"),
+            ),
             WebhookId::new(123),
         );
         assert_eq!(params.method(), HttpMethod::Delete);
@@ -444,19 +518,23 @@ mod tests {
             .await;
 
         let client = client::Client::new(&mock_server.uri())
-            .unwrap()
+            .expect("mock server URI should be valid")
             .with_api_key("test-api-key");
         let api = WebhookApi::new(client);
 
         let result = api
             .delete_webhook(
-                ProjectIdOrKey::from("TEST".parse::<ProjectKey>().unwrap()),
+                ProjectIdOrKey::from(
+                    "TEST"
+                        .parse::<ProjectKey>()
+                        .expect("TEST is a valid project key"),
+                ),
                 WebhookId::new(1),
             )
             .await;
         assert!(result.is_ok(), "Error: {:?}", result.err());
 
-        let webhook = result.unwrap();
+        let webhook = result.expect("delete_webhook should return deleted webhook");
         assert_eq!(webhook.id, 1);
         assert_eq!(webhook.name, "webhook1");
     }
@@ -473,13 +551,17 @@ mod tests {
             .await;
 
         let client = client::Client::new(&mock_server.uri())
-            .unwrap()
+            .expect("mock server URI should be valid")
             .with_api_key("test-api-key");
         let api = WebhookApi::new(client);
 
         let result = api
             .delete_webhook(
-                ProjectIdOrKey::from("TEST".parse::<ProjectKey>().unwrap()),
+                ProjectIdOrKey::from(
+                    "TEST"
+                        .parse::<ProjectKey>()
+                        .expect("TEST is a valid project key"),
+                ),
                 WebhookId::new(999),
             )
             .await;
@@ -504,19 +586,356 @@ mod tests {
             .await;
 
         let client = client::Client::new(&mock_server.uri())
-            .unwrap()
+            .expect("mock server URI should be valid")
             .with_api_key("test-api-key");
         let api = WebhookApi::new(client);
 
         let result = api
             .delete_webhook(
-                ProjectIdOrKey::from("TEST".parse::<ProjectKey>().unwrap()),
+                ProjectIdOrKey::from(
+                    "TEST"
+                        .parse::<ProjectKey>()
+                        .expect("TEST is a valid project key"),
+                ),
                 WebhookId::new(1),
             )
             .await;
-        assert!(result.is_err());
-        // Verify it's a permission error
-        let err_str = format!("{:?}", result.err());
-        assert!(err_str.contains("403") || err_str.contains("permission"));
+        let err = result.expect_err("should return 403 error");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 403, .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_add_webhook_unauthorized() {
+        let mock_server = setup_mock_server().await;
+        let error_response = serde_json::json!({
+            "errors": [{
+                "message": "Authentication required",
+                "code": 1,
+                "moreInfo": ""
+            }]
+        });
+
+        Mock::given(matchers::method("POST"))
+            .and(matchers::path("/api/v2/projects/TEST/webhooks"))
+            .respond_with(ResponseTemplate::new(401).set_body_json(&error_response))
+            .mount(&mock_server)
+            .await;
+
+        let client = client::Client::new(&mock_server.uri())
+            .expect("mock server URI should be valid")
+            .with_api_key("test-api-key");
+        let api = WebhookApi::new(client);
+
+        use backlog_webhook::AddWebhookParamsBuilder;
+
+        let params = AddWebhookParamsBuilder::default()
+            .project_id_or_key(ProjectIdOrKey::from(
+                "TEST"
+                    .parse::<ProjectKey>()
+                    .expect("TEST is a valid project key"),
+            ))
+            .name("Test Webhook")
+            .hook_url("https://example.com/webhook")
+            .build()
+            .expect("builder should create valid params");
+
+        let result = api.execute_add_webhook(params).await;
+        let err = result.expect_err("should return 401 error");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 401, .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_add_webhook_forbidden() {
+        let mock_server = setup_mock_server().await;
+        let error_response = serde_json::json!({
+            "errors": [{
+                "message": "You do not have permission to add webhooks",
+                "code": 11,
+                "moreInfo": ""
+            }]
+        });
+
+        Mock::given(matchers::method("POST"))
+            .and(matchers::path("/api/v2/projects/TEST/webhooks"))
+            .respond_with(ResponseTemplate::new(403).set_body_json(&error_response))
+            .mount(&mock_server)
+            .await;
+
+        let client = client::Client::new(&mock_server.uri())
+            .expect("mock server URI should be valid")
+            .with_api_key("test-api-key");
+        let api = WebhookApi::new(client);
+
+        use backlog_webhook::AddWebhookParamsBuilder;
+
+        let params = AddWebhookParamsBuilder::default()
+            .project_id_or_key(ProjectIdOrKey::from(
+                "TEST"
+                    .parse::<ProjectKey>()
+                    .expect("TEST is a valid project key"),
+            ))
+            .name("Test Webhook")
+            .hook_url("https://example.com/webhook")
+            .build()
+            .expect("builder should create valid params");
+
+        let result = api.execute_add_webhook(params).await;
+        let err = result.expect_err("should return 403 error");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 403, .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_add_webhook_server_error() {
+        let mock_server = setup_mock_server().await;
+        let error_response = serde_json::json!({
+            "errors": [{
+                "message": "Internal server error",
+                "code": 0,
+                "moreInfo": ""
+            }]
+        });
+
+        Mock::given(matchers::method("POST"))
+            .and(matchers::path("/api/v2/projects/TEST/webhooks"))
+            .respond_with(ResponseTemplate::new(500).set_body_json(&error_response))
+            .mount(&mock_server)
+            .await;
+
+        let client = client::Client::new(&mock_server.uri())
+            .expect("mock server URI should be valid")
+            .with_api_key("test-api-key");
+        let api = WebhookApi::new(client);
+
+        use backlog_webhook::AddWebhookParamsBuilder;
+
+        let params = AddWebhookParamsBuilder::default()
+            .project_id_or_key(ProjectIdOrKey::from(
+                "TEST"
+                    .parse::<ProjectKey>()
+                    .expect("TEST is a valid project key"),
+            ))
+            .name("Test Webhook")
+            .hook_url("https://example.com/webhook")
+            .build()
+            .expect("builder should create valid params");
+
+        let result = api.execute_add_webhook(params).await;
+        let err = result.expect_err("should return 500 error");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 500, .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_update_webhook_unauthorized() {
+        let mock_server = setup_mock_server().await;
+        let error_response = serde_json::json!({
+            "errors": [{
+                "message": "Authentication required",
+                "code": 1,
+                "moreInfo": ""
+            }]
+        });
+
+        Mock::given(matchers::method("PATCH"))
+            .and(matchers::path("/api/v2/projects/TEST/webhooks/1"))
+            .respond_with(ResponseTemplate::new(401).set_body_json(&error_response))
+            .mount(&mock_server)
+            .await;
+
+        let client = client::Client::new(&mock_server.uri())
+            .expect("mock server URI should be valid")
+            .with_api_key("test-api-key");
+        let api = WebhookApi::new(client);
+
+        let params = UpdateWebhookParamsBuilder::default()
+            .project_id_or_key(ProjectIdOrKey::from(
+                "TEST"
+                    .parse::<ProjectKey>()
+                    .expect("TEST is a valid project key"),
+            ))
+            .webhook_id(WebhookId::new(1))
+            .name("Updated Webhook")
+            .build()
+            .expect("builder should create valid params");
+
+        let result = api.execute_update_webhook(params).await;
+        let err = result.expect_err("should return 401 error");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 401, .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_update_webhook_forbidden() {
+        let mock_server = setup_mock_server().await;
+        let error_response = serde_json::json!({
+            "errors": [{
+                "message": "You do not have permission to update this webhook",
+                "code": 11,
+                "moreInfo": ""
+            }]
+        });
+
+        Mock::given(matchers::method("PATCH"))
+            .and(matchers::path("/api/v2/projects/TEST/webhooks/1"))
+            .respond_with(ResponseTemplate::new(403).set_body_json(&error_response))
+            .mount(&mock_server)
+            .await;
+
+        let client = client::Client::new(&mock_server.uri())
+            .expect("mock server URI should be valid")
+            .with_api_key("test-api-key");
+        let api = WebhookApi::new(client);
+
+        let params = UpdateWebhookParamsBuilder::default()
+            .project_id_or_key(ProjectIdOrKey::from(
+                "TEST"
+                    .parse::<ProjectKey>()
+                    .expect("TEST is a valid project key"),
+            ))
+            .webhook_id(WebhookId::new(1))
+            .name("Updated Webhook")
+            .build()
+            .expect("builder should create valid params");
+
+        let result = api.execute_update_webhook(params).await;
+        let err = result.expect_err("should return 403 error");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 403, .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_update_webhook_server_error() {
+        let mock_server = setup_mock_server().await;
+        let error_response = serde_json::json!({
+            "errors": [{
+                "message": "Internal server error",
+                "code": 0,
+                "moreInfo": ""
+            }]
+        });
+
+        Mock::given(matchers::method("PATCH"))
+            .and(matchers::path("/api/v2/projects/TEST/webhooks/1"))
+            .respond_with(ResponseTemplate::new(500).set_body_json(&error_response))
+            .mount(&mock_server)
+            .await;
+
+        let client = client::Client::new(&mock_server.uri())
+            .expect("mock server URI should be valid")
+            .with_api_key("test-api-key");
+        let api = WebhookApi::new(client);
+
+        let params = UpdateWebhookParamsBuilder::default()
+            .project_id_or_key(ProjectIdOrKey::from(
+                "TEST"
+                    .parse::<ProjectKey>()
+                    .expect("TEST is a valid project key"),
+            ))
+            .webhook_id(WebhookId::new(1))
+            .name("Updated Webhook")
+            .build()
+            .expect("builder should create valid params");
+
+        let result = api.execute_update_webhook(params).await;
+        let err = result.expect_err("should return 500 error");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 500, .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_delete_webhook_unauthorized() {
+        let mock_server = setup_mock_server().await;
+        let error_response = serde_json::json!({
+            "errors": [{
+                "message": "Authentication required",
+                "code": 1,
+                "moreInfo": ""
+            }]
+        });
+
+        Mock::given(matchers::method("DELETE"))
+            .and(matchers::path("/api/v2/projects/TEST/webhooks/1"))
+            .respond_with(ResponseTemplate::new(401).set_body_json(&error_response))
+            .mount(&mock_server)
+            .await;
+
+        let client = client::Client::new(&mock_server.uri())
+            .expect("mock server URI should be valid")
+            .with_api_key("test-api-key");
+        let api = WebhookApi::new(client);
+
+        let result = api
+            .delete_webhook(
+                ProjectIdOrKey::from(
+                    "TEST"
+                        .parse::<ProjectKey>()
+                        .expect("TEST is a valid project key"),
+                ),
+                WebhookId::new(1),
+            )
+            .await;
+
+        let err = result.expect_err("should return 401 error");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 401, .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_delete_webhook_server_error() {
+        let mock_server = setup_mock_server().await;
+        let error_response = serde_json::json!({
+            "errors": [{
+                "message": "Internal server error",
+                "code": 0,
+                "moreInfo": ""
+            }]
+        });
+
+        Mock::given(matchers::method("DELETE"))
+            .and(matchers::path("/api/v2/projects/TEST/webhooks/1"))
+            .respond_with(ResponseTemplate::new(500).set_body_json(&error_response))
+            .mount(&mock_server)
+            .await;
+
+        let client = client::Client::new(&mock_server.uri())
+            .expect("mock server URI should be valid")
+            .with_api_key("test-api-key");
+        let api = WebhookApi::new(client);
+
+        let result = api
+            .delete_webhook(
+                ProjectIdOrKey::from(
+                    "TEST"
+                        .parse::<ProjectKey>()
+                        .expect("TEST is a valid project key"),
+                ),
+                WebhookId::new(1),
+            )
+            .await;
+
+        let err = result.expect_err("should return 500 error");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 500, .. }
+        ));
     }
 }
