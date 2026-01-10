@@ -1,0 +1,5 @@
+error: ToFormParams can only be derived for structs
+ --> tests/ui/enum_not_supported.rs:4:1
+  |
+4 | enum NotSupported {
+  | ^^^^

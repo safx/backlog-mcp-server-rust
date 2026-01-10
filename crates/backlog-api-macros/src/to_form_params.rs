@@ -14,8 +14,6 @@ struct FieldConfig {
     name: Option<String>,
     /// Treat as array parameter (adds [] suffix)
     is_array: bool,
-    /// Flatten nested struct fields
-    flatten: bool,
     /// Date format specification for DateTime<Utc> fields
     date_format: Option<String>,
 }
@@ -180,7 +178,11 @@ fn parse_field_attributes(attrs: &[Attribute]) -> Result<FieldConfig> {
 
         match &attr.meta {
             Meta::Path(_) => {
-                // #[form] - no specific meaning, ignore
+                // #[form] without arguments - return error
+                return Err(Error::new(
+                    attr.span(),
+                    "#[form] attribute requires arguments. Use #[form(skip)], #[form(name = \"...\")], #[form(array)], or #[form(date_format = \"...\")]",
+                ));
             }
             Meta::List(meta_list) => {
                 // #[form(skip, name = "customName", array)]
@@ -190,9 +192,6 @@ fn parse_field_attributes(attrs: &[Attribute]) -> Result<FieldConfig> {
                         Ok(())
                     } else if meta.path.is_ident("array") {
                         config.is_array = true;
-                        Ok(())
-                    } else if meta.path.is_ident("flatten") {
-                        config.flatten = true;
                         Ok(())
                     } else if meta.path.is_ident("name") {
                         let value = meta.value()?;

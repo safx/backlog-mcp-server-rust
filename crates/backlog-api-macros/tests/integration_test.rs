@@ -167,3 +167,33 @@ fn test_snake_case_to_camel_case_conversion() {
     assert!(form_params.contains(&("alreadyCamel".to_string(), "value2".to_string())));
     assert!(form_params.contains(&("multiWordSnakeCase".to_string(), "value3".to_string())));
 }
+
+#[test]
+fn test_date_format_attribute() {
+    use chrono::{DateTime, TimeZone, Utc};
+
+    #[derive(ToFormParams)]
+    struct DateFormatParams {
+        content: String,
+        #[form(date_format = "%Y-%m-%d")]
+        start_date: DateTime<Utc>,
+        #[form(name = "dueDate", date_format = "%Y-%m-%d")]
+        due_date: Option<DateTime<Utc>>,
+    }
+
+    let start = Utc.with_ymd_and_hms(2024, 1, 15, 10, 30, 0).unwrap();
+    let due = Utc.with_ymd_and_hms(2024, 2, 20, 0, 0, 0).unwrap();
+
+    let params = DateFormatParams {
+        content: "test".to_string(),
+        start_date: start,
+        due_date: Some(due),
+    };
+
+    let form_params: Vec<(String, String)> = (&params).into();
+
+    assert_eq!(form_params.len(), 3);
+    assert!(form_params.contains(&("content".to_string(), "test".to_string())));
+    assert!(form_params.contains(&("startDate".to_string(), "2024-01-15".to_string())));
+    assert!(form_params.contains(&("dueDate".to_string(), "2024-02-20".to_string())));
+}

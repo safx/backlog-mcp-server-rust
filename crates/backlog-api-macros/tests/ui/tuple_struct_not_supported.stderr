@@ -1,0 +1,5 @@
+error: ToFormParams does not support tuple structs
+ --> tests/ui/tuple_struct_not_supported.rs:4:19
+  |
+4 | struct TupleStruct(String, u32);
+  |                   ^^^^^^^^^^^^^
