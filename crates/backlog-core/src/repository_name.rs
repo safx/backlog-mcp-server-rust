@@ -5,8 +5,9 @@ use std::fmt;
 use std::str::FromStr;
 use std::sync::LazyLock;
 
-static REPOSITORY_NAME_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,99}$").unwrap());
+static REPOSITORY_NAME_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,99}$").expect("valid regex pattern")
+});
 
 /// A type of string represents Git repository name.
 /// Only single-byte alphanumeric characters, underscores, hyphens, and dots can be used.

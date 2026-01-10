@@ -218,7 +218,7 @@ async fn test_get_participant_list_success() {
         .mount(&mock_server)
         .await;
 
-    let params = GetParticipantListParams::new(IssueKey::new("TESTKEY".parse().unwrap(), 1));
+    let params = GetParticipantListParams::new(IssueKey::from_str("TESTKEY-1").unwrap());
     let result = issue_api.get_participant_list(params).await;
 
     assert!(result.is_ok());
@@ -270,7 +270,7 @@ async fn test_get_participant_list_issue_not_found() {
         .mount(&mock_server)
         .await;
 
-    let params = GetParticipantListParams::new(IssueKey::new("TESTKEY".parse().unwrap(), 1));
+    let params = GetParticipantListParams::new(IssueKey::from_str("TESTKEY-1").unwrap());
     let result = issue_api.get_participant_list(params).await;
 
     assert!(result.is_err());

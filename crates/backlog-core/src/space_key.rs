@@ -5,7 +5,7 @@ use std::str::FromStr;
 use std::sync::LazyLock;
 
 static SPACE_KEY_REGEXP: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-]{3,10}$").unwrap());
+    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-]{3,10}$").expect("valid regex pattern"));
 
 /// A type of Backlog's space identifier, also known as "Space ID" in Backlog's help document,
 /// is used to access the organization's Backlog space. It is found in the

@@ -5,7 +5,8 @@ use wiremock::matchers::{body_string, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 mod common;
-use backlog_core::{IssueIdOrKey, IssueKey, ProjectKey, identifier::Identifier};
+use backlog_core::identifier::Identifier;
+use backlog_core::{IssueIdOrKey, IssueKey};
 use common::setup_issue_api;
 use std::str::FromStr;
 
@@ -173,7 +174,7 @@ async fn test_add_recently_viewed_issue_with_key() {
         .await;
 
     let params = AddRecentlyViewedIssueParams {
-        issue_id_or_key: IssueIdOrKey::Key(IssueKey::new(ProjectKey::from_str("TEST").unwrap(), 2)),
+        issue_id_or_key: IssueIdOrKey::Key(IssueKey::from_str("TEST-2").unwrap()),
     };
     let result = issue_api.add_recently_viewed_issue(params).await;
 
@@ -209,10 +210,7 @@ async fn test_add_recently_viewed_issue_not_found() {
         .await;
 
     let params = AddRecentlyViewedIssueParams {
-        issue_id_or_key: IssueIdOrKey::Key(IssueKey::new(
-            ProjectKey::from_str("INVALID").unwrap(),
-            999,
-        )),
+        issue_id_or_key: IssueIdOrKey::Key(IssueKey::from_str("INVALID-999").unwrap()),
     };
     let result = issue_api.add_recently_viewed_issue(params).await;
 
@@ -355,7 +353,7 @@ async fn test_add_recently_viewed_issue_with_custom_fields() {
         .await;
 
     let params = AddRecentlyViewedIssueParams {
-        issue_id_or_key: IssueIdOrKey::Key(IssueKey::new(ProjectKey::from_str("TEST").unwrap(), 3)),
+        issue_id_or_key: IssueIdOrKey::Key(IssueKey::from_str("TEST-3").unwrap()),
     };
     let result = issue_api.add_recently_viewed_issue(params).await;
 
@@ -439,7 +437,7 @@ async fn test_add_recently_viewed_issue_already_viewed() {
         .await;
 
     let params = AddRecentlyViewedIssueParams {
-        issue_id_or_key: IssueIdOrKey::Key(IssueKey::new(ProjectKey::from_str("TEST").unwrap(), 1)),
+        issue_id_or_key: IssueIdOrKey::Key(IssueKey::from_str("TEST-1").unwrap()),
     };
     let result = issue_api.add_recently_viewed_issue(params).await;
 

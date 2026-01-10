@@ -47,7 +47,7 @@ impl FromStr for Role {
 }
 
 impl TryFrom<i32> for Role {
-    type Error = ();
+    type Error = Error;
 
     fn try_from(value: i32) -> Result<Self, Self::Error> {
         match value {
@@ -56,7 +56,7 @@ impl TryFrom<i32> for Role {
             x if x == Role::Reporter as i32 => Ok(Role::Reporter),
             x if x == Role::Viewer as i32 => Ok(Role::Viewer),
             x if x == Role::Guest as i32 => Ok(Role::Guest),
-            _ => Err(()),
+            _ => Err(Error::InvalidRoleId(value)),
         }
     }
 }
@@ -70,5 +70,67 @@ impl fmt::Display for Role {
             Role::Viewer => write!(f, "viewer"),
             Role::Guest => write!(f, "guest"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from_str_success() {
+        assert_eq!(Role::from_str("admin").unwrap(), Role::Admin);
+        assert_eq!(Role::from_str("user").unwrap(), Role::User);
+        assert_eq!(Role::from_str("reporter").unwrap(), Role::Reporter);
+        assert_eq!(Role::from_str("viewer").unwrap(), Role::Viewer);
+        assert_eq!(Role::from_str("guest").unwrap(), Role::Guest);
+    }
+
+    #[test]
+    fn test_from_str_error() {
+        assert_eq!(
+            Role::from_str("invalid"),
+            Err(Error::InvalidRole("invalid".to_string()))
+        );
+        assert_eq!(
+            Role::from_str("Admin"),
+            Err(Error::InvalidRole("Admin".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_try_from_i32_success() {
+        assert_eq!(Role::try_from(1).unwrap(), Role::Admin);
+        assert_eq!(Role::try_from(2).unwrap(), Role::User);
+        assert_eq!(Role::try_from(3).unwrap(), Role::Reporter);
+        assert_eq!(Role::try_from(4).unwrap(), Role::Viewer);
+        assert_eq!(Role::try_from(5).unwrap(), Role::Guest);
+    }
+
+    #[test]
+    fn test_try_from_i32_error() {
+        assert_eq!(Role::try_from(0), Err(Error::InvalidRoleId(0)));
+        assert_eq!(Role::try_from(6), Err(Error::InvalidRoleId(6)));
+        assert_eq!(Role::try_from(-1), Err(Error::InvalidRoleId(-1)));
+    }
+
+    #[test]
+    fn test_display() {
+        assert_eq!(Role::Admin.to_string(), "admin");
+        assert_eq!(Role::User.to_string(), "user");
+        assert_eq!(Role::Reporter.to_string(), "reporter");
+        assert_eq!(Role::Viewer.to_string(), "viewer");
+        assert_eq!(Role::Guest.to_string(), "guest");
+    }
+
+    #[test]
+    fn test_all() {
+        let roles = Role::all();
+        assert_eq!(roles.len(), 5);
+        assert!(roles.contains(&Role::Admin));
+        assert!(roles.contains(&Role::User));
+        assert!(roles.contains(&Role::Reporter));
+        assert!(roles.contains(&Role::Viewer));
+        assert!(roles.contains(&Role::Guest));
     }
 }

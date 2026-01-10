@@ -17,8 +17,14 @@ pub enum Error {
     #[error("Invalid issue key: {0}")]
     InvalidIssueKey(String),
 
+    #[error("Invalid issue key id: {0} (must be non-zero)")]
+    InvalidIssueKeyId(u32),
+
     #[error("Invalid role type: {0}")]
     InvalidRole(String),
+
+    #[error("Invalid role id: {0}")]
+    InvalidRoleId(i32),
 
     #[error("Invalid document id: {0}")]
     InvalidDocumentId(String),

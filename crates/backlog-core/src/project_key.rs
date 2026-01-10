@@ -5,7 +5,7 @@ use std::str::FromStr;
 use std::sync::LazyLock;
 
 static PROJECT_KEY_REGEXP: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[_A-Z0-9]{1,25}$").unwrap());
+    LazyLock::new(|| Regex::new(r"^[_A-Z0-9]{1,25}$").expect("valid regex pattern"));
 
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize, Hash)]
 pub struct ProjectKey(pub(crate) String);
