@@ -68,7 +68,8 @@ mod tests {
 
         let result = api.reset_unread_notification_count().await;
         assert!(result.is_ok());
-        let count = result.unwrap();
+        let count =
+            result.expect("reset_unread_notification_count should succeed with notifications");
         assert_eq!(count.count, 42);
     }
 
@@ -89,7 +90,8 @@ mod tests {
 
         let result = api.reset_unread_notification_count().await;
         assert!(result.is_ok());
-        let count = result.unwrap();
+        let count =
+            result.expect("reset_unread_notification_count should succeed with no notifications");
         assert_eq!(count.count, 0);
     }
 
@@ -161,11 +163,11 @@ mod tests {
 
         let result1 = api.reset_unread_notification_count().await;
         assert!(result1.is_ok());
-        assert_eq!(result1.unwrap().count, 10);
+        assert_eq!(result1.expect("first reset should succeed").count, 10);
 
         let result2 = api.reset_unread_notification_count().await;
         assert!(result2.is_ok());
-        assert_eq!(result2.unwrap().count, 0);
+        assert_eq!(result2.expect("second reset should succeed").count, 0);
     }
 
     #[test]

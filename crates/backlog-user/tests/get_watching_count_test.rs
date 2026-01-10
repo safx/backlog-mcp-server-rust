@@ -28,7 +28,7 @@ mod get_watching_count_test {
         let result = api.get_watching_count(params).await;
 
         assert!(result.is_ok());
-        let response = result.unwrap();
+        let response = result.expect("get_watching_count should succeed");
         assert_eq!(response.count, 138);
     }
 
@@ -55,7 +55,7 @@ mod get_watching_count_test {
         let result = api.get_watching_count(params).await;
 
         assert!(result.is_ok());
-        let response = result.unwrap();
+        let response = result.expect("get_watching_count should succeed with filters");
         assert_eq!(response.count, 42);
     }
 
@@ -78,7 +78,7 @@ mod get_watching_count_test {
         let result = api.get_watching_count(params).await;
 
         assert!(result.is_ok());
-        let response = result.unwrap();
+        let response = result.expect("get_watching_count should succeed with zero count");
         assert_eq!(response.count, 0);
     }
 
@@ -103,7 +103,7 @@ mod get_watching_count_test {
         let result = api.get_watching_count(params).await;
 
         assert!(result.is_ok());
-        let response = result.unwrap();
+        let response = result.expect("get_watching_count should succeed with partial filters");
         assert_eq!(response.count, 25);
     }
 

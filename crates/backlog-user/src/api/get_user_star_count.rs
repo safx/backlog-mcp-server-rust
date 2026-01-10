@@ -77,16 +77,20 @@ mod tests {
 
     #[test]
     fn test_get_user_star_count_params_with_dates() {
-        let since_date = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
+        let since_date = NaiveDate::from_ymd_opt(2024, 1, 1).expect("valid date constant");
         let since_datetime = DateTime::<Utc>::from_naive_utc_and_offset(
-            since_date.and_hms_opt(0, 0, 0).unwrap(),
+            since_date
+                .and_hms_opt(0, 0, 0)
+                .expect("valid time constant"),
             Utc,
         );
         let since = ApiDate::from(since_datetime);
 
-        let until_date = NaiveDate::from_ymd_opt(2024, 12, 31).unwrap();
+        let until_date = NaiveDate::from_ymd_opt(2024, 12, 31).expect("valid date constant");
         let until_datetime = DateTime::<Utc>::from_naive_utc_and_offset(
-            until_date.and_hms_opt(0, 0, 0).unwrap(),
+            until_date
+                .and_hms_opt(0, 0, 0)
+                .expect("valid time constant"),
             Utc,
         );
         let until = ApiDate::from(until_datetime);
@@ -96,14 +100,29 @@ mod tests {
             .with_until(until);
 
         // Since parameters are part of the struct, we can verify they're set correctly
-        assert_eq!(params.since.as_ref().unwrap().to_string(), "2024-01-01");
-        assert_eq!(params.until.as_ref().unwrap().to_string(), "2024-12-31");
+        assert_eq!(
+            params
+                .since
+                .as_ref()
+                .expect("since should be set")
+                .to_string(),
+            "2024-01-01"
+        );
+        assert_eq!(
+            params
+                .until
+                .as_ref()
+                .expect("until should be set")
+                .to_string(),
+            "2024-12-31"
+        );
     }
 
     #[test]
     fn test_star_count_response_deserialization() {
         let json = r#"{"count": 54}"#;
-        let response: StarCount = serde_json::from_str(json).unwrap();
+        let response: StarCount =
+            serde_json::from_str(json).expect("valid JSON should deserialize");
 
         assert_eq!(response.count, 54);
     }

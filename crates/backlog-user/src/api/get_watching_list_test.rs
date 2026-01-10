@@ -25,7 +25,7 @@ mod get_watching_list_tests {
             .resource_already_read(true)
             .issue_ids(vec![IssueId::from(123), IssueId::from(456)])
             .build()
-            .unwrap();
+            .expect("builder should succeed with all fields");
 
         let form_params: Vec<(String, String)> = (&params).into();
 
@@ -41,22 +41,31 @@ mod get_watching_list_tests {
 
     #[test]
     fn test_order_serialization() {
-        assert_eq!(serde_json::to_string(&Order::Asc).unwrap(), r#""asc""#);
-        assert_eq!(serde_json::to_string(&Order::Desc).unwrap(), r#""desc""#);
+        assert_eq!(
+            serde_json::to_string(&Order::Asc).expect("Order::Asc should serialize"),
+            r#""asc""#
+        );
+        assert_eq!(
+            serde_json::to_string(&Order::Desc).expect("Order::Desc should serialize"),
+            r#""desc""#
+        );
     }
 
     #[test]
     fn test_watching_sort_serialization() {
         assert_eq!(
-            serde_json::to_string(&WatchingSort::Created).unwrap(),
+            serde_json::to_string(&WatchingSort::Created)
+                .expect("WatchingSort::Created should serialize"),
             r#""created""#
         );
         assert_eq!(
-            serde_json::to_string(&WatchingSort::Updated).unwrap(),
+            serde_json::to_string(&WatchingSort::Updated)
+                .expect("WatchingSort::Updated should serialize"),
             r#""updated""#
         );
         assert_eq!(
-            serde_json::to_string(&WatchingSort::IssueUpdated).unwrap(),
+            serde_json::to_string(&WatchingSort::IssueUpdated)
+                .expect("WatchingSort::IssueUpdated should serialize"),
             r#""issueUpdated""#
         );
     }
@@ -73,7 +82,10 @@ mod get_watching_list_tests {
 
     #[test]
     fn test_partial_params() {
-        let params = GetWatchingListParams::builder().count(10).build().unwrap();
+        let params = GetWatchingListParams::builder()
+            .count(10)
+            .build()
+            .expect("builder should succeed with partial fields");
 
         let form_params: Vec<(String, String)> = (&params).into();
         assert_eq!(form_params.len(), 1);
@@ -85,7 +97,7 @@ mod get_watching_list_tests {
         let params = GetWatchingListParams::builder()
             .issue_ids(vec![IssueId::from(1), IssueId::from(2), IssueId::from(3)])
             .build()
-            .unwrap();
+            .expect("builder should succeed with issue_ids");
 
         let form_params: Vec<(String, String)> = (&params).into();
 
