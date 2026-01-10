@@ -2,10 +2,7 @@ use backlog_core::{
     Date,
     identifier::{CustomFieldId, IssueTypeId, ProjectId},
 };
-use serde::{
-    de::Error as _,
-    Deserialize, Deserializer, Serialize,
-};
+use serde::{Deserialize, Deserializer, Serialize, de::Error as _};
 
 #[cfg(feature = "schemars")]
 use schemars::JsonSchema;

@@ -1,12 +1,18 @@
+mod common;
+
 #[cfg(feature = "writable")]
 mod writable_tests {
+    use crate::common::{
+        create_mock_attachment, create_mock_comment, create_mock_shared_file, create_mock_user,
+    };
+
     use backlog_api_core::bytes::Bytes;
     use backlog_core::identifier::{
         AttachmentId, CommentId, Identifier, IssueId, SharedFileId, UserId,
     };
-    use backlog_core::{IssueIdOrKey, IssueKey, Language, Role, User};
+    use backlog_core::{IssueIdOrKey, IssueKey};
     use backlog_issue::api::IssueApi;
-    use backlog_issue::models::{Attachment, Comment, FileContent, SharedFile};
+    use backlog_issue::models::Comment;
     use backlog_issue::{
         AddCommentParamsBuilder, DeleteAttachmentParams, DeleteCommentParams, DeleteIssueParams,
         GetAttachmentFileParams, LinkSharedFilesToIssueParamsBuilder, UnlinkSharedFileParams,
@@ -16,36 +22,6 @@ mod writable_tests {
     use client::test_utils::setup_client;
     use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
-
-    fn create_mock_user(id: u32, name: &str) -> User {
-        User {
-            id: UserId::new(id),
-            user_id: Some(name.to_string()),
-            name: name.to_string(),
-            role_type: Role::User,
-            lang: Some(Language::Japanese),
-            mail_address: format!("{name}@example.com"),
-            last_login_time: Some(
-                chrono::DateTime::parse_from_rfc3339("2024-01-01T00:00:00Z")
-                    .unwrap()
-                    .with_timezone(&Utc),
-            ),
-        }
-    }
-
-    fn create_mock_comment(id: u32, content: &str, user_id: u32, user_name: &str) -> Comment {
-        let created_time = Utc.with_ymd_and_hms(2024, 1, 1, 12, 0, 0).unwrap();
-        Comment {
-            id: CommentId::new(id),
-            content: Some(content.to_string()),
-            change_log: vec![],
-            created_user: create_mock_user(user_id, user_name),
-            created: created_time,
-            updated: created_time,
-            stars: vec![],
-            notifications: vec![],
-        }
-    }
 
     fn create_mock_comment_with_updated_time(
         id: u32,
@@ -64,48 +40,6 @@ mod writable_tests {
             updated: updated_time,
             stars: vec![],
             notifications: vec![],
-        }
-    }
-
-    fn create_mock_shared_file(
-        id: u32,
-        dir: &str,
-        name: &str,
-        size: Option<u64>,
-        user_id: u32,
-        user_name: &str,
-        created_str: &str,
-    ) -> SharedFile {
-        SharedFile {
-            id: SharedFileId::new(id),
-            dir: dir.to_string(),
-            name: name.to_string(),
-            created_user: create_mock_user(user_id, user_name),
-            created: chrono::DateTime::parse_from_rfc3339(created_str)
-                .unwrap()
-                .with_timezone(&Utc),
-            updated_user: None,
-            updated: None,
-            content: match size {
-                Some(s) => FileContent::File { size: s },
-                None => FileContent::Directory,
-            },
-        }
-    }
-
-    fn create_mock_attachment(
-        id: u32,
-        name: &str,
-        size: u64,
-        user_id: u32,
-        user_name: &str,
-    ) -> Attachment {
-        Attachment {
-            id: AttachmentId::new(id),
-            name: name.to_string(),
-            size,
-            created_user: create_mock_user(user_id, user_name),
-            created: Utc.with_ymd_and_hms(2023, 10, 1, 12, 0, 0).unwrap(),
         }
     }
 
@@ -775,8 +709,14 @@ mod writable_tests {
         let issue_id_or_key = "MFP-2";
         let attachment_id = AttachmentId::new(12345);
 
-        let expected_attachment =
-            create_mock_attachment(12345, "deleted_file.pdf", 1024, 100, "testuser");
+        let expected_attachment = create_mock_attachment(
+            12345,
+            "deleted_file.pdf",
+            1024,
+            100,
+            "testuser",
+            "2023-10-01T12:00:00Z",
+        );
 
         Mock::given(method("DELETE"))
             .and(path(format!(
