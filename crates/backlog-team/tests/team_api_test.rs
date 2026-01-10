@@ -134,7 +134,11 @@ async fn test_get_team_not_found() {
     };
 
     let result = api.get_team(params).await;
-    assert!(result.is_err());
+    let err = result.expect_err("should return 404 error");
+    assert!(matches!(
+        err,
+        backlog_api_core::Error::HttpStatus { status: 404, .. }
+    ));
 }
 
 #[tokio::test]
@@ -164,7 +168,11 @@ async fn test_get_team_forbidden() {
     };
 
     let result = api.get_team(params).await;
-    assert!(result.is_err());
+    let err = result.expect_err("should return 403 error");
+    assert!(matches!(
+        err,
+        backlog_api_core::Error::HttpStatus { status: 403, .. }
+    ));
 }
 
 #[tokio::test]
@@ -354,7 +362,11 @@ async fn test_list_teams_forbidden() {
     let params = ListTeamsParams::default();
 
     let result = api.list_teams(params).await;
-    assert!(result.is_err());
+    let err = result.expect_err("should return 403 error");
+    assert!(matches!(
+        err,
+        backlog_api_core::Error::HttpStatus { status: 403, .. }
+    ));
 }
 
 #[tokio::test]
@@ -423,7 +435,11 @@ async fn test_get_team_icon_not_found() {
     };
 
     let result = api.get_team_icon(params).await;
-    assert!(result.is_err());
+    let err = result.expect_err("should return 404 error");
+    assert!(matches!(
+        err,
+        backlog_api_core::Error::HttpStatus { status: 404, .. }
+    ));
 }
 
 #[tokio::test]
@@ -453,5 +469,207 @@ async fn test_get_team_icon_forbidden() {
     };
 
     let result = api.get_team_icon(params).await;
-    assert!(result.is_err());
+    let err = result.expect_err("should return 403 error");
+    assert!(matches!(
+        err,
+        backlog_api_core::Error::HttpStatus { status: 403, .. }
+    ));
+}
+
+#[tokio::test]
+async fn test_get_team_unauthorized() {
+    let mock_server = MockServer::start().await;
+    let api = setup_team_api(&mock_server).await;
+
+    let team_id = 123;
+    let error_response = json!({
+        "errors": [
+            {
+                "message": "Authentication required",
+                "code": 1,
+                "moreInfo": ""
+            }
+        ]
+    });
+
+    Mock::given(method("GET"))
+        .and(path(format!("/api/v2/teams/{team_id}")))
+        .respond_with(ResponseTemplate::new(401).set_body_json(&error_response))
+        .mount(&mock_server)
+        .await;
+
+    let params = GetTeamParams {
+        team_id: TeamId::new(team_id),
+    };
+
+    let result = api.get_team(params).await;
+    let err = result.expect_err("should return 401 error");
+    assert!(matches!(
+        err,
+        backlog_api_core::Error::HttpStatus { status: 401, .. }
+    ));
+}
+
+#[tokio::test]
+async fn test_list_teams_unauthorized() {
+    let mock_server = MockServer::start().await;
+    let api = setup_team_api(&mock_server).await;
+
+    let error_response = json!({
+        "errors": [
+            {
+                "message": "Authentication required",
+                "code": 1,
+                "moreInfo": ""
+            }
+        ]
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/api/v2/teams"))
+        .respond_with(ResponseTemplate::new(401).set_body_json(&error_response))
+        .mount(&mock_server)
+        .await;
+
+    let params = ListTeamsParams::default();
+
+    let result = api.list_teams(params).await;
+    let err = result.expect_err("should return 401 error");
+    assert!(matches!(
+        err,
+        backlog_api_core::Error::HttpStatus { status: 401, .. }
+    ));
+}
+
+#[tokio::test]
+async fn test_get_team_icon_unauthorized() {
+    let mock_server = MockServer::start().await;
+    let api = setup_team_api(&mock_server).await;
+
+    let team_id = 123;
+    let error_response = json!({
+        "errors": [
+            {
+                "message": "Authentication required",
+                "code": 1,
+                "moreInfo": ""
+            }
+        ]
+    });
+
+    Mock::given(method("GET"))
+        .and(path(format!("/api/v2/teams/{team_id}/icon")))
+        .respond_with(ResponseTemplate::new(401).set_body_json(&error_response))
+        .mount(&mock_server)
+        .await;
+
+    let params = GetTeamIconParams {
+        team_id: TeamId::new(team_id),
+    };
+
+    let result = api.get_team_icon(params).await;
+    let err = result.expect_err("should return 401 error");
+    assert!(matches!(
+        err,
+        backlog_api_core::Error::HttpStatus { status: 401, .. }
+    ));
+}
+
+#[tokio::test]
+async fn test_get_team_server_error() {
+    let mock_server = MockServer::start().await;
+    let api = setup_team_api(&mock_server).await;
+
+    let team_id = 123;
+    let error_response = json!({
+        "errors": [
+            {
+                "message": "Internal server error",
+                "code": 0,
+                "moreInfo": ""
+            }
+        ]
+    });
+
+    Mock::given(method("GET"))
+        .and(path(format!("/api/v2/teams/{team_id}")))
+        .respond_with(ResponseTemplate::new(500).set_body_json(&error_response))
+        .mount(&mock_server)
+        .await;
+
+    let params = GetTeamParams {
+        team_id: TeamId::new(team_id),
+    };
+
+    let result = api.get_team(params).await;
+    let err = result.expect_err("should return 500 error");
+    assert!(matches!(
+        err,
+        backlog_api_core::Error::HttpStatus { status: 500, .. }
+    ));
+}
+
+#[tokio::test]
+async fn test_list_teams_server_error() {
+    let mock_server = MockServer::start().await;
+    let api = setup_team_api(&mock_server).await;
+
+    let error_response = json!({
+        "errors": [
+            {
+                "message": "Internal server error",
+                "code": 0,
+                "moreInfo": ""
+            }
+        ]
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/api/v2/teams"))
+        .respond_with(ResponseTemplate::new(500).set_body_json(&error_response))
+        .mount(&mock_server)
+        .await;
+
+    let params = ListTeamsParams::default();
+
+    let result = api.list_teams(params).await;
+    let err = result.expect_err("should return 500 error");
+    assert!(matches!(
+        err,
+        backlog_api_core::Error::HttpStatus { status: 500, .. }
+    ));
+}
+
+#[tokio::test]
+async fn test_get_team_icon_server_error() {
+    let mock_server = MockServer::start().await;
+    let api = setup_team_api(&mock_server).await;
+
+    let team_id = 123;
+    let error_response = json!({
+        "errors": [
+            {
+                "message": "Internal server error",
+                "code": 0,
+                "moreInfo": ""
+            }
+        ]
+    });
+
+    Mock::given(method("GET"))
+        .and(path(format!("/api/v2/teams/{team_id}/icon")))
+        .respond_with(ResponseTemplate::new(500).set_body_json(&error_response))
+        .mount(&mock_server)
+        .await;
+
+    let params = GetTeamIconParams {
+        team_id: TeamId::new(team_id),
+    };
+
+    let result = api.get_team_icon(params).await;
+    let err = result.expect_err("should return 500 error");
+    assert!(matches!(
+        err,
+        backlog_api_core::Error::HttpStatus { status: 500, .. }
+    ));
 }
