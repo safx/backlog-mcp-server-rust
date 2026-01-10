@@ -43,32 +43,55 @@ impl<'de> Deserialize<'de> for CustomFieldWithValue {
             CustomFieldTypeId::Text => CustomFieldValue::Text(
                 raw.value
                     .as_str()
-                    .ok_or_else(|| serde::de::Error::custom("Expected string for Text field"))?
+                    .ok_or_else(|| {
+                        serde::de::Error::custom(format!(
+                            "Expected string for Text field '{}' (id: {})",
+                            raw.name, raw.id
+                        ))
+                    })?
                     .to_string(),
             ),
             CustomFieldTypeId::TextArea => CustomFieldValue::TextArea(
                 raw.value
                     .as_str()
-                    .ok_or_else(|| serde::de::Error::custom("Expected string for TextArea field"))?
+                    .ok_or_else(|| {
+                        serde::de::Error::custom(format!(
+                            "Expected string for TextArea field '{}' (id: {})",
+                            raw.name, raw.id
+                        ))
+                    })?
                     .to_string(),
             ),
-            CustomFieldTypeId::Numeric => CustomFieldValue::Numeric(
-                raw.value
-                    .as_f64()
-                    .ok_or_else(|| serde::de::Error::custom("Expected number for Numeric field"))?,
-            ),
+            CustomFieldTypeId::Numeric => {
+                CustomFieldValue::Numeric(raw.value.as_f64().ok_or_else(|| {
+                    serde::de::Error::custom(format!(
+                        "Expected number for Numeric field '{}' (id: {})",
+                        raw.name, raw.id
+                    ))
+                })?)
+            }
             CustomFieldTypeId::Date => {
-                let date_str = raw
-                    .value
-                    .as_str()
-                    .ok_or_else(|| serde::de::Error::custom("Expected string for Date field"))?;
-                let date = chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
-                    .map_err(|e| serde::de::Error::custom(format!("Invalid date format: {e}")))?;
+                let date_str = raw.value.as_str().ok_or_else(|| {
+                    serde::de::Error::custom(format!(
+                        "Expected string for Date field '{}' (id: {})",
+                        raw.name, raw.id
+                    ))
+                })?;
+                let date =
+                    chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d").map_err(|e| {
+                        serde::de::Error::custom(format!(
+                            "Invalid date format for field '{}' (id: {}): {e}",
+                            raw.name, raw.id
+                        ))
+                    })?;
                 CustomFieldValue::Date(date)
             }
             CustomFieldTypeId::SingleList => {
                 let item: CustomFieldListItem = serde_json::from_value(raw.value).map_err(|e| {
-                    serde::de::Error::custom(format!("Failed to parse SingleList item: {e}"))
+                    serde::de::Error::custom(format!(
+                        "Failed to parse SingleList item for field '{}' (id: {}): {e}",
+                        raw.name, raw.id
+                    ))
                 })?;
                 let other_value = raw
                     .other_value
@@ -80,7 +103,10 @@ impl<'de> Deserialize<'de> for CustomFieldWithValue {
             CustomFieldTypeId::MultipleList => {
                 let items: Vec<CustomFieldListItem> =
                     serde_json::from_value(raw.value).map_err(|e| {
-                        serde::de::Error::custom(format!("Failed to parse MultipleList items: {e}"))
+                        serde::de::Error::custom(format!(
+                            "Failed to parse MultipleList items for field '{}' (id: {}): {e}",
+                            raw.name, raw.id
+                        ))
                     })?;
                 let other_value = raw
                     .other_value
@@ -92,13 +118,19 @@ impl<'de> Deserialize<'de> for CustomFieldWithValue {
             CustomFieldTypeId::CheckBox => {
                 let items: Vec<CustomFieldListItem> =
                     serde_json::from_value(raw.value).map_err(|e| {
-                        serde::de::Error::custom(format!("Failed to parse CheckBox items: {e}"))
+                        serde::de::Error::custom(format!(
+                            "Failed to parse CheckBox items for field '{}' (id: {}): {e}",
+                            raw.name, raw.id
+                        ))
                     })?;
                 CustomFieldValue::CheckBox(items)
             }
             CustomFieldTypeId::Radio => {
                 let item: CustomFieldListItem = serde_json::from_value(raw.value).map_err(|e| {
-                    serde::de::Error::custom(format!("Failed to parse Radio item: {e}"))
+                    serde::de::Error::custom(format!(
+                        "Failed to parse Radio item for field '{}' (id: {}): {e}",
+                        raw.name, raw.id
+                    ))
                 })?;
                 let other_value = raw
                     .other_value

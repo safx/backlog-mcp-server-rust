@@ -1,87 +1,15 @@
 mod common;
 use backlog_core::{IssueKey, identifier::Identifier};
-use common::*;
+use common::{
+    create_mock_attachment, create_mock_comment, create_mock_shared_file, create_mock_user, *,
+};
 
 use backlog_issue::{
     CommentOrder, CountCommentParams, CountIssueParamsBuilder, GetAttachmentListParams,
-    GetCommentListParamsBuilder, GetCommentParams, GetIssueListParamsBuilder,
+    GetCommentListParamsBuilder, GetCommentParams, GetIssueListParamsBuilder, GetIssueParams,
     GetParticipantListParams, GetSharedFileListParams,
 };
-
-fn create_mock_user(id: u32, name: &str) -> User {
-    User {
-        id: UserId::new(id),
-        user_id: Some(name.to_string()),
-        name: name.to_string(),
-        role_type: Role::User,
-        lang: Some(Language::Japanese),
-        mail_address: format!("{name}@example.com"),
-        last_login_time: Some(
-            chrono::DateTime::parse_from_rfc3339("2024-01-01T00:00:00Z")
-                .unwrap()
-                .with_timezone(&Utc),
-        ),
-    }
-}
-
-fn create_mock_comment(id: u32, content: &str, user_id: u32, user_name: &str) -> Comment {
-    let created_time = Utc.with_ymd_and_hms(2024, 1, 1, 12, 0, 0).unwrap();
-    Comment {
-        id: CommentId::new(id),
-        content: Some(content.to_string()),
-        change_log: vec![],
-        created_user: create_mock_user(user_id, user_name),
-        created: created_time,
-        updated: created_time,
-        stars: vec![],
-        notifications: vec![],
-    }
-}
-
-fn create_mock_attachment(
-    id: u32,
-    name: &str,
-    size: u64,
-    user_id: u32,
-    user_name: &str,
-    created_str: &str,
-) -> Attachment {
-    Attachment {
-        id: AttachmentId::new(id),
-        name: name.to_string(),
-        size,
-        created_user: create_mock_user(user_id, user_name),
-        created: chrono::DateTime::parse_from_rfc3339(created_str)
-            .unwrap()
-            .with_timezone(&Utc),
-    }
-}
-
-fn create_mock_shared_file(
-    id: u32,
-    dir: &str,
-    name: &str,
-    size: Option<u64>,
-    user_id: u32,
-    user_name: &str,
-    created_str: &str,
-) -> SharedFile {
-    SharedFile {
-        id: SharedFileId::new(id),
-        dir: dir.to_string(),
-        name: name.to_string(),
-        created_user: create_mock_user(user_id, user_name),
-        created: chrono::DateTime::parse_from_rfc3339(created_str)
-            .unwrap()
-            .with_timezone(&Utc),
-        updated_user: None,
-        updated: None,
-        content: match size {
-            Some(s) => FileContent::File { size: s },
-            None => FileContent::Directory,
-        },
-    }
-}
+use std::str::FromStr;
 
 #[tokio::test]
 async fn test_get_issue_list_empty_params_success() {
@@ -512,6 +440,127 @@ async fn test_count_issue_server_error() {
         .build()
         .expect("CountIssueParams build should succeed");
     let result = issue_api.count_issue(params).await;
+
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_get_issue_success() {
+    let mock_server = wiremock::MockServer::start().await;
+    let issue_api = setup_issue_api(&mock_server).await;
+    let issue_key = "TESTKEY-123";
+
+    let mock_issue = json!({
+        "id": 1001,
+        "projectId": 100,
+        "issueKey": issue_key,
+        "keyId": 123,
+        "issueType": {
+            "id": 1,
+            "projectId": 100,
+            "name": "Bug",
+            "color": "#990000",
+            "displayOrder": 1
+        },
+        "summary": "Test issue",
+        "description": "Test description",
+        "priority": {
+            "id": 2,
+            "name": "High"
+        },
+        "status": {
+            "id": 1,
+            "projectId": 100,
+            "name": "Open",
+            "color": "#ed8077",
+            "displayOrder": 1000
+        },
+        "assignee": null,
+        "category": [],
+        "versions": [],
+        "milestone": [],
+        "startDate": null,
+        "dueDate": null,
+        "estimatedHours": null,
+        "actualHours": null,
+        "parentIssueId": null,
+        "createdUser": {
+            "id": 1,
+            "userId": "admin",
+            "name": "Admin",
+            "roleType": 1,
+            "lang": "ja",
+            "mailAddress": "admin@example.com"
+        },
+        "created": "2024-01-01T00:00:00Z",
+        "updatedUser": {
+            "id": 1,
+            "userId": "admin",
+            "name": "Admin",
+            "roleType": 1,
+            "lang": "ja",
+            "mailAddress": "admin@example.com"
+        },
+        "updated": "2024-01-01T00:00:00Z",
+        "customFields": [],
+        "attachments": [],
+        "sharedFiles": [],
+        "stars": []
+    });
+
+    Mock::given(method("GET"))
+        .and(path(format!("/api/v2/issues/{issue_key}")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&mock_issue))
+        .mount(&mock_server)
+        .await;
+
+    let params = GetIssueParams::new(IssueKey::from_str(issue_key).unwrap());
+    let result = issue_api.get_issue(params).await;
+
+    assert!(result.is_ok());
+    let issue = result.expect("get_issue should succeed");
+    assert_eq!(issue.issue_key.to_string(), issue_key);
+    assert_eq!(issue.summary, "Test issue");
+}
+
+#[tokio::test]
+async fn test_get_issue_not_found() {
+    let mock_server = wiremock::MockServer::start().await;
+    let issue_api = setup_issue_api(&mock_server).await;
+    let issue_key = "NONEXISTENT-999";
+
+    Mock::given(method("GET"))
+        .and(path(format!("/api/v2/issues/{issue_key}")))
+        .respond_with(ResponseTemplate::new(404).set_body_json(json!({
+            "errors": [{
+                "message": "Issue not found",
+                "code": 6,
+                "moreInfo": ""
+            }]
+        })))
+        .mount(&mock_server)
+        .await;
+
+    let params = GetIssueParams::new(IssueKey::from_str(issue_key).unwrap());
+    let result = issue_api.get_issue(params).await;
+
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_get_issue_server_error() {
+    let mock_server = wiremock::MockServer::start().await;
+    let issue_api = setup_issue_api(&mock_server).await;
+    let issue_key = "TESTKEY-500";
+
+    Mock::given(method("GET"))
+        .and(path(format!("/api/v2/issues/{issue_key}")))
+        .respond_with(ResponseTemplate::new(500))
+        .mount(&mock_server)
+        .await;
+
+    let params = GetIssueParams::new(IssueKey::from_str(issue_key).unwrap());
+    let result = issue_api.get_issue(params).await;
 
     assert!(result.is_err());
 }
