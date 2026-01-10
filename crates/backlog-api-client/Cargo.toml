@@ -81,3 +81,8 @@ required-features = ["issue", "issue_writable"]
 name = "custom_fields_simple"
 path = "../../examples/custom_fields_simple.rs"
 required-features = ["issue", "issue_writable"]
+
+[dev-dependencies]
+wiremock = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+serde_json = { workspace = true }

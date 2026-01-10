@@ -161,8 +161,10 @@ dependencies = [
  "backlog-wiki",
  "chrono",
  "client",
+ "serde_json",
  "tokio",
  "url",
+ "wiremock",
 ]
 
 [[package]]
