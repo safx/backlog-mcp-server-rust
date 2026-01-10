@@ -39,7 +39,7 @@ mod writable_tests {
         let result = space_api.upload_attachment(params).await;
 
         assert!(result.is_ok());
-        let attachment = result.unwrap();
+        let attachment = result.expect("upload_attachment should succeed");
         assert_eq!(attachment.id, 456);
         assert_eq!(attachment.name, "test_attachment.txt");
         assert_eq!(attachment.size, 32);
@@ -55,6 +55,8 @@ mod writable_tests {
 
         let result = space_api.upload_attachment(params).await;
         assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err, backlog_api_core::Error::FileRead { .. }));
     }
 
     #[tokio::test]
@@ -87,6 +89,11 @@ mod writable_tests {
         let result = space_api.upload_attachment(params).await;
 
         assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 413, .. }
+        ));
     }
 
     #[tokio::test]
@@ -119,6 +126,11 @@ mod writable_tests {
         let result = space_api.upload_attachment(params).await;
 
         assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 401, .. }
+        ));
     }
 
     #[tokio::test]
@@ -141,7 +153,7 @@ mod writable_tests {
         let result = space_api.update_space_notification(params).await;
 
         assert!(result.is_ok());
-        let notification = result.unwrap();
+        let notification = result.expect("update_space_notification should succeed");
         assert_eq!(notification.content, "Updated space notification content");
         assert_eq!(
             notification.updated.to_rfc3339(),
@@ -169,7 +181,8 @@ mod writable_tests {
         let result = space_api.update_space_notification(params).await;
 
         assert!(result.is_ok());
-        let notification = result.unwrap();
+        let notification =
+            result.expect("update_space_notification should succeed with empty content");
         assert_eq!(notification.content, "");
     }
 
@@ -198,6 +211,11 @@ mod writable_tests {
         let result = space_api.update_space_notification(params).await;
 
         assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 401, .. }
+        ));
     }
 
     #[tokio::test]
@@ -225,5 +243,10 @@ mod writable_tests {
         let result = space_api.update_space_notification(params).await;
 
         assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 400, .. }
+        ));
     }
 }

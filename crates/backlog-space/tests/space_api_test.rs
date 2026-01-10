@@ -34,7 +34,7 @@ async fn test_get_space_success() {
 
     let result = space_api.get_space(GetSpaceParams::new()).await;
     assert!(result.is_ok());
-    let space = result.unwrap();
+    let space = result.expect("get_space should succeed");
     assert_eq!(space.name, "My Space");
 }
 
@@ -58,7 +58,7 @@ async fn test_get_space_logo_success() {
 
     let result = space_api.get_space_logo(GetSpaceLogoParams::new()).await;
     assert!(result.is_ok());
-    let downloaded_file = result.unwrap();
+    let downloaded_file = result.expect("get_space_logo should succeed");
     assert_eq!(downloaded_file.filename, "logo.png");
     assert_eq!(downloaded_file.content_type, "image/png");
     assert_eq!(
@@ -114,7 +114,7 @@ async fn test_get_space_disk_usage_success() {
         .get_space_disk_usage(GetSpaceDiskUsageParams::new())
         .await;
     assert!(result.is_ok());
-    let disk_usage = result.unwrap();
+    let disk_usage = result.expect("get_space_disk_usage should succeed");
     assert_eq!(disk_usage.capacity, 10737418240);
     assert_eq!(disk_usage.issue, 1073741824);
     assert_eq!(disk_usage.details.len(), 2);
@@ -142,7 +142,7 @@ async fn test_get_space_notification_success() {
         .get_space_notification(GetSpaceNotificationParams::new())
         .await;
     assert!(result.is_ok());
-    let notification = result.unwrap();
+    let notification = result.expect("get_space_notification should succeed");
     assert_eq!(notification.content, "This is a space notification");
     assert_eq!(
         notification.updated.to_rfc3339(),
@@ -175,6 +175,11 @@ async fn test_get_space_disk_usage_forbidden() {
         .get_space_disk_usage(GetSpaceDiskUsageParams::new())
         .await;
     assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(matches!(
+        err,
+        backlog_api_core::Error::HttpStatus { status: 403, .. }
+    ));
 }
 
 #[tokio::test]
@@ -202,6 +207,11 @@ async fn test_get_space_notification_error() {
         .get_space_notification(GetSpaceNotificationParams::new())
         .await;
     assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(matches!(
+        err,
+        backlog_api_core::Error::HttpStatus { status: 403, .. }
+    ));
 }
 
 #[tokio::test]
@@ -241,7 +251,7 @@ async fn test_get_space_disk_usage_with_negative_values() {
         .get_space_disk_usage(GetSpaceDiskUsageParams::new())
         .await;
     assert!(result.is_ok());
-    let disk_usage = result.unwrap();
+    let disk_usage = result.expect("get_space_disk_usage should handle negative values");
     assert_eq!(disk_usage.issue, -2610477);
     assert_eq!(disk_usage.details[0].issue, -1000000);
 }
@@ -294,7 +304,7 @@ async fn test_get_licence_success() {
 
     let result = space_api.get_licence(GetLicenceParams::new()).await;
     assert!(result.is_ok());
-    let licence = result.unwrap();
+    let licence = result.expect("get_licence should succeed");
     assert!(licence.active);
     assert_eq!(licence.licence_type_id, 1);
     assert_eq!(licence.user_limit, 500);
@@ -351,7 +361,7 @@ async fn test_get_licence_minimal_response() {
 
     let result = space_api.get_licence(GetLicenceParams::new()).await;
     assert!(result.is_ok());
-    let licence = result.unwrap();
+    let licence = result.expect("get_licence should succeed with minimal response");
     assert!(!licence.active);
     assert_eq!(licence.licence_type_id, 0);
     assert_eq!(licence.user_limit, 0);
@@ -380,4 +390,99 @@ async fn test_get_licence_unauthorized() {
 
     let result = space_api.get_licence(GetLicenceParams::new()).await;
     assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(matches!(
+        err,
+        backlog_api_core::Error::HttpStatus { status: 401, .. }
+    ));
+}
+
+#[tokio::test]
+async fn test_get_space_unauthorized() {
+    let server = MockServer::start().await;
+    let space_api = setup_space_api(&server).await;
+
+    let error_response = serde_json::json!({
+        "errors": [
+            {
+                "message": "Authenticate error",
+                "code": 6,
+                "moreInfo": ""
+            }
+        ]
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/api/v2/space"))
+        .respond_with(ResponseTemplate::new(401).set_body_json(&error_response))
+        .mount(&server)
+        .await;
+
+    let result = space_api.get_space(GetSpaceParams::new()).await;
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(matches!(
+        err,
+        backlog_api_core::Error::HttpStatus { status: 401, .. }
+    ));
+}
+
+#[tokio::test]
+async fn test_get_space_internal_server_error() {
+    let server = MockServer::start().await;
+    let space_api = setup_space_api(&server).await;
+
+    let error_response = serde_json::json!({
+        "errors": [
+            {
+                "message": "Internal server error",
+                "code": 1,
+                "moreInfo": ""
+            }
+        ]
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/api/v2/space"))
+        .respond_with(ResponseTemplate::new(500).set_body_json(&error_response))
+        .mount(&server)
+        .await;
+
+    let result = space_api.get_space(GetSpaceParams::new()).await;
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(matches!(
+        err,
+        backlog_api_core::Error::HttpStatus { status: 500, .. }
+    ));
+}
+
+#[tokio::test]
+async fn test_get_space_logo_not_found() {
+    let server = MockServer::start().await;
+    let space_api = setup_space_api(&server).await;
+
+    let error_response = serde_json::json!({
+        "errors": [
+            {
+                "message": "No image",
+                "code": 9,
+                "moreInfo": ""
+            }
+        ]
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/api/v2/space/image"))
+        .respond_with(ResponseTemplate::new(404).set_body_json(&error_response))
+        .mount(&server)
+        .await;
+
+    let result = space_api.get_space_logo(GetSpaceLogoParams::new()).await;
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(matches!(
+        err,
+        backlog_api_core::Error::HttpStatus { status: 404, .. }
+    ));
 }
