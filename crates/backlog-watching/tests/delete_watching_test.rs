@@ -95,18 +95,9 @@ mod delete_watching_test {
             .await;
 
         let api = setup_watching_api(&mock_server).await;
-        let uri = &mock_server.uri();
-        eprintln!("Mock server URI: {uri}");
-
-        // Debug request
         let watching_id = WatchingId::from(123);
-        eprintln!("Watching ID: {watching_id}");
-
         let result = api.delete(watching_id).await;
 
-        if let Err(ref e) = result {
-            eprintln!("Error: {e:?}");
-        }
         assert!(result.is_ok());
         let deleted_watching = result.unwrap();
         assert_eq!(deleted_watching.id, WatchingId::from(123));
@@ -169,5 +160,67 @@ mod delete_watching_test {
         let result = api.delete(WatchingId::from(456)).await;
 
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    #[cfg(feature = "writable")]
+    async fn test_delete_watching_forbidden() {
+        let mock_server = MockServer::start().await;
+
+        let error_json = json!({
+            "errors": [
+                {
+                    "message": "You do not have permission to delete this watching.",
+                    "code": 11,
+                    "moreInfo": ""
+                }
+            ]
+        });
+
+        Mock::given(matchers::method("DELETE"))
+            .and(matchers::path("/api/v2/watchings/123"))
+            .respond_with(ResponseTemplate::new(403).set_body_json(&error_json))
+            .mount(&mock_server)
+            .await;
+
+        let api = setup_watching_api(&mock_server).await;
+        let result = api.delete(WatchingId::from(123)).await;
+
+        let err = result.expect_err("should return 403 error");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 403, .. }
+        ));
+    }
+
+    #[tokio::test]
+    #[cfg(feature = "writable")]
+    async fn test_delete_watching_server_error() {
+        let mock_server = MockServer::start().await;
+
+        let error_json = json!({
+            "errors": [
+                {
+                    "message": "Internal server error",
+                    "code": 1,
+                    "moreInfo": ""
+                }
+            ]
+        });
+
+        Mock::given(matchers::method("DELETE"))
+            .and(matchers::path("/api/v2/watchings/123"))
+            .respond_with(ResponseTemplate::new(500).set_body_json(&error_json))
+            .mount(&mock_server)
+            .await;
+
+        let api = setup_watching_api(&mock_server).await;
+        let result = api.delete(WatchingId::from(123)).await;
+
+        let err = result.expect_err("should return 500 error");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 500, .. }
+        ));
     }
 }
