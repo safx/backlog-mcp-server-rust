@@ -63,7 +63,7 @@ async fn test_get_space_recent_updates_success() {
     let result = space_api.get_space_recent_updates(params).await;
 
     assert!(result.is_ok());
-    let activities = result.unwrap();
+    let activities = result.expect("get_space_recent_updates should succeed");
     assert_eq!(activities.len(), 1);
 
     let activity = &activities[0];
@@ -133,4 +133,10 @@ async fn test_get_space_recent_updates_unauthorized() {
     let params = GetSpaceRecentUpdatesParams::default();
     let result = space_api.get_space_recent_updates(params).await;
     assert!(result.is_err());
+    let err = result.unwrap_err();
+    // Note: This test returns 401 with no body, which becomes UnparseableErrorResponse
+    assert!(matches!(
+        err,
+        backlog_api_core::Error::UnparseableErrorResponse { status: 401, .. }
+    ));
 }
