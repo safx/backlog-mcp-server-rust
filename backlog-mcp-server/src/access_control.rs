@@ -69,10 +69,9 @@ impl AccessControl {
         project_id: &ProjectId,
         client: &BacklogApiClient,
     ) -> Result<(), Error> {
-        if !self.is_enabled() {
+        let Some(allowed_keys) = &self.allowed_projects else {
             return Ok(());
-        }
-        let allowed_keys = self.allowed_projects.as_ref().unwrap();
+        };
 
         if let Some(project) = self.project_cache.get_from_cache_by_id(project_id).await
             && allowed_keys.contains(&project.project_key)
@@ -96,11 +95,10 @@ impl AccessControl {
         &self,
         project_key: &ProjectKey,
     ) -> Result<(), Error> {
-        if !self.is_enabled() {
+        let Some(allowed_keys) = &self.allowed_projects else {
             return Ok(());
-        }
+        };
 
-        let allowed_keys = self.allowed_projects.as_ref().unwrap();
         if allowed_keys.contains(project_key) {
             return Ok(());
         }
@@ -136,11 +134,10 @@ impl AccessControl {
     // Synchronous versions for backward compatibility (will be removed)
 
     pub fn check_project_access_by_id(&self, project_id: &ProjectId) -> Result<(), Error> {
-        if !self.is_enabled() {
+        let Some(allowed_keys) = &self.allowed_projects else {
             return Ok(());
-        }
+        };
 
-        let allowed_keys = self.allowed_projects.as_ref().unwrap();
         Err(Error::ProjectAccessDenied {
             project: project_id.to_string(),
             allowed_projects: allowed_keys.iter().map(|k| k.to_string()).collect(),
@@ -148,22 +145,17 @@ impl AccessControl {
     }
 
     pub fn check_project_access_by_key(&self, project_key: &ProjectKey) -> Result<(), Error> {
-        if !self.is_enabled() {
+        let Some(allowed_keys) = &self.allowed_projects else {
             return Ok(());
-        }
+        };
 
-        if let Some(allowed_keys) = &self.allowed_projects
-            && allowed_keys.contains(project_key)
-        {
+        if allowed_keys.contains(project_key) {
             return Ok(());
         }
 
         Err(Error::ProjectAccessDenied {
             project: project_key.to_string(),
-            allowed_projects: self
-                .allowed_projects
-                .as_ref()
-                .unwrap()
+            allowed_projects: allowed_keys
                 .iter()
                 .map(|key| key.to_string())
                 .collect::<Vec<String>>(),

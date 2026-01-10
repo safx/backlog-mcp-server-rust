@@ -180,7 +180,11 @@ impl SerializableFile {
     }
 
     pub fn raw(file: DownloadedFile) -> Self {
-        Self::new(file, Some(FileFormat::Raw)).unwrap()
+        Self {
+            filename: file.filename,
+            content_type: file.content_type,
+            content: SerializableFileContent::Raw(file.bytes),
+        }
     }
 
     pub fn auto(file: DownloadedFile) -> Result<Self, McpError> {
