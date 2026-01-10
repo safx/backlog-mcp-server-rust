@@ -2,8 +2,12 @@ use backlog_api_core::IntoRequest;
 use backlog_core::{activity::Activity, identifier::ActivityId};
 use serde::Serialize;
 
+/// Response type for the get activity API endpoint.
 pub type GetActivityResponse = Activity;
 
+/// Parameters for fetching a single activity by ID.
+///
+/// Corresponds to `GET /api/v2/activities/:activityId`.
 #[derive(Debug, Clone)]
 pub struct GetActivityParams {
     pub activity_id: ActivityId,

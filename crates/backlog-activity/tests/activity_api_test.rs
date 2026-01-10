@@ -3,11 +3,9 @@ mod common;
 #[cfg(test)]
 mod activity_api_tests {
     use super::common::setup_activity_api;
-    use backlog_activity::GetActivityParams;
-    use backlog_api_core::IntoRequest;
     use backlog_core::identifier::{ActivityId, Identifier};
     use serde_json::json;
-    use wiremock::matchers::{method, path};
+    use wiremock::matchers::{method, path, path_regex};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     #[tokio::test]
@@ -66,7 +64,7 @@ mod activity_api_tests {
         let result = api.get_activity(activity_id).await;
 
         assert!(result.is_ok());
-        let activity = result.unwrap();
+        let activity = result.expect("get_activity should return activity for valid ID");
         assert_eq!(activity.id.value(), 12345);
         // Use helper method to access project id
         assert_eq!(activity.project_id(), Some(101));
@@ -94,14 +92,97 @@ mod activity_api_tests {
         let api = setup_activity_api(&mock_server).await;
         let result = api.get_activity(activity_id).await;
 
-        assert!(result.is_err());
+        let err = result.expect_err("should return 404 error for non-existent activity");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 404, .. }
+        ));
     }
 
-    #[test]
-    fn test_get_activity_path() {
+    #[tokio::test]
+    async fn test_get_activity_unauthorized() {
+        let mock_server = MockServer::start().await;
         let activity_id = ActivityId::from(12345);
-        let params = GetActivityParams { activity_id };
 
-        assert_eq!(params.path(), "/api/v2/activities/12345");
+        Mock::given(method("GET"))
+            .and(path_regex(r"/api/v2/activities/\d+"))
+            .respond_with(ResponseTemplate::new(401).set_body_json(json!({
+                "errors": [
+                    {
+                        "message": "Unauthorized",
+                        "code": 11,
+                        "moreInfo": ""
+                    }
+                ]
+            })))
+            .mount(&mock_server)
+            .await;
+
+        let api = setup_activity_api(&mock_server).await;
+        let result = api.get_activity(activity_id).await;
+
+        let err = result.expect_err("should return 401 error");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 401, .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_get_activity_forbidden() {
+        let mock_server = MockServer::start().await;
+        let activity_id = ActivityId::from(12345);
+
+        Mock::given(method("GET"))
+            .and(path_regex(r"/api/v2/activities/\d+"))
+            .respond_with(ResponseTemplate::new(403).set_body_json(json!({
+                "errors": [
+                    {
+                        "message": "Forbidden",
+                        "code": 13,
+                        "moreInfo": ""
+                    }
+                ]
+            })))
+            .mount(&mock_server)
+            .await;
+
+        let api = setup_activity_api(&mock_server).await;
+        let result = api.get_activity(activity_id).await;
+
+        let err = result.expect_err("should return 403 error");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 403, .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_get_activity_server_error() {
+        let mock_server = MockServer::start().await;
+        let activity_id = ActivityId::from(12345);
+
+        Mock::given(method("GET"))
+            .and(path_regex(r"/api/v2/activities/\d+"))
+            .respond_with(ResponseTemplate::new(500).set_body_json(json!({
+                "errors": [
+                    {
+                        "message": "Internal Server Error",
+                        "code": 99,
+                        "moreInfo": ""
+                    }
+                ]
+            })))
+            .mount(&mock_server)
+            .await;
+
+        let api = setup_activity_api(&mock_server).await;
+        let result = api.get_activity(activity_id).await;
+
+        let err = result.expect_err("should return 500 error");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 500, .. }
+        ));
     }
 }

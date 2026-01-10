@@ -4,10 +4,14 @@ use client::Client;
 
 use super::get_activity::{GetActivityParams, GetActivityResponse};
 
+/// API client for Backlog Activity endpoints.
+///
+/// Provides methods to interact with the Backlog Activity API.
 #[derive(Clone, Debug)]
 pub struct ActivityApi(Client);
 
 impl ActivityApi {
+    /// Creates a new `ActivityApi` instance with the given HTTP client.
     pub fn new(client: Client) -> Self {
         Self(client)
     }
