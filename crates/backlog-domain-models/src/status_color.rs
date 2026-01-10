@@ -1,3 +1,4 @@
+use crate::error::ParseColorError;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
@@ -99,7 +100,7 @@ impl fmt::Display for StatusColor {
 }
 
 impl FromStr for StatusColor {
-    type Err = String;
+    type Err = ParseColorError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -114,10 +115,10 @@ impl FromStr for StatusColor {
             "#eda62a" | "orange" => Ok(Self::Orange),
             "#f42858" | "magenta" => Ok(Self::Magenta),
             "#393939" | "dark-gray" => Ok(Self::DarkGray),
-            _ => Err(format!(
-                "Invalid status color: '{}'. Valid colors: {}",
+            _ => Err(ParseColorError::new(
                 s,
-                Self::all_names().join(", ")
+                "status",
+                "red, coral, pink, light-purple, blue, green, light-green, orange, magenta, dark-gray",
             )),
         }
     }

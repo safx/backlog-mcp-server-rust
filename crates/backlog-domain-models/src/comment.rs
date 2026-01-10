@@ -29,18 +29,18 @@ pub struct Comment {
     pub change_log: Option<Vec<serde_json::Value>>, // Will be ChangeLogEntry in future
 }
 
-/// Simplified comment for activity contexts  
+/// Simplified comment for activity contexts
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[cfg_attr(feature = "schemars", derive(JsonSchema))]
 pub struct ActivityComment {
-    pub id: i64,
+    pub id: u32,
     pub content: String,
 }
 
 impl From<ActivityComment> for Comment {
     fn from(ac: ActivityComment) -> Self {
         Comment {
-            id: CommentId::from(ac.id as u32),
+            id: CommentId::from(ac.id),
             content: Some(ac.content),
             created_user: None,
             created: None,
@@ -56,7 +56,7 @@ impl Comment {
     /// Convert to simplified activity comment
     pub fn to_activity_comment(&self) -> Option<ActivityComment> {
         self.content.as_ref().map(|content| ActivityComment {
-            id: self.id.value() as i64,
+            id: self.id.value(),
             content: content.clone(),
         })
     }

@@ -1,6 +1,7 @@
 pub mod category;
 pub mod comment;
 pub mod custom_field;
+pub mod error;
 pub mod issue_type;
 pub mod milestone;
 pub mod priority;
@@ -17,6 +18,7 @@ pub use custom_field::{
     CustomFieldSettings, CustomFieldType, DateSettings, InitialDate, ListItem, ListSettings,
     NumericSettings,
 };
+pub use error::ParseColorError;
 pub use issue_type::{IssueType, IssueTypeColor};
 pub use milestone::Milestone;
 pub use priority::Priority;

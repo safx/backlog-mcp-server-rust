@@ -2,7 +2,10 @@ use backlog_core::{
     Date,
     identifier::{CustomFieldId, IssueTypeId, ProjectId},
 };
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{
+    de::Error as _,
+    Deserialize, Deserializer, Serialize,
+};
 
 #[cfg(feature = "schemars")]
 use schemars::JsonSchema;
@@ -348,16 +351,36 @@ impl CustomFieldType {
                     unit: raw.unit,
                 }),
             ),
-            RawTaggedCustomFieldType::Date(raw) => (
-                raw.base,
-                CustomFieldSettings::Date(DateSettings {
-                    min: raw.min.and_then(|s| Date::from_str(&s).ok()),
-                    max: raw.max.and_then(|s| Date::from_str(&s).ok()),
-                    initial_value_type: raw.initial_value_type,
-                    initial_shift: raw.initial_shift,
-                    initial_date: raw.initial_date.and_then(|s| Date::from_str(&s).ok()),
-                }),
-            ),
+            RawTaggedCustomFieldType::Date(raw) => {
+                let min = raw
+                    .min
+                    .map(|s| Date::from_str(&s))
+                    .transpose()
+                    .map_err(|e| D::Error::custom(format!("Failed to parse min date: {}", e)))?;
+                let max = raw
+                    .max
+                    .map(|s| Date::from_str(&s))
+                    .transpose()
+                    .map_err(|e| D::Error::custom(format!("Failed to parse max date: {}", e)))?;
+                let initial_date = raw
+                    .initial_date
+                    .map(|s| Date::from_str(&s))
+                    .transpose()
+                    .map_err(|e| {
+                        D::Error::custom(format!("Failed to parse initial date: {}", e))
+                    })?;
+
+                (
+                    raw.base,
+                    CustomFieldSettings::Date(DateSettings {
+                        min,
+                        max,
+                        initial_value_type: raw.initial_value_type,
+                        initial_shift: raw.initial_shift,
+                        initial_date,
+                    }),
+                )
+            }
             RawTaggedCustomFieldType::SingleList(raw) => {
                 let (base, settings) = raw.into_list_settings();
                 (base, CustomFieldSettings::SingleList(settings))
@@ -396,24 +419,39 @@ impl CustomFieldType {
             }),
             4 => {
                 use std::str::FromStr;
+
+                let min = untagged
+                    .min
+                    .as_ref()
+                    .and_then(|v| v.as_str())
+                    .map(Date::from_str)
+                    .transpose()
+                    .map_err(|e| D::Error::custom(format!("Failed to parse min date: {}", e)))?;
+
+                let max = untagged
+                    .max
+                    .as_ref()
+                    .and_then(|v| v.as_str())
+                    .map(Date::from_str)
+                    .transpose()
+                    .map_err(|e| D::Error::custom(format!("Failed to parse max date: {}", e)))?;
+
+                let initial_date = untagged
+                    .initial_date
+                    .as_ref()
+                    .and_then(|v| v.as_str())
+                    .map(Date::from_str)
+                    .transpose()
+                    .map_err(|e| {
+                        D::Error::custom(format!("Failed to parse initial date: {}", e))
+                    })?;
+
                 CustomFieldSettings::Date(DateSettings {
-                    min: untagged
-                        .min
-                        .as_ref()
-                        .and_then(|s| s.as_str())
-                        .and_then(|s| Date::from_str(s).ok()),
-                    max: untagged
-                        .max
-                        .as_ref()
-                        .and_then(|s| s.as_str())
-                        .and_then(|s| Date::from_str(s).ok()),
+                    min,
+                    max,
                     initial_value_type: untagged.initial_value_type,
                     initial_shift: untagged.initial_shift,
-                    initial_date: untagged
-                        .initial_date
-                        .as_ref()
-                        .and_then(|s| s.as_str())
-                        .and_then(|s| Date::from_str(s).ok()),
+                    initial_date,
                 })
             }
             5 => CustomFieldSettings::SingleList(ListSettings {
