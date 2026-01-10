@@ -220,3 +220,64 @@ pub struct PullRequestCount {
     /// The number of pull requests.
     pub count: u32,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pr_comment_order_from_str_asc() {
+        let result = PrCommentOrder::from_str("asc");
+        assert_eq!(result.expect("asc should parse"), PrCommentOrder::Asc);
+    }
+
+    #[test]
+    fn test_pr_comment_order_from_str_desc() {
+        let result = PrCommentOrder::from_str("desc");
+        assert_eq!(result.expect("desc should parse"), PrCommentOrder::Desc);
+    }
+
+    #[test]
+    fn test_pr_comment_order_from_str_case_insensitive() {
+        assert_eq!(
+            PrCommentOrder::from_str("ASC").expect("ASC should parse"),
+            PrCommentOrder::Asc
+        );
+        assert_eq!(
+            PrCommentOrder::from_str("DESC").expect("DESC should parse"),
+            PrCommentOrder::Desc
+        );
+        assert_eq!(
+            PrCommentOrder::from_str("Asc").expect("Asc should parse"),
+            PrCommentOrder::Asc
+        );
+    }
+
+    #[test]
+    fn test_pr_comment_order_from_str_invalid() {
+        let result = PrCommentOrder::from_str("invalid");
+        assert!(result.is_err());
+
+        let result = PrCommentOrder::from_str("");
+        assert!(result.is_err());
+
+        let result = PrCommentOrder::from_str("ascending");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_pr_comment_order_display() {
+        assert_eq!(PrCommentOrder::Asc.to_string(), "asc");
+        assert_eq!(PrCommentOrder::Desc.to_string(), "desc");
+    }
+
+    #[test]
+    fn test_pr_comment_order_serialize() {
+        let asc_json = serde_json::to_string(&PrCommentOrder::Asc).expect("Asc should serialize");
+        assert_eq!(asc_json, "\"asc\"");
+
+        let desc_json =
+            serde_json::to_string(&PrCommentOrder::Desc).expect("Desc should serialize");
+        assert_eq!(desc_json, "\"desc\"");
+    }
+}

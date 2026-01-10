@@ -8,6 +8,5 @@ pub async fn setup_git_api(mock_server: &MockServer) -> GitApi {
 }
 
 /// Common imports for tests
-pub use backlog_core::identifier::{PullRequestAttachmentId, PullRequestNumber};
 pub use wiremock::matchers::{method, path};
 pub use wiremock::{Mock, MockServer, ResponseTemplate};
