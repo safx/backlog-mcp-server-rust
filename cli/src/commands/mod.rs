@@ -16,3 +16,5 @@ pub mod team;
 pub mod watching;
 #[cfg(feature = "webhook")]
 pub mod webhook;
+#[cfg(feature = "wiki")]
+pub mod wiki;
