@@ -37,7 +37,7 @@ async fn test_get_user_success() {
     let params = GetUserParams::new(user_id);
     let result = api.get_user(params).await;
     assert!(result.is_ok());
-    let user = result.unwrap();
+    let user = result.expect("get_user should succeed");
     assert_eq!(user.id.value(), 123);
     assert_eq!(user.user_id, Some("testuser".to_string()));
     assert_eq!(user.name, "Test User");
@@ -97,7 +97,7 @@ async fn test_get_user_list_success() {
     let params = GetUserListParams::new();
     let result = api.get_user_list(params).await;
     assert!(result.is_ok());
-    let users = result.unwrap();
+    let users = result.expect("get_user_list should succeed");
     assert_eq!(users.len(), 2);
     assert_eq!(users[0].id.value(), 123);
     assert_eq!(users[1].id.value(), 124);
@@ -127,7 +127,7 @@ async fn test_get_own_user_success() {
     let params = GetOwnUserParams::new();
     let result = api.get_own_user(params).await;
     assert!(result.is_ok());
-    let user = result.unwrap();
+    let user = result.expect("get_own_user should succeed");
     assert_eq!(user.id.value(), 123);
     assert_eq!(user.user_id, Some("myself".to_string()));
     assert_eq!(user.name, "My User");
@@ -155,7 +155,7 @@ async fn test_get_user_icon_success() {
     let params = GetUserIconParams::new(user_id);
     let result = api.get_user_icon(params).await;
     assert!(result.is_ok());
-    let downloaded_file = result.unwrap();
+    let downloaded_file = result.expect("get_user_icon should succeed");
     assert_eq!(downloaded_file.filename, "icon.png");
     assert_eq!(downloaded_file.content_type, "image/png");
     assert_eq!(downloaded_file.bytes.as_ref(), icon_data);
@@ -180,7 +180,7 @@ async fn test_get_user_star_count_success() {
     let params = GetUserStarCountParams::new(user_id);
     let result = api.get_user_star_count(params).await;
     assert!(result.is_ok());
-    let star_count = result.unwrap();
+    let star_count = result.expect("get_user_star_count should succeed");
     assert_eq!(star_count.count, 54);
 }
 
@@ -202,14 +202,22 @@ async fn test_get_user_star_count_with_date_range() {
         .mount(&mock_server)
         .await;
 
-    let since_date = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
-    let since_datetime =
-        DateTime::<Utc>::from_naive_utc_and_offset(since_date.and_hms_opt(0, 0, 0).unwrap(), Utc);
+    let since_date = NaiveDate::from_ymd_opt(2024, 1, 1).expect("valid date constant");
+    let since_datetime = DateTime::<Utc>::from_naive_utc_and_offset(
+        since_date
+            .and_hms_opt(0, 0, 0)
+            .expect("valid time constant"),
+        Utc,
+    );
     let since = ApiDate::from(since_datetime);
 
-    let until_date = NaiveDate::from_ymd_opt(2024, 12, 31).unwrap();
-    let until_datetime =
-        DateTime::<Utc>::from_naive_utc_and_offset(until_date.and_hms_opt(0, 0, 0).unwrap(), Utc);
+    let until_date = NaiveDate::from_ymd_opt(2024, 12, 31).expect("valid date constant");
+    let until_datetime = DateTime::<Utc>::from_naive_utc_and_offset(
+        until_date
+            .and_hms_opt(0, 0, 0)
+            .expect("valid time constant"),
+        Utc,
+    );
     let until = ApiDate::from(until_datetime);
 
     let params = GetUserStarCountParams::new(user_id)
@@ -218,7 +226,7 @@ async fn test_get_user_star_count_with_date_range() {
 
     let result = api.get_user_star_count(params).await;
     assert!(result.is_ok());
-    let star_count = result.unwrap();
+    let star_count = result.expect("get_user_star_count should succeed with date range");
     assert_eq!(star_count.count, 10);
 }
 
@@ -241,7 +249,7 @@ async fn test_get_user_star_count_zero_stars() {
     let params = GetUserStarCountParams::new(user_id);
     let result = api.get_user_star_count(params).await;
     assert!(result.is_ok());
-    let star_count = result.unwrap();
+    let star_count = result.expect("get_user_star_count should succeed with zero stars");
     assert_eq!(star_count.count, 0);
 }
 
@@ -295,7 +303,7 @@ async fn test_get_user_stars_success() {
     let params = GetUserStarsParams::new(user_id);
     let result = api.get_user_stars(params).await;
     assert!(result.is_ok());
-    let stars = result.unwrap();
+    let stars = result.expect("get_user_stars should succeed");
     assert_eq!(stars.len(), 2);
     assert_eq!(stars[0].id, StarId::new(75));
     assert_eq!(stars[0].comment, None);
@@ -346,7 +354,7 @@ async fn test_get_user_stars_with_pagination() {
 
     let result = api.get_user_stars(params).await;
     assert!(result.is_ok());
-    let stars = result.unwrap();
+    let stars = result.expect("get_user_stars should succeed with pagination");
     assert_eq!(stars.len(), 1);
     assert_eq!(stars[0].id, StarId::new(150));
 }
@@ -370,7 +378,7 @@ async fn test_get_user_stars_with_order() {
 
     let result = api.get_user_stars(params).await;
     assert!(result.is_ok());
-    let stars = result.unwrap();
+    let stars = result.expect("get_user_stars should succeed with order");
     assert_eq!(stars.len(), 0);
 }
 
@@ -391,7 +399,7 @@ async fn test_get_user_stars_empty_response() {
     let params = GetUserStarsParams::new(user_id);
     let result = api.get_user_stars(params).await;
     assert!(result.is_ok());
-    let stars = result.unwrap();
+    let stars = result.expect("get_user_stars should succeed with empty response");
     assert_eq!(stars.len(), 0);
 }
 
@@ -436,7 +444,7 @@ async fn test_get_notification_count_success() {
     let params = GetNotificationCountParams::new();
     let result = api.get_notification_count(params).await;
     assert!(result.is_ok());
-    let notification_count = result.unwrap();
+    let notification_count = result.expect("get_notification_count should succeed");
     assert_eq!(notification_count.count, 138);
 }
 
@@ -459,7 +467,8 @@ async fn test_get_notification_count_with_already_read() {
     let params = GetNotificationCountParams::new().with_already_read(true);
     let result = api.get_notification_count(params).await;
     assert!(result.is_ok());
-    let notification_count = result.unwrap();
+    let notification_count =
+        result.expect("get_notification_count should succeed with already_read");
     assert_eq!(notification_count.count, 250);
 }
 
@@ -482,7 +491,8 @@ async fn test_get_notification_count_with_resource_already_read() {
     let params = GetNotificationCountParams::new().with_resource_already_read(true);
     let result = api.get_notification_count(params).await;
     assert!(result.is_ok());
-    let notification_count = result.unwrap();
+    let notification_count =
+        result.expect("get_notification_count should succeed with resource_already_read");
     assert_eq!(notification_count.count, 75);
 }
 
@@ -508,7 +518,8 @@ async fn test_get_notification_count_with_both_parameters() {
         .with_resource_already_read(true);
     let result = api.get_notification_count(params).await;
     assert!(result.is_ok());
-    let notification_count = result.unwrap();
+    let notification_count =
+        result.expect("get_notification_count should succeed with both params");
     assert_eq!(notification_count.count, 300);
 }
 
@@ -530,7 +541,7 @@ async fn test_get_notification_count_zero() {
     let params = GetNotificationCountParams::new();
     let result = api.get_notification_count(params).await;
     assert!(result.is_ok());
-    let notification_count = result.unwrap();
+    let notification_count = result.expect("get_notification_count should succeed with zero count");
     assert_eq!(notification_count.count, 0);
 }
 
@@ -632,7 +643,7 @@ async fn test_get_notifications_success() {
     let params = GetNotificationsParams::new();
     let result = api.get_notifications(params).await;
     assert!(result.is_ok());
-    let notifications = result.unwrap();
+    let notifications = result.expect("get_notifications should succeed");
     assert_eq!(notifications.len(), 1);
     assert_eq!(notifications[0].id.value(), 22);
     assert!(!notifications[0].already_read);
@@ -671,7 +682,7 @@ async fn test_get_notifications_with_pagination() {
 
     let result = api.get_notifications(params).await;
     assert!(result.is_ok());
-    let notifications = result.unwrap();
+    let notifications = result.expect("get_notifications should succeed with pagination");
     assert_eq!(notifications.len(), 0);
 }
 
@@ -730,7 +741,7 @@ async fn test_get_notifications_with_sender_filter() {
 
     let result = api.get_notifications(params).await;
     assert!(result.is_ok());
-    let notifications = result.unwrap();
+    let notifications = result.expect("get_notifications should succeed with sender filter");
     assert_eq!(notifications.len(), 1);
     assert_eq!(notifications[0].id.value(), 33);
     assert_eq!(notifications[0].sender.id.value(), 5);
@@ -774,7 +785,7 @@ async fn test_get_notifications_empty_response() {
     let params = GetNotificationsParams::new();
     let result = api.get_notifications(params).await;
     assert!(result.is_ok());
-    let notifications = result.unwrap();
+    let notifications = result.expect("get_notifications should succeed with empty response");
     assert_eq!(notifications.len(), 0);
 }
 

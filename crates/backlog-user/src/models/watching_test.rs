@@ -19,7 +19,7 @@ mod watching_tests {
         let result: Result<Watching, _> = serde_json::from_str(json);
         assert!(result.is_ok());
 
-        let watching = result.unwrap();
+        let watching = result.expect("valid JSON should deserialize");
         assert_eq!(watching.id.value(), 123);
         assert!(!watching.resource_already_read);
         assert_eq!(watching.watching_type, WatchingType::Issue);
@@ -43,7 +43,7 @@ mod watching_tests {
         let result: Result<Watching, _> = serde_json::from_str(json);
         assert!(result.is_ok());
 
-        let watching = result.unwrap();
+        let watching = result.expect("valid JSON should deserialize");
         assert_eq!(watching.id.value(), 456);
         assert!(watching.resource_already_read);
         assert_eq!(watching.note, Some("Important issue to track".to_string()));
@@ -53,13 +53,14 @@ mod watching_tests {
     #[test]
     fn test_watching_type_serialization() {
         assert_eq!(
-            serde_json::to_string(&WatchingType::Issue).unwrap(),
+            serde_json::to_string(&WatchingType::Issue)
+                .expect("WatchingType::Issue should serialize"),
             r#""issue""#
         );
 
         let result: Result<WatchingType, _> = serde_json::from_str(r#""issue""#);
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), WatchingType::Issue);
+        assert_eq!(result.expect("valid JSON should deserialize"), WatchingType::Issue);
     }
 
     #[test]
@@ -84,7 +85,7 @@ mod watching_tests {
         let result: Result<Vec<Watching>, _> = serde_json::from_str(json);
         assert!(result.is_ok());
 
-        let watchings = result.unwrap();
+        let watchings = result.expect("valid JSON should deserialize");
         assert_eq!(watchings.len(), 2);
         assert_eq!(watchings[0].id.value(), 1);
         assert_eq!(watchings[1].id.value(), 2);
@@ -96,7 +97,7 @@ mod watching_tests {
         let result: Result<crate::models::watching::WatchingCount, _> = serde_json::from_str(json);
         assert!(result.is_ok());
 
-        let watching_count = result.unwrap();
+        let watching_count = result.expect("valid JSON should deserialize");
         assert_eq!(watching_count.count, 138);
     }
 
@@ -106,7 +107,7 @@ mod watching_tests {
         let result: Result<crate::models::watching::WatchingCount, _> = serde_json::from_str(json);
         assert!(result.is_ok());
 
-        let watching_count = result.unwrap();
+        let watching_count = result.expect("valid JSON should deserialize");
         assert_eq!(watching_count.count, 0);
     }
 }

@@ -81,7 +81,7 @@ mod user_recent_updates_tests {
             "Failed to get user recent updates: {result:?}"
         );
 
-        let activities = result.unwrap();
+        let activities = result.expect("get_user_recent_updates should succeed");
         assert_eq!(activities.len(), 1);
         assert_eq!(activities[0].id.value(), 123);
         // Use helper method to access project id

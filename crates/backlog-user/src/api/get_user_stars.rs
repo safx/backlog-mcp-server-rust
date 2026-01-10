@@ -156,10 +156,12 @@ mod tests {
 
     #[test]
     fn test_star_order_serialization() {
-        let asc_json = serde_json::to_string(&StarOrder::Asc).unwrap();
+        let asc_json =
+            serde_json::to_string(&StarOrder::Asc).expect("StarOrder::Asc should serialize");
         assert_eq!(asc_json, "\"asc\"");
 
-        let desc_json = serde_json::to_string(&StarOrder::Desc).unwrap();
+        let desc_json =
+            serde_json::to_string(&StarOrder::Desc).expect("StarOrder::Desc should serialize");
         assert_eq!(desc_json, "\"desc\"");
     }
 

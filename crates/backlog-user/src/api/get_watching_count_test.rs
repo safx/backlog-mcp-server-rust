@@ -34,9 +34,15 @@ mod get_watching_count_tests {
     #[test]
     fn test_query_serialization_empty() {
         let params = GetWatchingCountParams::new(UserId::from(123));
-        let query = serde_json::to_value(params.to_query()).unwrap();
+        let query =
+            serde_json::to_value(params.to_query()).expect("params should serialize to JSON");
 
-        assert!(query.as_object().unwrap().is_empty());
+        assert!(
+            query
+                .as_object()
+                .expect("query should be an object")
+                .is_empty()
+        );
     }
 
     #[test]
@@ -45,15 +51,20 @@ mod get_watching_count_tests {
             .with_resource_already_read(true)
             .with_already_read(false);
 
-        let query = serde_json::to_value(params.to_query()).unwrap();
-        let query_obj = query.as_object().unwrap();
+        let query =
+            serde_json::to_value(params.to_query()).expect("params should serialize to JSON");
+        let query_obj = query.as_object().expect("query should be an object");
 
         assert_eq!(
-            query_obj.get("resourceAlreadyRead").unwrap(),
+            query_obj
+                .get("resourceAlreadyRead")
+                .expect("resourceAlreadyRead should exist"),
             &serde_json::Value::Bool(true)
         );
         assert_eq!(
-            query_obj.get("alreadyRead").unwrap(),
+            query_obj
+                .get("alreadyRead")
+                .expect("alreadyRead should exist"),
             &serde_json::Value::Bool(false)
         );
     }
@@ -63,12 +74,15 @@ mod get_watching_count_tests {
         let params =
             GetWatchingCountParams::new(UserId::from(123)).with_resource_already_read(false);
 
-        let query = serde_json::to_value(params.to_query()).unwrap();
-        let query_obj = query.as_object().unwrap();
+        let query =
+            serde_json::to_value(params.to_query()).expect("params should serialize to JSON");
+        let query_obj = query.as_object().expect("query should be an object");
 
         assert_eq!(query_obj.len(), 1);
         assert_eq!(
-            query_obj.get("resourceAlreadyRead").unwrap(),
+            query_obj
+                .get("resourceAlreadyRead")
+                .expect("resourceAlreadyRead should exist"),
             &serde_json::Value::Bool(false)
         );
         assert!(!query_obj.contains_key("alreadyRead"));

@@ -33,7 +33,7 @@ async fn test_get_watching_list_minimal() {
         .await;
 
     assert!(result.is_ok());
-    let watchings = result.unwrap();
+    let watchings = result.expect("get_watching_list should succeed");
     assert_eq!(watchings.len(), 1);
     assert_eq!(watchings[0].id.value(), 123);
 }
@@ -77,12 +77,12 @@ async fn test_get_watching_list_with_all_params() {
         .resource_already_read(true)
         .issue_ids(vec![IssueId::from(123), IssueId::from(456)])
         .build()
-        .unwrap();
+        .expect("builder should succeed with all fields");
 
     let result = api.get_watching_list(UserId::from(100), params).await;
 
     assert!(result.is_ok());
-    let watchings = result.unwrap();
+    let watchings = result.expect("get_watching_list should succeed with all params");
     assert_eq!(watchings.len(), 1);
     assert_eq!(watchings[0].id.value(), 456);
     assert!(watchings[0].resource_already_read);
@@ -106,7 +106,7 @@ async fn test_get_watching_list_empty_response() {
         .await;
 
     assert!(result.is_ok());
-    let watchings = result.unwrap();
+    let watchings = result.expect("get_watching_list should succeed with empty response");
     assert_eq!(watchings.len(), 0);
 }
 
