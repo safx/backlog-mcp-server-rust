@@ -13,7 +13,7 @@ mod to_form_params;
 /// - `#[form(skip)]` - Skip this field during serialization
 /// - `#[form(name = "customName")]` - Use custom field name in API
 /// - `#[form(array)]` - Treat as array parameter (adds `[]` suffix)
-/// - `#[form(flatten)]` - Flatten nested struct fields
+/// - `#[form(date_format = "%Y-%m-%d")]` - Format DateTime fields with the specified format
 ///
 /// # Examples
 ///
