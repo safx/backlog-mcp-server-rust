@@ -10,7 +10,7 @@ use wiremock::{
 
 async fn setup_api(server: &MockServer) -> RateLimitApi {
     let client = Client::new(&server.uri())
-        .unwrap()
+        .expect("Client::new should succeed with valid mock server URI")
         .with_api_key("test_api_key");
     RateLimitApi::new(client)
 }
@@ -28,9 +28,7 @@ async fn test_get_rate_limit_success() {
         .await;
 
     let result = api.get_rate_limit().await;
-    assert!(result.is_ok());
-
-    let response = result.unwrap();
+    let response = result.expect("get_rate_limit should succeed");
     assert_eq!(response.rate_limit.read.limit, 600);
     assert_eq!(response.rate_limit.read.remaining, 598);
     assert_eq!(response.rate_limit.read.reset, 1603881873);
@@ -70,21 +68,78 @@ async fn test_get_rate_limit_api_error() {
         .await;
 
     let result = api.get_rate_limit().await;
-    assert!(result.is_err());
-
-    if let Err(e) = result {
-        assert_eq!(e.to_string(), "Backlog API Error (HTTP 401): No api key.");
-    }
+    let err = result.expect_err("should return 401 error");
+    assert!(matches!(
+        err,
+        backlog_api_core::Error::HttpStatus { status: 401, .. }
+    ));
 }
 
 #[tokio::test]
 async fn test_get_rate_limit_network_error() {
     // Use an invalid URL that will fail to connect
     let client = Client::new("http://invalid-domain-that-does-not-exist.local")
-        .unwrap()
+        .expect("Client::new should succeed even with unreachable URL")
         .with_api_key("test_api_key");
     let api = RateLimitApi::new(client);
 
     let result = api.get_rate_limit().await;
-    assert!(result.is_err());
+    let err = result.expect_err("should fail with network error");
+    assert!(matches!(err, backlog_api_core::Error::Http(_)));
+}
+
+#[tokio::test]
+async fn test_get_rate_limit_forbidden() {
+    let server = setup_server().await;
+    let api = setup_api(&server).await;
+    let error_response = serde_json::json!({
+        "errors": [
+            {
+                "message": "Access denied.",
+                "code": 11,
+                "moreInfo": ""
+            }
+        ]
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/api/v2/rateLimit"))
+        .respond_with(ResponseTemplate::new(403).set_body_json(&error_response))
+        .mount(&server)
+        .await;
+
+    let result = api.get_rate_limit().await;
+    let err = result.expect_err("should return 403 error");
+    assert!(matches!(
+        err,
+        backlog_api_core::Error::HttpStatus { status: 403, .. }
+    ));
+}
+
+#[tokio::test]
+async fn test_get_rate_limit_server_error() {
+    let server = setup_server().await;
+    let api = setup_api(&server).await;
+    let error_response = serde_json::json!({
+        "errors": [
+            {
+                "message": "Internal server error",
+                "code": 0,
+                "moreInfo": ""
+            }
+        ]
+    });
+
+    Mock::given(method("GET"))
+        .and(path("/api/v2/rateLimit"))
+        .respond_with(ResponseTemplate::new(500).set_body_json(&error_response))
+        .mount(&server)
+        .await;
+
+    let result = api.get_rate_limit().await;
+    let err = result.expect_err("should return 500 error");
+    assert!(matches!(
+        err,
+        backlog_api_core::Error::HttpStatus { status: 500, .. }
+    ));
 }
