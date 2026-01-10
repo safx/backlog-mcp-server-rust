@@ -45,6 +45,7 @@ mod tests {
     use crate::api::IssueApi;
     use backlog_core::{IssueKey, identifier::Identifier};
     use client::test_utils::setup_client;
+    use std::str::FromStr;
     use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -93,7 +94,7 @@ mod tests {
         let api = IssueApi::new(client);
 
         let params =
-            GetCommentNotificationsParams::new(IssueKey::new("TEST".parse().unwrap(), 1), 123u32);
+            GetCommentNotificationsParams::new(IssueKey::from_str("TEST-1").unwrap(), 123u32);
         let result = api.get_comment_notifications(params).await;
 
         assert!(result.is_ok());
@@ -131,7 +132,7 @@ mod tests {
         let api = IssueApi::new(client);
 
         let params =
-            GetCommentNotificationsParams::new(IssueKey::new("TEST".parse().unwrap(), 2), 456u32);
+            GetCommentNotificationsParams::new(IssueKey::from_str("TEST-2").unwrap(), 456u32);
         let result = api.get_comment_notifications(params).await;
 
         assert!(result.is_ok());
@@ -157,7 +158,7 @@ mod tests {
         let api = IssueApi::new(client);
 
         let params = GetCommentNotificationsParams::new(
-            IssueKey::new("NONEXISTENT".parse().unwrap(), 1),
+            IssueKey::from_str("NONEXISTENT-1").unwrap(),
             123u32,
         );
         let result = api.get_comment_notifications(params).await;
@@ -181,7 +182,7 @@ mod tests {
         let api = IssueApi::new(client);
 
         let params =
-            GetCommentNotificationsParams::new(IssueKey::new("TEST".parse().unwrap(), 1), 99999u32);
+            GetCommentNotificationsParams::new(IssueKey::from_str("TEST-1").unwrap(), 99999u32);
         let result = api.get_comment_notifications(params).await;
 
         assert!(result.is_err());
@@ -189,17 +190,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_comment_notifications_path_construction() {
-        let params = GetCommentNotificationsParams::new(
-            IssueKey::new("PROJECT".parse().unwrap(), 123),
-            456u32,
-        );
+        let params =
+            GetCommentNotificationsParams::new(IssueKey::from_str("PROJECT-123").unwrap(), 456u32);
         assert_eq!(
             params.path(),
             "/api/v2/issues/PROJECT-123/comments/456/notifications"
         );
 
         let params_with_key =
-            GetCommentNotificationsParams::new(IssueKey::new("PROJ".parse().unwrap(), 1), 789u32);
+            GetCommentNotificationsParams::new(IssueKey::from_str("PROJ-1").unwrap(), 789u32);
         assert_eq!(
             params_with_key.path(),
             "/api/v2/issues/PROJ-1/comments/789/notifications"

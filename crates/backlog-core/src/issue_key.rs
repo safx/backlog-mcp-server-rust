@@ -2,16 +2,18 @@ use super::ProjectKey;
 use super::error::Error;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::num::NonZeroU32;
 use std::str::FromStr;
 use std::sync::LazyLock;
 
-static ISSUE_KEY_REGEXP: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^([_A-Z0-9]{1,25})-([1-9][0-9]*)$").unwrap());
+static ISSUE_KEY_REGEXP: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^([_A-Z0-9]{1,25})-([1-9][0-9]*)$").expect("valid regex pattern")
+});
 
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
 pub struct IssueKey {
     project_key: ProjectKey,
-    key_id: u32,
+    key_id: NonZeroU32,
 }
 
 /// A type that identify the issue, and is unique through the space.
@@ -20,12 +22,9 @@ pub struct IssueKey {
 impl IssueKey {
     /// Creates a new `IssueKey` from `project_key` and `key_id`.
     ///
-    /// # Panics
-    /// Panics if key_id = 0.
-    pub fn new(project_key: ProjectKey, key_id: u32) -> Self {
-        if key_id == 0 {
-            panic!("key_id should not be zero.")
-        }
+    /// This is private to prevent constructing invalid IssueKeys.
+    /// Use `FromStr` to parse from strings like "PROJECT-123".
+    pub(crate) fn new(project_key: ProjectKey, key_id: NonZeroU32) -> Self {
         IssueKey {
             project_key,
             key_id,
@@ -41,7 +40,7 @@ impl From<IssueKey> for String {
 
 impl std::fmt::Display for IssueKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}-{}", &self.project_key.0, &self.key_id)
+        write!(f, "{}-{}", &self.project_key.0, self.key_id.get())
     }
 }
 
@@ -63,6 +62,10 @@ impl FromStr for IssueKey {
             // Parse key_id, returning error if it exceeds u32::MAX
             let key_id =
                 u32::from_str(&m[2]).map_err(|_| Error::InvalidIssueKey(key.to_string()))?;
+
+            // The regex pattern ensures key_id starts with [1-9], but we handle the zero case defensively
+            let key_id =
+                NonZeroU32::new(key_id).ok_or_else(|| Error::InvalidIssueKey(key.to_string()))?;
 
             Ok(IssueKey::new(project_key, key_id))
         } else {
@@ -94,7 +97,10 @@ impl<'de> Deserialize<'de> for IssueKey {
 fn test_issue_key_from_str() {
     assert_eq!(
         IssueKey::from_str("BLG-9"),
-        Ok(IssueKey::new(ProjectKey::from_str_unchecked("BLG"), 9,))
+        Ok(IssueKey::new(
+            ProjectKey::from_str_unchecked("BLG"),
+            NonZeroU32::new(9).unwrap()
+        ))
     );
     assert_eq!(
         IssueKey::from_str("BLG-09"),
@@ -105,6 +111,10 @@ fn test_issue_key_from_str() {
         Err(Error::InvalidIssueKey(String::from("BLG9")))
     );
     assert_eq!(
+        IssueKey::from_str("BLG-0"),
+        Err(Error::InvalidIssueKey(String::from("BLG-0")))
+    );
+    assert_eq!(
         IssueKey::from_str("BLG-a9"),
         Err(Error::InvalidIssueKey(String::from("BLG-a9")))
     );
@@ -112,7 +122,7 @@ fn test_issue_key_from_str() {
         IssueKey::from_str("TOO_LONG_PROJECT_KEY_LN25-9999"),
         Ok(IssueKey::new(
             ProjectKey::from_str_unchecked("TOO_LONG_PROJECT_KEY_LN25"),
-            9999,
+            NonZeroU32::new(9999).unwrap()
         ))
     );
     assert_eq!(
@@ -126,14 +136,14 @@ fn test_issue_key_from_str() {
 #[test]
 fn test_issue_key_to_string() {
     assert_eq!(
-        IssueKey::new(ProjectKey::from_str_unchecked("BLG"), 123,).to_string(),
+        IssueKey::from_str("BLG-123").unwrap().to_string(),
         "BLG-123".to_string()
     );
 }
 
 #[test]
 fn test_issue_key_serialize() {
-    let issue_key = IssueKey::new(ProjectKey::from_str_unchecked("BLG"), 123);
+    let issue_key = IssueKey::from_str("BLG-123").unwrap();
     let serialized = serde_json::to_string(&issue_key).unwrap();
     assert_eq!(serialized, "\"BLG-123\"");
 }
@@ -141,10 +151,7 @@ fn test_issue_key_serialize() {
 #[test]
 fn test_issue_key_deserialize() {
     let issue_key: IssueKey = serde_json::from_str("\"BLG-123\"").unwrap();
-    assert_eq!(
-        issue_key,
-        IssueKey::new(ProjectKey::from_str_unchecked("BLG"), 123)
-    );
+    assert_eq!(issue_key, IssueKey::from_str("BLG-123").unwrap());
 
     // Test invalid issue key
     let result: Result<IssueKey, _> = serde_json::from_str("\"invalid-key\"");
@@ -169,5 +176,5 @@ fn test_issue_key_from_str_max_valid() {
     let result = IssueKey::from_str(&max_key);
     assert!(result.is_ok());
     let issue_key = result.unwrap();
-    assert_eq!(issue_key.key_id, u32::MAX);
+    assert_eq!(issue_key.key_id.get(), u32::MAX);
 }

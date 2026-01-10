@@ -62,7 +62,6 @@ impl From<IssueIdOrKey> for String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ProjectKey;
 
     #[test]
     fn test_issue_id_or_key_from_str_id() {
@@ -74,10 +73,9 @@ mod tests {
 
     #[test]
     fn test_issue_id_or_key_from_str_key() {
-        let project_key = ProjectKey::from_str("BLG").unwrap();
         assert_eq!(
             IssueIdOrKey::from_str("BLG-123"),
-            Ok(IssueIdOrKey::Key(IssueKey::new(project_key, 123)))
+            Ok(IssueIdOrKey::Key(IssueKey::from_str("BLG-123").unwrap()))
         );
     }
 
@@ -105,8 +103,7 @@ mod tests {
 
     #[test]
     fn test_issue_id_or_key_display_key() {
-        let project_key = ProjectKey::from_str("TEST").unwrap();
-        let id_or_key = IssueIdOrKey::Key(IssueKey::new(project_key, 789));
+        let id_or_key = IssueIdOrKey::Key(IssueKey::from_str("TEST-789").unwrap());
         assert_eq!(id_or_key.to_string(), "TEST-789");
     }
 
@@ -116,8 +113,7 @@ mod tests {
         let id_or_key_from_id: IssueIdOrKey = issue_id.into();
         assert_eq!(id_or_key_from_id, IssueIdOrKey::Id(IssueId::new(1)));
 
-        let project_key = ProjectKey::from_str("PROJ").unwrap();
-        let issue_key = IssueKey::new(project_key, 2);
+        let issue_key = IssueKey::from_str("PROJ-2").unwrap();
         let id_or_key_from_key: IssueIdOrKey = issue_key.clone().into(); // Clone because IssueKey might not be Copy
         assert_eq!(id_or_key_from_key, IssueIdOrKey::Key(issue_key));
     }
@@ -127,8 +123,7 @@ mod tests {
         let id_val: String = IssueIdOrKey::Id(IssueId::new(123)).into();
         assert_eq!(id_val, "123");
 
-        let project_key = ProjectKey::from_str("KEY").unwrap();
-        let key_val: String = IssueIdOrKey::Key(IssueKey::new(project_key, 456)).into();
+        let key_val: String = IssueIdOrKey::Key(IssueKey::from_str("KEY-456").unwrap()).into();
         assert_eq!(key_val, "KEY-456");
     }
 
@@ -144,8 +139,7 @@ mod tests {
 
     #[test]
     fn test_serde_key() {
-        let project_key = ProjectKey::from_str_unchecked("BLG");
-        let issue_key = IssueKey::new(project_key, 123);
+        let issue_key = IssueKey::from_str("BLG-123").unwrap();
         let id_or_key = IssueIdOrKey::Key(issue_key);
         let serialized = serde_json::to_string(&id_or_key).unwrap();
         // Based on #[serde(untagged)] and IssueKey serializing as a string

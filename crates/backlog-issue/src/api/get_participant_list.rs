@@ -30,10 +30,11 @@ mod tests {
     use super::*;
     use backlog_core::identifier::{Identifier, IssueId};
     use backlog_core::{IssueKey, Role};
+    use std::str::FromStr;
 
     #[test]
     fn test_get_participant_list_params_new_with_issue_key() {
-        let issue_key = IssueKey::new("TEST".parse().unwrap(), 123);
+        let issue_key = IssueKey::from_str("TEST-123").unwrap();
         let params = GetParticipantListParams::new(issue_key.clone());
         assert_eq!(params.issue_id_or_key, IssueIdOrKey::Key(issue_key));
     }
@@ -47,7 +48,7 @@ mod tests {
 
     #[test]
     fn test_get_participant_list_params_path_with_issue_key() {
-        let params = GetParticipantListParams::new(IssueKey::new("TEST".parse().unwrap(), 123));
+        let params = GetParticipantListParams::new(IssueKey::from_str("TEST-123").unwrap());
         assert_eq!(params.path(), "/api/v2/issues/TEST-123/participants");
     }
 
@@ -59,7 +60,7 @@ mod tests {
 
     #[test]
     fn test_get_participant_list_params_debug() {
-        let params = GetParticipantListParams::new(IssueKey::new("TEST".parse().unwrap(), 123));
+        let params = GetParticipantListParams::new(IssueKey::from_str("TEST-123").unwrap());
         let debug_str = format!("{params:?}");
         assert!(debug_str.contains("GetParticipantListParams"));
         assert!(debug_str.contains("TEST"));
@@ -67,16 +68,16 @@ mod tests {
 
     #[test]
     fn test_get_participant_list_params_clone() {
-        let params = GetParticipantListParams::new(IssueKey::new("TEST".parse().unwrap(), 123));
+        let params = GetParticipantListParams::new(IssueKey::from_str("TEST-123").unwrap());
         let cloned = params.clone();
         assert_eq!(params, cloned);
     }
 
     #[test]
     fn test_get_participant_list_params_partial_eq() {
-        let params1 = GetParticipantListParams::new(IssueKey::new("TEST".parse().unwrap(), 123));
-        let params2 = GetParticipantListParams::new(IssueKey::new("TEST".parse().unwrap(), 123));
-        let params3 = GetParticipantListParams::new(IssueKey::new("TEST".parse().unwrap(), 456));
+        let params1 = GetParticipantListParams::new(IssueKey::from_str("TEST-123").unwrap());
+        let params2 = GetParticipantListParams::new(IssueKey::from_str("TEST-123").unwrap());
+        let params3 = GetParticipantListParams::new(IssueKey::from_str("TEST-456").unwrap());
 
         assert_eq!(params1, params2);
         assert_ne!(params1, params3);

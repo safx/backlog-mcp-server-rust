@@ -13,7 +13,7 @@ fn create_test_issue() -> Issue {
         id: IssueId::new(1),
         project_id: ProjectId::new(1),
         key_id: 1u32,
-        issue_key: IssueKey::new(ProjectKey::from_str("TEST").unwrap(), 1),
+        issue_key: IssueKey::from_str("TEST-1").unwrap(),
         issue_type: Box::new(IssueType {
             id: IssueTypeId::new(1),
             project_id: ProjectId::new(1),

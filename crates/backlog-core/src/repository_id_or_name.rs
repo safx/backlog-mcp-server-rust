@@ -60,3 +60,81 @@ impl From<RepositoryIdOrName> for String {
         val.to_string()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from_str_id() {
+        let result = RepositoryIdOrName::from_str("123").unwrap();
+        assert!(matches!(result, RepositoryIdOrName::Id(_)));
+        if let RepositoryIdOrName::Id(id) = result {
+            assert_eq!(id.value(), 123);
+        }
+    }
+
+    #[test]
+    fn test_from_str_name() {
+        let result = RepositoryIdOrName::from_str("my-repo").unwrap();
+        assert!(matches!(result, RepositoryIdOrName::Name(_)));
+        assert_eq!(result.to_string(), "my-repo");
+    }
+
+    #[test]
+    fn test_from_str_zero_as_name() {
+        // "0" is valid as a repository name (single alphanumeric char)
+        let result = RepositoryIdOrName::from_str("0").unwrap();
+        assert!(matches!(result, RepositoryIdOrName::Name(_)));
+        assert_eq!(result.to_string(), "0");
+    }
+
+    #[test]
+    fn test_from_str_invalid() {
+        let result = RepositoryIdOrName::from_str("invalid repo");
+        assert!(result.is_err());
+        assert_eq!(
+            result,
+            Err(Error::InvalidRepositoryIdOrName("invalid repo".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_display_id() {
+        let id_or_name = RepositoryIdOrName::Id(RepositoryId::new(456));
+        assert_eq!(id_or_name.to_string(), "456");
+    }
+
+    #[test]
+    fn test_display_name() {
+        let name = RepositoryName::from_str("test-repo").unwrap();
+        let id_or_name = RepositoryIdOrName::Name(name);
+        assert_eq!(id_or_name.to_string(), "test-repo");
+    }
+
+    #[test]
+    fn test_from_repository_id() {
+        let id = RepositoryId::new(789);
+        let id_or_name: RepositoryIdOrName = id.into();
+        assert!(matches!(id_or_name, RepositoryIdOrName::Id(_)));
+    }
+
+    #[test]
+    fn test_from_repository_name() {
+        let name = RepositoryName::from_str("my-project").unwrap();
+        let id_or_name: RepositoryIdOrName = name.into();
+        assert!(matches!(id_or_name, RepositoryIdOrName::Name(_)));
+    }
+
+    #[test]
+    fn test_into_string() {
+        let id_or_name = RepositoryIdOrName::Id(RepositoryId::new(123));
+        let s: String = id_or_name.into();
+        assert_eq!(s, "123");
+
+        let name = RepositoryName::from_str("repo-name").unwrap();
+        let id_or_name = RepositoryIdOrName::Name(name);
+        let s: String = id_or_name.into();
+        assert_eq!(s, "repo-name");
+    }
+}

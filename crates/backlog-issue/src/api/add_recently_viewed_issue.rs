@@ -44,7 +44,7 @@ impl IntoRequest for AddRecentlyViewedIssueParams {
 #[cfg(all(test, feature = "writable"))]
 mod tests {
     use super::*;
-    use backlog_core::{IssueKey, ProjectKey, id::IssueId};
+    use backlog_core::{IssueKey, identifier::IssueId};
     use std::str::FromStr;
 
     #[test]
@@ -62,10 +62,7 @@ mod tests {
     #[test]
     fn test_params_with_issue_key() {
         let params = AddRecentlyViewedIssueParams {
-            issue_id_or_key: IssueIdOrKey::Key(IssueKey::new(
-                ProjectKey::from_str("TEST").unwrap(),
-                123,
-            )),
+            issue_id_or_key: IssueIdOrKey::Key(IssueKey::from_str("TEST-123").unwrap()),
         };
 
         let form_params: Vec<(String, String)> = (&params).into();

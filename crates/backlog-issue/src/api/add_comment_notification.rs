@@ -68,6 +68,7 @@ mod tests {
     use crate::api::IssueApi;
     use backlog_core::{IssueKey, identifier::Identifier};
     use client::test_utils::setup_client;
+    use std::str::FromStr;
     use wiremock::matchers::{body_string_contains, method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -119,7 +120,7 @@ mod tests {
         let api = IssueApi::new(client);
 
         let params = AddCommentNotificationParams::new(
-            IssueKey::new("TEST".parse().unwrap(), 1),
+            IssueKey::from_str("TEST-1").unwrap(),
             123u32,
             vec![UserId::new(456)],
         );
@@ -148,7 +149,7 @@ mod tests {
         let api = IssueApi::new(client);
 
         let params = AddCommentNotificationParams::new(
-            IssueKey::new("TEST".parse().unwrap(), 2),
+            IssueKey::from_str("TEST-2").unwrap(),
             789u32,
             vec![UserId::new(111), UserId::new(222)],
         );
@@ -175,7 +176,7 @@ mod tests {
         let api = IssueApi::new(client);
 
         let params = AddCommentNotificationParams::new(
-            IssueKey::new("NONEXISTENT".parse().unwrap(), 1),
+            IssueKey::from_str("NONEXISTENT-1").unwrap(),
             123u32,
             vec![UserId::new(456)],
         );
@@ -200,7 +201,7 @@ mod tests {
         let api = IssueApi::new(client);
 
         let params = AddCommentNotificationParams::new(
-            IssueKey::new("TEST".parse().unwrap(), 1),
+            IssueKey::from_str("TEST-1").unwrap(),
             99999u32,
             vec![UserId::new(456)],
         );
@@ -225,7 +226,7 @@ mod tests {
         let api = IssueApi::new(client);
 
         let params = AddCommentNotificationParams::new(
-            IssueKey::new("TEST".parse().unwrap(), 1),
+            IssueKey::from_str("TEST-1").unwrap(),
             123u32,
             vec![UserId::new(456)],
         );
@@ -250,7 +251,7 @@ mod tests {
         let api = IssueApi::new(client);
 
         let params = AddCommentNotificationParams::new(
-            IssueKey::new("TEST".parse().unwrap(), 1),
+            IssueKey::from_str("TEST-1").unwrap(),
             123u32,
             vec![UserId::new(99999)],
         );
@@ -262,7 +263,7 @@ mod tests {
     #[tokio::test]
     async fn test_add_comment_notification_path_construction() {
         let params = AddCommentNotificationParams::new(
-            IssueKey::new("PROJECT".parse().unwrap(), 123),
+            IssueKey::from_str("PROJECT-123").unwrap(),
             456u32,
             vec![UserId::new(789)],
         );
@@ -288,7 +289,7 @@ mod tests {
         let api = IssueApi::new(client);
 
         let params = AddCommentNotificationParams::new(
-            IssueKey::new("TEST".parse().unwrap(), 1),
+            IssueKey::from_str("TEST-1").unwrap(),
             123u32,
             vec![],
         );
