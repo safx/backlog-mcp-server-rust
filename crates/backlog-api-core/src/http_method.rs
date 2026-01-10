@@ -21,3 +21,53 @@ impl HttpMethod {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_to_reqwest_get() {
+        assert_eq!(
+            HttpMethod::Get.to_reqwest(),
+            reqwest::Method::GET,
+            "GET should convert correctly"
+        );
+    }
+
+    #[test]
+    fn test_to_reqwest_post() {
+        assert_eq!(
+            HttpMethod::Post.to_reqwest(),
+            reqwest::Method::POST,
+            "POST should convert correctly"
+        );
+    }
+
+    #[test]
+    fn test_to_reqwest_put() {
+        assert_eq!(
+            HttpMethod::Put.to_reqwest(),
+            reqwest::Method::PUT,
+            "PUT should convert correctly"
+        );
+    }
+
+    #[test]
+    fn test_to_reqwest_patch() {
+        assert_eq!(
+            HttpMethod::Patch.to_reqwest(),
+            reqwest::Method::PATCH,
+            "PATCH should convert correctly"
+        );
+    }
+
+    #[test]
+    fn test_to_reqwest_delete() {
+        assert_eq!(
+            HttpMethod::Delete.to_reqwest(),
+            reqwest::Method::DELETE,
+            "DELETE should convert correctly"
+        );
+    }
+}
