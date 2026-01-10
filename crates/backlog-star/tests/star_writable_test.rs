@@ -21,10 +21,7 @@ mod tests {
         let params = AddStarParams::issue(123u32);
         let result = api.add_star(params).await;
 
-        match result {
-            Ok(_) => {}
-            Err(e) => panic!("Expected Ok, got Err: {e}"),
-        }
+        result.expect("add_star should succeed");
     }
 
     #[tokio::test]
@@ -124,8 +121,9 @@ mod tests {
         let params = AddStarParams::issue(123u32);
         let result = api.add_star(params).await;
 
-        assert!(result.is_err());
-        let error_message = result.unwrap_err().to_string();
+        let error_message = result
+            .expect_err("should fail for duplicate star")
+            .to_string();
         assert!(error_message.contains("You have already added a star"));
     }
 
@@ -154,8 +152,7 @@ mod tests {
         let params = AddStarParams::issue(999u32);
         let result = api.add_star(params).await;
 
-        assert!(result.is_err());
-        let error_message = result.unwrap_err().to_string();
+        let error_message = result.expect_err("should fail for not found").to_string();
         assert!(error_message.contains("No issue found"));
     }
 
@@ -175,8 +172,102 @@ mod tests {
         let params = AddStarParams::issue(123u32);
         let result = api.add_star(params).await;
 
-        assert!(result.is_err());
-        let error_message = result.unwrap_err().to_string();
+        let error_message = result
+            .expect_err("should fail for unexpected status")
+            .to_string();
         assert!(error_message.contains("Unexpected HTTP status 200"));
+    }
+
+    #[tokio::test]
+    async fn test_add_star_unauthorized() {
+        let mock_server = MockServer::start().await;
+        let api = setup_star_api(&mock_server).await;
+
+        let error_response = r#"{
+            "errors": [
+                {
+                    "message": "Authentication failure.",
+                    "code": 11,
+                    "moreInfo": ""
+                }
+            ]
+        }"#;
+
+        Mock::given(method("POST"))
+            .and(path("/api/v2/stars"))
+            .respond_with(ResponseTemplate::new(401).set_body_string(error_response))
+            .mount(&mock_server)
+            .await;
+
+        let params = AddStarParams::issue(123u32);
+        let result = api.add_star(params).await;
+
+        let err = result.expect_err("should return 401 error");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 401, .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_add_star_forbidden() {
+        let mock_server = MockServer::start().await;
+        let api = setup_star_api(&mock_server).await;
+
+        let error_response = r#"{
+            "errors": [
+                {
+                    "message": "You do not have permission to add a star.",
+                    "code": 11,
+                    "moreInfo": ""
+                }
+            ]
+        }"#;
+
+        Mock::given(method("POST"))
+            .and(path("/api/v2/stars"))
+            .respond_with(ResponseTemplate::new(403).set_body_string(error_response))
+            .mount(&mock_server)
+            .await;
+
+        let params = AddStarParams::issue(123u32);
+        let result = api.add_star(params).await;
+
+        let err = result.expect_err("should return 403 error");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 403, .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_add_star_server_error() {
+        let mock_server = MockServer::start().await;
+        let api = setup_star_api(&mock_server).await;
+
+        let error_response = r#"{
+            "errors": [
+                {
+                    "message": "Internal server error",
+                    "code": 1,
+                    "moreInfo": ""
+                }
+            ]
+        }"#;
+
+        Mock::given(method("POST"))
+            .and(path("/api/v2/stars"))
+            .respond_with(ResponseTemplate::new(500).set_body_string(error_response))
+            .mount(&mock_server)
+            .await;
+
+        let params = AddStarParams::issue(123u32);
+        let result = api.add_star(params).await;
+
+        let err = result.expect_err("should return 500 error");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 500, .. }
+        ));
     }
 }
