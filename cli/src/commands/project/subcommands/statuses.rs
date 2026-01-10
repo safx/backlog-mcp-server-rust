@@ -1,0 +1,195 @@
+//! Project status management commands
+
+use crate::commands::common::{parse_project_id_or_key, CliResult};
+use backlog_api_client::client::BacklogApiClient;
+use backlog_core::identifier::StatusId;
+use backlog_project::GetStatusListParams;
+
+#[cfg(feature = "project_writable")]
+use backlog_domain_models::StatusColor;
+#[cfg(feature = "project_writable")]
+use backlog_project::api::{AddStatusParams, DeleteStatusParams, UpdateStatusParams, UpdateStatusOrderParams};
+#[cfg(feature = "project_writable")]
+use std::str::FromStr;
+
+/// List statuses for a project
+pub async fn list(client: &BacklogApiClient, project_id_or_key: &str) -> CliResult<()> {
+    println!("Listing statuses for project: {project_id_or_key}");
+
+    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let params = GetStatusListParams::new(proj_id_or_key);
+    match client.project().get_status_list(params).await {
+        Ok(statuses) => {
+            if statuses.is_empty() {
+                println!("No statuses found");
+            } else {
+                for status in statuses {
+                    println!("[{}] {} (Color: {})", status.id, status.name, status.color);
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("Error listing statuses: {e}");
+        }
+    }
+    Ok(())
+}
+
+/// Add a status to a project
+#[cfg(feature = "project_writable")]
+pub async fn add(
+    client: &BacklogApiClient,
+    project_id_or_key: &str,
+    name: &str,
+    color: &str,
+) -> CliResult<()> {
+    println!("Adding status '{name}' to project: {project_id_or_key}");
+
+    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let parsed_color = StatusColor::from_str(color)?;
+
+    let params = AddStatusParams::new(proj_id_or_key, name, parsed_color);
+
+    match client.project().add_status(params).await {
+        Ok(status) => {
+            println!("✅ Status added successfully:");
+            println!("ID: {}", status.id);
+            println!("Name: {}", status.name);
+            println!("Color: {}", status.color);
+            println!("Display Order: {}", status.display_order);
+        }
+        Err(e) => {
+            eprintln!("❌ Failed to add status: {e}");
+            std::process::exit(1);
+        }
+    }
+    Ok(())
+}
+
+/// Update a status in a project
+#[cfg(feature = "project_writable")]
+pub async fn update(
+    client: &BacklogApiClient,
+    project_id_or_key: &str,
+    status_id: u32,
+    name: Option<String>,
+    color: Option<String>,
+) -> CliResult<()> {
+    println!("Updating status {status_id} in project: {project_id_or_key}");
+
+    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let status_id_val = StatusId::new(status_id);
+
+    let parsed_color = if let Some(color_str) = &color {
+        Some(StatusColor::from_str(color_str)?)
+    } else {
+        None
+    };
+
+    let mut params = UpdateStatusParams::new(proj_id_or_key, status_id_val);
+
+    if let Some(name) = name {
+        params = params.name(name);
+    }
+
+    if let Some(color) = parsed_color {
+        params = params.color(color);
+    }
+
+    match client.project().update_status(params).await {
+        Ok(status) => {
+            println!("✅ Status updated successfully:");
+            println!("ID: {}", status.id);
+            println!("Name: {}", status.name);
+            println!("Color: {}", status.color);
+            println!("Display Order: {}", status.display_order);
+        }
+        Err(e) => {
+            eprintln!("❌ Failed to update status: {e}");
+            std::process::exit(1);
+        }
+    }
+    Ok(())
+}
+
+/// Delete a status from a project
+#[cfg(feature = "project_writable")]
+pub async fn delete(
+    client: &BacklogApiClient,
+    project_id_or_key: &str,
+    status_id: u32,
+    substitute_status_id: u32,
+) -> CliResult<()> {
+    println!(
+        "Deleting status {status_id} from project: {project_id_or_key} (substitute: {substitute_status_id})"
+    );
+
+    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let status_id_val = StatusId::new(status_id);
+    let substitute_id = StatusId::new(substitute_status_id);
+
+    let params = DeleteStatusParams::new(proj_id_or_key, status_id_val, substitute_id);
+
+    match client.project().delete_status(params).await {
+        Ok(status) => {
+            println!("✅ Status deleted successfully:");
+            println!("ID: {}", status.id);
+            println!("Name: {}", status.name);
+            println!("Color: {}", status.color);
+            println!("Display Order: {}", status.display_order);
+        }
+        Err(e) => {
+            eprintln!("❌ Failed to delete status: {e}");
+            std::process::exit(1);
+        }
+    }
+    Ok(())
+}
+
+/// Update the display order of statuses in a project
+#[cfg(feature = "project_writable")]
+pub async fn update_order(
+    client: &BacklogApiClient,
+    project_id_or_key: &str,
+    status_ids: &str,
+) -> CliResult<()> {
+    println!("Updating status order in project: {project_id_or_key} with IDs: {status_ids}");
+
+    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+
+    // Parse comma-separated status IDs
+    let parsed_status_ids: Result<Vec<StatusId>, _> = status_ids
+        .split(',')
+        .map(|s| s.trim().parse::<u32>().map(StatusId::new))
+        .collect();
+
+    let status_id_vec = match parsed_status_ids {
+        Ok(ids) => ids,
+        Err(e) => {
+            eprintln!("❌ Error parsing status IDs '{status_ids}': {e}");
+            std::process::exit(1);
+        }
+    };
+
+    let params = UpdateStatusOrderParams::new(proj_id_or_key, status_id_vec);
+
+    match client.project().update_status_order(params).await {
+        Ok(statuses) => {
+            println!("✅ Status order updated successfully:");
+            for (index, status) in statuses.iter().enumerate() {
+                println!(
+                    "{}. [{}] {} (Color: {})",
+                    index + 1,
+                    status.id,
+                    status.name,
+                    status.color
+                );
+            }
+        }
+        Err(e) => {
+            eprintln!("❌ Failed to update status order: {e}");
+            std::process::exit(1);
+        }
+    }
+    Ok(())
+}
