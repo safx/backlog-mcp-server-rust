@@ -6,6 +6,8 @@ pub mod issue;
 #[cfg(feature = "project")]
 pub mod project;
 
+#[cfg(feature = "git")]
+pub mod git;
 #[cfg(feature = "rate-limit")]
 pub mod rate_limit;
 #[cfg(feature = "star")]
