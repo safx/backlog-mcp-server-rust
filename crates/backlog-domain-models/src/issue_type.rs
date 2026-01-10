@@ -1,3 +1,4 @@
+use crate::error::ParseColorError;
 use backlog_core::identifier::{IssueTypeId, ProjectId};
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -116,7 +117,7 @@ impl fmt::Display for IssueTypeColor {
 }
 
 impl FromStr for IssueTypeColor {
-    type Err = String;
+    type Err = ParseColorError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -131,10 +132,10 @@ impl FromStr for IssueTypeColor {
             "#ff9200" | "orange" => Ok(Self::Orange),
             "#ff3265" | "pink" => Ok(Self::Pink),
             "#666665" | "gray" => Ok(Self::Gray),
-            _ => Err(format!(
-                "Invalid issue type color: '{}'. Valid colors: {}",
+            _ => Err(ParseColorError::new(
                 s,
-                Self::all_names().join(", ")
+                "issue type",
+                "red, dark-red, purple, violet, blue, teal, green, orange, pink, gray",
             )),
         }
     }
