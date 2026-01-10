@@ -235,4 +235,100 @@ mod add_watching_test {
 
         assert!(result.is_err());
     }
+
+    #[tokio::test]
+    #[cfg(feature = "writable")]
+    async fn test_add_watching_unauthorized() {
+        let mock_server = MockServer::start().await;
+
+        let error_json = json!({
+            "errors": [
+                {
+                    "message": "Authentication failure.",
+                    "code": 11,
+                    "moreInfo": ""
+                }
+            ]
+        });
+
+        Mock::given(matchers::method("POST"))
+            .and(matchers::path("/api/v2/watchings"))
+            .respond_with(ResponseTemplate::new(401).set_body_json(&error_json))
+            .mount(&mock_server)
+            .await;
+
+        let api = setup_watching_api(&mock_server).await;
+        let params = AddWatchingParams::new(IssueIdOrKey::Id(IssueId::from(123)));
+        let result = api.add(params).await;
+
+        let err = result.expect_err("should return 401 error");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 401, .. }
+        ));
+    }
+
+    #[tokio::test]
+    #[cfg(feature = "writable")]
+    async fn test_add_watching_forbidden() {
+        let mock_server = MockServer::start().await;
+
+        let error_json = json!({
+            "errors": [
+                {
+                    "message": "You do not have permission to watch this issue.",
+                    "code": 11,
+                    "moreInfo": ""
+                }
+            ]
+        });
+
+        Mock::given(matchers::method("POST"))
+            .and(matchers::path("/api/v2/watchings"))
+            .respond_with(ResponseTemplate::new(403).set_body_json(&error_json))
+            .mount(&mock_server)
+            .await;
+
+        let api = setup_watching_api(&mock_server).await;
+        let params = AddWatchingParams::new(IssueIdOrKey::Id(IssueId::from(123)));
+        let result = api.add(params).await;
+
+        let err = result.expect_err("should return 403 error");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 403, .. }
+        ));
+    }
+
+    #[tokio::test]
+    #[cfg(feature = "writable")]
+    async fn test_add_watching_server_error() {
+        let mock_server = MockServer::start().await;
+
+        let error_json = json!({
+            "errors": [
+                {
+                    "message": "Internal server error",
+                    "code": 1,
+                    "moreInfo": ""
+                }
+            ]
+        });
+
+        Mock::given(matchers::method("POST"))
+            .and(matchers::path("/api/v2/watchings"))
+            .respond_with(ResponseTemplate::new(500).set_body_json(&error_json))
+            .mount(&mock_server)
+            .await;
+
+        let api = setup_watching_api(&mock_server).await;
+        let params = AddWatchingParams::new(IssueIdOrKey::Id(IssueId::from(123)));
+        let result = api.add(params).await;
+
+        let err = result.expect_err("should return 500 error");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 500, .. }
+        ));
+    }
 }

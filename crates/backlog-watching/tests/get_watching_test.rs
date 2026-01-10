@@ -199,4 +199,64 @@ mod get_watching_test {
 
         assert!(result.is_err());
     }
+
+    #[tokio::test]
+    async fn test_get_watching_forbidden() {
+        let mock_server = MockServer::start().await;
+
+        let error_json = json!({
+            "errors": [
+                {
+                    "message": "You do not have permission to view this watching.",
+                    "code": 11,
+                    "moreInfo": ""
+                }
+            ]
+        });
+
+        Mock::given(matchers::method("GET"))
+            .and(matchers::path("/api/v2/watchings/123"))
+            .respond_with(ResponseTemplate::new(403).set_body_json(&error_json))
+            .mount(&mock_server)
+            .await;
+
+        let api = setup_watching_api(&mock_server).await;
+        let result = api.get(WatchingId::from(123)).await;
+
+        let err = result.expect_err("should return 403 error");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 403, .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_get_watching_server_error() {
+        let mock_server = MockServer::start().await;
+
+        let error_json = json!({
+            "errors": [
+                {
+                    "message": "Internal server error",
+                    "code": 1,
+                    "moreInfo": ""
+                }
+            ]
+        });
+
+        Mock::given(matchers::method("GET"))
+            .and(matchers::path("/api/v2/watchings/123"))
+            .respond_with(ResponseTemplate::new(500).set_body_json(&error_json))
+            .mount(&mock_server)
+            .await;
+
+        let api = setup_watching_api(&mock_server).await;
+        let result = api.get(WatchingId::from(123)).await;
+
+        let err = result.expect_err("should return 500 error");
+        assert!(matches!(
+            err,
+            backlog_api_core::Error::HttpStatus { status: 500, .. }
+        ));
+    }
 }
