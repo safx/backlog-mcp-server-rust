@@ -10,6 +10,8 @@ pub mod project;
 pub mod git;
 #[cfg(feature = "rate-limit")]
 pub mod rate_limit;
+#[cfg(feature = "space")]
+pub mod space;
 #[cfg(feature = "star")]
 pub mod star;
 #[cfg(feature = "team")]

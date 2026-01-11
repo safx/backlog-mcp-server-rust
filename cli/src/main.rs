@@ -9,7 +9,8 @@ mod activity_commands;
     feature = "webhook",
     feature = "user",
     feature = "wiki",
-    feature = "git"
+    feature = "git",
+    feature = "space"
 ))]
 mod commands;
 #[cfg(feature = "project")]
@@ -35,17 +36,10 @@ use backlog_core::identifier::ActivityTypeId;
 use backlog_core::identifier::Identifier;
 #[cfg(feature = "project")]
 use backlog_project::GetProjectRecentUpdatesParams;
-use backlog_space::GetLicenceParams;
-use backlog_space::GetSpaceDiskUsageParams;
-use backlog_space::GetSpaceLogoParams;
 #[cfg(feature = "space")]
 use backlog_space::GetSpaceRecentUpdatesParams;
-#[cfg(feature = "space_writable")]
-use backlog_space::{UpdateSpaceNotificationParams, UploadAttachmentParams};
 use clap::{Args, Parser};
 use std::env;
-use std::path::PathBuf;
-use tokio::fs;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -66,7 +60,8 @@ enum Commands {
     #[cfg(feature = "issue")]
     Issue(commands::issue::IssueArgs),
     /// Manage space
-    Space(SpaceArgs),
+    #[cfg(feature = "space")]
+    Space(commands::space::SpaceArgs),
     /// Manage projects
     #[cfg(feature = "project")]
     Project(ProjectArgs),
@@ -110,48 +105,6 @@ struct WatchingArgs {
     command: commands::watching::WatchingSubcommand,
 }
 
-#[derive(Parser)]
-struct SpaceArgs {
-    #[clap(subcommand)]
-    command: SpaceCommands,
-}
-
-#[derive(Parser)]
-enum SpaceCommands {
-    /// Download space logo
-    Logo {
-        /// Output file path to save the logo
-        #[clap(short, long, value_name = "FILE_PATH")]
-        output: PathBuf,
-    },
-    /// Get space disk usage
-    DiskUsage {
-        /// Output format (table or json)
-        #[clap(short, long, default_value = "table")]
-        format: String,
-    },
-    /// Get licence information
-    Licence {
-        /// Output format (table or json)
-        #[clap(short, long, default_value = "table")]
-        format: String,
-    },
-    /// Upload an attachment file
-    #[cfg(feature = "space_writable")]
-    UploadAttachment {
-        /// File path to upload
-        #[clap(short, long, value_name = "FILE_PATH")]
-        file: PathBuf,
-    },
-    /// Update space notification
-    #[cfg(feature = "space_writable")]
-    UpdateNotification {
-        /// Notification content
-        #[clap(short, long, value_name = "CONTENT")]
-        content: String,
-    },
-}
-
 /// Truncates a string to a maximum length, ensuring UTF-8 character boundary safety
 fn truncate_text(text: &str, max_length: usize) -> String {
     if text.len() <= max_length {
@@ -186,272 +139,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Issue(issue_args) => {
             commands::issue::execute(&client, issue_args).await?;
         }
-        Commands::Space(space_args) => match space_args.command {
-            SpaceCommands::Logo { output } => {
-                println!("Downloading space logo to {}", output.display());
-
-                match client
-                    .space()
-                    .get_space_logo(GetSpaceLogoParams::new())
-                    .await
-                {
-                    Ok(downloaded_file) => {
-                        if let Err(e) = fs::write(&output, &downloaded_file.bytes).await {
-                            eprintln!("Error writing logo to {}: {}", output.display(), e);
-                        } else {
-                            println!(
-                                "Space logo downloaded successfully to: {}",
-                                output.display()
-                            );
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("Error downloading space logo: {e}");
-                    }
-                }
-            }
-            SpaceCommands::DiskUsage { format } => {
-                match client
-                    .space()
-                    .get_space_disk_usage(GetSpaceDiskUsageParams::new())
-                    .await
-                {
-                    Ok(disk_usage) => {
-                        if format == "json" {
-                            match serde_json::to_string_pretty(&disk_usage) {
-                                Ok(json) => println!("{}", json),
-                                Err(e) => eprintln!("Failed to serialize to JSON: {}", e),
-                            }
-                        } else {
-                            // Table format
-                            fn format_bytes(bytes: i64) -> String {
-                                const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
-                                let abs_bytes = bytes.abs();
-                                let mut size = abs_bytes as f64;
-                                let mut unit_index = 0;
-
-                                while size >= 1024.0 && unit_index < UNITS.len() - 1 {
-                                    size /= 1024.0;
-                                    unit_index += 1;
-                                }
-
-                                let formatted = if unit_index == 0 {
-                                    format!("{} {}", size as i64, UNITS[unit_index])
-                                } else {
-                                    format!("{:.2} {}", size, UNITS[unit_index])
-                                };
-
-                                if bytes < 0 {
-                                    format!("-{formatted}")
-                                } else {
-                                    formatted
-                                }
-                            }
-
-                            fn calculate_percentage(used: i64, capacity: i64) -> f64 {
-                                if capacity <= 0 {
-                                    0.0
-                                } else {
-                                    (used as f64 / capacity as f64) * 100.0
-                                }
-                            }
-
-                            let total_used = disk_usage.issue
-                                + disk_usage.wiki
-                                + disk_usage.file
-                                + disk_usage.subversion
-                                + disk_usage.git
-                                + disk_usage.git_lfs;
-                            let usage_percentage =
-                                calculate_percentage(total_used, disk_usage.capacity);
-
-                            println!("Space Disk Usage Summary");
-                            println!("========================");
-                            println!("Total Capacity: {}", format_bytes(disk_usage.capacity));
-                            println!(
-                                "Used: {} ({:.1}%)",
-                                format_bytes(total_used),
-                                usage_percentage
-                            );
-                            println!();
-                            println!("By Feature:");
-                            println!("- Issues:     {}", format_bytes(disk_usage.issue));
-                            println!("- Wiki:       {}", format_bytes(disk_usage.wiki));
-                            println!("- Files:      {}", format_bytes(disk_usage.file));
-                            println!("- Subversion: {}", format_bytes(disk_usage.subversion));
-                            println!("- Git:        {}", format_bytes(disk_usage.git));
-                            println!("- Git LFS:    {}", format_bytes(disk_usage.git_lfs));
-
-                            if !disk_usage.details.is_empty() {
-                                println!();
-                                println!("Top Projects by Usage:");
-                                let mut project_usages: Vec<_> = disk_usage
-                                    .details
-                                    .iter()
-                                    .map(|detail| {
-                                        let total = detail.issue
-                                            + detail.wiki
-                                            + detail.document
-                                            + detail.file
-                                            + detail.subversion
-                                            + detail.git
-                                            + detail.git_lfs;
-                                        (detail.project_id.value(), total)
-                                    })
-                                    .collect();
-                                project_usages.sort_by(|a, b| b.1.cmp(&a.1));
-
-                                for (i, (project_id, usage)) in
-                                    project_usages.iter().take(10).enumerate()
-                                {
-                                    println!(
-                                        "{}. PROJECT-{}: {}",
-                                        i + 1,
-                                        project_id,
-                                        format_bytes(*usage)
-                                    );
-                                }
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("Error getting space disk usage: {e}");
-                        if e.to_string().contains("403") {
-                            eprintln!(
-                                "Note: Administrator permissions are required to access disk usage information."
-                            );
-                        }
-                    }
-                }
-            }
-            SpaceCommands::Licence { format } => {
-                match client.space().get_licence(GetLicenceParams::new()).await {
-                    Ok(licence) => {
-                        if format == "json" {
-                            match serde_json::to_string_pretty(&licence) {
-                                Ok(json) => println!("{}", json),
-                                Err(e) => eprintln!("Failed to serialize to JSON: {}", e),
-                            }
-                        } else {
-                            // Table format
-                            println!("Space Licence Information");
-                            println!("========================");
-                            println!(
-                                "Status: {}",
-                                if licence.active { "Active" } else { "Inactive" }
-                            );
-                            println!("Licence Type ID: {}", licence.licence_type_id);
-                            println!();
-                            println!("Limits:");
-                            println!("- Users:         {} users", licence.user_limit);
-                            println!("- Projects:      {} projects", licence.project_limit);
-                            println!("- Issues:        {} issues", licence.issue_limit);
-                            println!(
-                                "- Storage:       {} GB",
-                                licence.storage_limit / 1_073_741_824
-                            );
-                            println!();
-                            println!("Features:");
-                            println!("- Git:           {}", if licence.git { "✓" } else { "✗" });
-                            println!(
-                                "- Subversion:    {}",
-                                if licence.subversion { "✓" } else { "✗" }
-                            );
-                            println!("- Gantt Chart:   {}", if licence.gantt { "✓" } else { "✗" });
-                            println!(
-                                "- Burndown:      {}",
-                                if licence.burndown { "✓" } else { "✗" }
-                            );
-                            println!(
-                                "- Wiki:          {}",
-                                if licence.wiki_attachment {
-                                    "✓"
-                                } else {
-                                    "✗"
-                                }
-                            );
-                            println!(
-                                "- File Sharing:  {}",
-                                if licence.file_sharing { "✓" } else { "✗" }
-                            );
-                            println!();
-                            if let Some(started_on) = licence.started_on {
-                                println!("Started On:  {}", started_on.format("%Y-%m-%d"));
-                            }
-                            if let Some(limit_date) = licence.limit_date {
-                                println!("Expires On:  {}", limit_date.format("%Y-%m-%d"));
-                            } else {
-                                println!("Expires On:  Unlimited");
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("Error getting licence information: {e}");
-                        if e.to_string().contains("401") {
-                            eprintln!(
-                                "Note: Authentication is required to access licence information."
-                            );
-                        }
-                    }
-                }
-            }
-            #[cfg(feature = "space_writable")]
-            SpaceCommands::UploadAttachment { file } => {
-                println!("Uploading attachment: {}", file.display());
-
-                // Check if file exists
-                if !file.exists() {
-                    eprintln!("Error: File does not exist: {}", file.display());
-                    std::process::exit(1);
-                }
-
-                let params = UploadAttachmentParams::new(file.clone());
-
-                match client.space().upload_attachment(params).await {
-                    Ok(attachment) => {
-                        println!("✅ Attachment uploaded successfully");
-                        println!("Attachment ID: {}", attachment.id);
-                        println!("Filename: {}", attachment.name);
-                        println!("Size: {} bytes", attachment.size);
-                    }
-                    Err(e) => {
-                        eprintln!("❌ Failed to upload attachment: {e}");
-                        std::process::exit(1);
-                    }
-                }
-            }
-            #[cfg(feature = "space_writable")]
-            SpaceCommands::UpdateNotification { content } => {
-                println!("Updating space notification...");
-
-                let params = UpdateSpaceNotificationParams::new(content.clone());
-
-                match client.space().update_space_notification(params).await {
-                    Ok(notification) => {
-                        println!("✅ Space notification updated successfully");
-                        println!("Content: {}", notification.content);
-                        println!(
-                            "Updated: {}",
-                            notification.updated.format("%Y-%m-%d %H:%M:%S UTC")
-                        );
-                    }
-                    Err(e) => {
-                        eprintln!("❌ Failed to update space notification: {e}");
-                        std::process::exit(1);
-                    }
-                }
-            }
-            #[cfg(not(feature = "space_writable"))]
-            _ => {
-                eprintln!(
-                    "This command requires write access to space and is not available. \
-                    Please build with the 'space_writable' feature flag:\
-\
-                    cargo build --package blg --features space_writable"
-                );
-                std::process::exit(1);
-            }
-        },
+        #[cfg(feature = "space")]
+        Commands::Space(space_args) => {
+            commands::space::execute(&client, space_args).await?;
+        }
         #[cfg(feature = "project")]
         Commands::Project(project_args) => {
             commands::project::execute(&client, project_args).await?;
