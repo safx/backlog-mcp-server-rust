@@ -72,18 +72,11 @@ pub async fn delete_attachment(
         attachment_id: AttachmentId::new(attachment_id),
     };
 
-    match client.issue().delete_attachment(params).await {
-        Ok(attachment) => {
-            println!("✅ Attachment deleted successfully");
-            println!("Deleted Attachment ID: {}", attachment.id);
-            println!("Deleted File Name: {}", attachment.name);
-            println!("File Size: {} bytes", attachment.size);
-            println!("Originally Created: {}", attachment.created);
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to delete attachment: {e}");
-            std::process::exit(1);
-        }
-    }
+    let attachment = client.issue().delete_attachment(params).await?;
+    println!("✅ Attachment deleted successfully");
+    println!("Deleted Attachment ID: {}", attachment.id);
+    println!("Deleted File Name: {}", attachment.name);
+    println!("File Size: {} bytes", attachment.size);
+    println!("Originally Created: {}", attachment.created);
     Ok(())
 }

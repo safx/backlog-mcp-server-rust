@@ -140,10 +140,10 @@ pub async fn execute_pr(client: &BacklogApiClient, args: PrArgs) -> CliResult<()
         }
         #[cfg(not(feature = "git_writable"))]
         _ => {
-            eprintln!(
+            return Err(
                 "This command requires write access. Please rebuild with --features git_writable"
+                    .into(),
             );
-            std::process::exit(1);
         }
     }
     Ok(())

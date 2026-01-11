@@ -94,26 +94,19 @@ pub async fn admin_add(
 
     let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
     let params = AddProjectAdministratorParams::new(proj_id_or_key, user_id);
-    match client.project().add_project_administrator(params).await {
-        Ok(user) => {
-            println!("✅ Successfully added administrator:");
-            println!("  User ID: {}", user.id);
-            println!("  Name: {}", user.name);
-            println!("  Email: {}", user.mail_address);
-            let role_str = match user.role_type {
-                backlog_core::Role::Admin => "Administrator",
-                backlog_core::Role::User => "User",
-                backlog_core::Role::Reporter => "Reporter",
-                backlog_core::Role::Viewer => "Viewer",
-                backlog_core::Role::Guest => "Guest",
-            };
-            println!("  Role: {role_str}");
-        }
-        Err(e) => {
-            eprintln!("❌ Error adding project administrator: {e}");
-            std::process::exit(1);
-        }
-    }
+    let user = client.project().add_project_administrator(params).await?;
+    println!("✅ Successfully added administrator:");
+    println!("  User ID: {}", user.id);
+    println!("  Name: {}", user.name);
+    println!("  Email: {}", user.mail_address);
+    let role_str = match user.role_type {
+        backlog_core::Role::Admin => "Administrator",
+        backlog_core::Role::User => "User",
+        backlog_core::Role::Reporter => "Reporter",
+        backlog_core::Role::Viewer => "Viewer",
+        backlog_core::Role::Guest => "Guest",
+    };
+    println!("  Role: {role_str}");
     Ok(())
 }
 
@@ -128,18 +121,14 @@ pub async fn admin_remove(
 
     let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
     let params = DeleteProjectAdministratorParams::new(proj_id_or_key, user_id);
-    match client.project().delete_project_administrator(params).await {
-        Ok(user) => {
-            println!("Successfully removed administrator:");
-            println!("  User ID: {}", user.id);
-            println!("  Name: {}", user.name);
-            println!("  Email: {}", user.mail_address);
-        }
-        Err(e) => {
-            eprintln!("Error removing project administrator: {e}");
-            std::process::exit(1);
-        }
-    }
+    let user = client
+        .project()
+        .delete_project_administrator(params)
+        .await?;
+    println!("Successfully removed administrator:");
+    println!("  User ID: {}", user.id);
+    println!("  Name: {}", user.name);
+    println!("  Email: {}", user.mail_address);
     Ok(())
 }
 

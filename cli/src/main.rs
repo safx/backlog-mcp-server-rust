@@ -140,7 +140,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         #[cfg(feature = "team")]
         Commands::Team(team_args) => {
-            handle_team_command(client.team(), team_args).await;
+            handle_team_command(client.team(), team_args).await?;
         }
         #[cfg(feature = "star")]
         Commands::Star(star_args) => {

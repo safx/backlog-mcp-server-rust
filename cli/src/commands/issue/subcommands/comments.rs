@@ -105,18 +105,11 @@ pub async fn update_comment(
         content: args.content,
     };
 
-    match client.issue().update_comment(params).await {
-        Ok(comment) => {
-            println!("✅ Comment updated successfully");
-            println!("Comment ID: {}", comment.id);
-            println!("Content: {}", comment.content.unwrap_or_default());
-            println!("Updated: {}", comment.updated);
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to update comment: {e}");
-            std::process::exit(1);
-        }
-    }
+    let comment = client.issue().update_comment(params).await?;
+    println!("✅ Comment updated successfully");
+    println!("Comment ID: {}", comment.id);
+    println!("Content: {}", comment.content.unwrap_or_default());
+    println!("Updated: {}", comment.updated);
     Ok(())
 }
 
@@ -133,18 +126,11 @@ pub async fn delete_comment(
         comment_id: CommentId::new(args.comment_id),
     };
 
-    match client.issue().delete_comment(params).await {
-        Ok(comment) => {
-            println!("✅ Comment deleted successfully");
-            println!("Deleted Comment ID: {}", comment.id);
-            println!("Deleted Content: {}", comment.content.unwrap_or_default());
-            println!("Originally Created: {}", comment.created);
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to delete comment: {e}");
-            std::process::exit(1);
-        }
-    }
+    let comment = client.issue().delete_comment(params).await?;
+    println!("✅ Comment deleted successfully");
+    println!("Deleted Comment ID: {}", comment.id);
+    println!("Deleted Content: {}", comment.content.unwrap_or_default());
+    println!("Originally Created: {}", comment.created);
     Ok(())
 }
 

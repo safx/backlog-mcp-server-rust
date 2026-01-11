@@ -100,13 +100,7 @@ pub(crate) async fn project_recent(
 
     // Parse activity type IDs
     if let Some(type_ids_str) = type_ids {
-        match parse_type_ids(&type_ids_str) {
-            Ok(ids) => params.activity_type_ids = Some(ids),
-            Err(e) => {
-                eprintln!("❌ {e}");
-                std::process::exit(1);
-            }
-        }
+        params.activity_type_ids = Some(parse_type_ids(&type_ids_str)?);
     }
 
     if let Some(count) = count {
@@ -117,15 +111,8 @@ pub(crate) async fn project_recent(
         params.order = Some(order);
     }
 
-    match client.project().get_project_recent_updates(params).await {
-        Ok(activities) => {
-            print_activities(&activities);
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to get project activities: {e}");
-            std::process::exit(1);
-        }
-    }
+    let activities = client.project().get_project_recent_updates(params).await?;
+    print_activities(&activities);
     Ok(())
 }
 
@@ -143,13 +130,7 @@ pub(crate) async fn space_recent(
 
     // Parse activity type IDs
     if let Some(type_ids_str) = type_ids {
-        match parse_type_ids(&type_ids_str) {
-            Ok(ids) => params.activity_type_ids = Some(ids),
-            Err(e) => {
-                eprintln!("❌ {e}");
-                std::process::exit(1);
-            }
-        }
+        params.activity_type_ids = Some(parse_type_ids(&type_ids_str)?);
     }
 
     if let Some(count) = count {
@@ -160,14 +141,7 @@ pub(crate) async fn space_recent(
         params.order = Some(order);
     }
 
-    match client.space().get_space_recent_updates(params).await {
-        Ok(activities) => {
-            print_activities(&activities);
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to get space activities: {e}");
-            std::process::exit(1);
-        }
-    }
+    let activities = client.space().get_space_recent_updates(params).await?;
+    print_activities(&activities);
     Ok(())
 }

@@ -163,12 +163,10 @@ pub async fn update(
         params.text_formatting_rule = Some(match text_formatting_rule.as_str() {
             "backlog" => backlog_project::api::TextFormattingRule::Backlog,
             "markdown" => backlog_project::api::TextFormattingRule::Markdown,
-            _ => {
-                eprintln!(
-                    "Invalid text formatting rule: {text_formatting_rule}. Use 'backlog' or 'markdown'"
-                );
-                std::process::exit(1);
-            }
+            _ => return Err(format!(
+                "Invalid text formatting rule: {text_formatting_rule}. Use 'backlog' or 'markdown'"
+            )
+            .into()),
         });
     }
     if let Some(archived) = archived {

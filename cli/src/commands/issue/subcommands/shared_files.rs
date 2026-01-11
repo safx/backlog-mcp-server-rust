@@ -95,36 +95,29 @@ pub async fn link_shared_files(
         .build()
         .map_err(|e| format!("Failed to build parameters: {e}"))?;
 
-    match client.issue().link_shared_files_to_issue(params).await {
-        Ok(linked_files) => {
-            println!(
-                "✅ Successfully linked {} shared file(s) to the issue!",
-                linked_files.len()
-            );
-            println!();
+    let linked_files = client.issue().link_shared_files_to_issue(params).await?;
+    println!(
+        "✅ Successfully linked {} shared file(s) to the issue!",
+        linked_files.len()
+    );
+    println!();
 
-            for (index, file) in linked_files.iter().enumerate() {
-                println!("{}. {}", index + 1, file.name);
-                println!("   ID: {}", file.id);
-                println!("   Directory: {}", file.dir);
-                match &file.content {
-                    backlog_issue::models::FileContent::File { size } => {
-                        println!("   Type: File");
-                        println!("   Size: {size} bytes");
-                    }
-                    backlog_issue::models::FileContent::Directory => {
-                        println!("   Type: Directory");
-                    }
-                }
-                println!("   Created by: {}", file.created_user.name);
-                println!("   Created at: {}", file.created);
-                println!();
+    for (index, file) in linked_files.iter().enumerate() {
+        println!("{}. {}", index + 1, file.name);
+        println!("   ID: {}", file.id);
+        println!("   Directory: {}", file.dir);
+        match &file.content {
+            backlog_issue::models::FileContent::File { size } => {
+                println!("   Type: File");
+                println!("   Size: {size} bytes");
+            }
+            backlog_issue::models::FileContent::Directory => {
+                println!("   Type: Directory");
             }
         }
-        Err(e) => {
-            eprintln!("❌ Failed to link shared files to issue: {e}");
-            std::process::exit(1);
-        }
+        println!("   Created by: {}", file.created_user.name);
+        println!("   Created at: {}", file.created);
+        println!();
     }
     Ok(())
 }
@@ -145,28 +138,21 @@ pub async fn unlink_shared_file(
 
     let params = UnlinkSharedFileParams::new(parsed_issue_id_or_key, SharedFileId::new(file_id));
 
-    match client.issue().unlink_shared_file(params).await {
-        Ok(unlinked_file) => {
-            println!("✅ Successfully unlinked shared file from the issue!");
-            println!("   Name: {}", unlinked_file.name);
-            println!("   ID: {}", unlinked_file.id);
-            println!("   Directory: {}", unlinked_file.dir);
-            match &unlinked_file.content {
-                backlog_issue::models::FileContent::File { size } => {
-                    println!("   Type: File");
-                    println!("   Size: {size} bytes");
-                }
-                backlog_issue::models::FileContent::Directory => {
-                    println!("   Type: Directory");
-                }
-            }
-            println!("   Created by: {}", unlinked_file.created_user.name);
-            println!("   Created at: {}", unlinked_file.created);
+    let unlinked_file = client.issue().unlink_shared_file(params).await?;
+    println!("✅ Successfully unlinked shared file from the issue!");
+    println!("   Name: {}", unlinked_file.name);
+    println!("   ID: {}", unlinked_file.id);
+    println!("   Directory: {}", unlinked_file.dir);
+    match &unlinked_file.content {
+        backlog_issue::models::FileContent::File { size } => {
+            println!("   Type: File");
+            println!("   Size: {size} bytes");
         }
-        Err(e) => {
-            eprintln!("❌ Failed to unlink shared file from issue: {e}");
-            std::process::exit(1);
+        backlog_issue::models::FileContent::Directory => {
+            println!("   Type: Directory");
         }
     }
+    println!("   Created by: {}", unlinked_file.created_user.name);
+    println!("   Created at: {}", unlinked_file.created);
     Ok(())
 }

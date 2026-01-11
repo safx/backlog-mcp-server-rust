@@ -25,16 +25,9 @@ pub(crate) async fn comment_count(
         parsed_repo_id,
         parsed_pr_number,
     );
-    match client.git().get_pull_request_comment_count(params).await {
-        Ok(count_response) => {
-            println!("✅ Pull request comment count retrieved successfully");
-            println!("Comment count: {}", count_response.count);
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to get pull request comment count: {e}");
-            std::process::exit(1);
-        }
-    }
+    let count_response = client.git().get_pull_request_comment_count(params).await?;
+    println!("✅ Pull request comment count retrieved successfully");
+    println!("Comment count: {}", count_response.count);
     Ok(())
 }
 
@@ -66,23 +59,16 @@ pub(crate) async fn comment_update(
         &content,
     );
 
-    match client.git().update_pull_request_comment(params).await {
-        Ok(comment) => {
-            println!("✅ Pull request comment updated successfully");
-            println!("Comment ID: {}", comment.id.value());
-            println!("Content: {}", comment.content);
-            println!(
-                "Created by: {} (ID: {})",
-                comment.created_user.name,
-                comment.created_user.id.value()
-            );
-            println!("Created: {}", comment.created);
-            println!("Updated: {}", comment.updated);
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to update pull request comment: {e}");
-            std::process::exit(1);
-        }
-    }
+    let comment = client.git().update_pull_request_comment(params).await?;
+    println!("✅ Pull request comment updated successfully");
+    println!("Comment ID: {}", comment.id.value());
+    println!("Content: {}", comment.content);
+    println!(
+        "Created by: {} (ID: {})",
+        comment.created_user.name,
+        comment.created_user.id.value()
+    );
+    println!("Created: {}", comment.created);
+    println!("Updated: {}", comment.updated);
     Ok(())
 }

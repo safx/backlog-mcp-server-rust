@@ -1,3 +1,4 @@
+use crate::commands::common::CliResult;
 use backlog_api_client::{ListTeamsOrder, ListTeamsParams, ListTeamsResponse, TeamApi};
 use backlog_core::{id::TeamId, identifier::Identifier};
 use backlog_team::api::{GetTeamIconParams, GetTeamParams};
@@ -62,40 +63,33 @@ pub enum OutputFormat {
     Csv,
 }
 
-pub async fn handle_team_command(api: TeamApi, args: TeamArgs) {
+pub async fn handle_team_command(api: TeamApi, args: TeamArgs) -> CliResult<()> {
     match args.command {
         TeamCommands::Show { team_id } => {
             let params = GetTeamParams {
                 team_id: TeamId::new(team_id),
             };
 
-            match api.get_team(params).await {
-                Ok(team) => {
-                    println!("Team Information:");
-                    println!("================");
-                    println!("ID: {}", team.id.value());
-                    println!("Name: {}", team.name);
-                    println!();
+            let team = api.get_team(params).await?;
+            println!("Team Information:");
+            println!("================");
+            println!("ID: {}", team.id.value());
+            println!("Name: {}", team.name);
+            println!();
 
-                    println!("Members ({}):", team.members.len());
-                    for member in &team.members {
-                        println!(
-                            "  - {} ({}) - {}",
-                            member.name,
-                            member.user_id.as_deref().unwrap_or("N/A"),
-                            member.mail_address
-                        );
-                    }
-                    println!();
-
-                    println!("Created by: {} at {}", team.created_user.name, team.created);
-                    println!("Updated by: {} at {}", team.updated_user.name, team.updated);
-                }
-                Err(e) => {
-                    eprintln!("❌ Failed to get team: {e}");
-                    std::process::exit(1);
-                }
+            println!("Members ({}):", team.members.len());
+            for member in &team.members {
+                println!(
+                    "  - {} ({}) - {}",
+                    member.name,
+                    member.user_id.as_deref().unwrap_or("N/A"),
+                    member.mail_address
+                );
             }
+            println!();
+
+            println!("Created by: {} at {}", team.created_user.name, team.created);
+            println!("Updated by: {} at {}", team.updated_user.name, team.updated);
         }
         TeamCommands::List {
             order,
@@ -112,15 +106,16 @@ pub async fn handle_team_command(api: TeamApi, args: TeamArgs) {
                 count,
             };
 
-            match api.list_teams(params).await {
-                Ok(teams) => match format {
-                    OutputFormat::Table => display_teams_table(&teams),
-                    OutputFormat::Json => display_teams_json(&teams),
-                    OutputFormat::Csv => display_teams_csv(&teams),
-                },
-                Err(e) => {
-                    eprintln!("❌ Failed to list teams: {e}");
-                    std::process::exit(1);
+            let teams = api.list_teams(params).await?;
+            match format {
+                OutputFormat::Table => {
+                    display_teams_table(&teams);
+                }
+                OutputFormat::Json => {
+                    display_teams_json(&teams)?;
+                }
+                OutputFormat::Csv => {
+                    display_teams_csv(&teams);
                 }
             }
         }
@@ -129,23 +124,12 @@ pub async fn handle_team_command(api: TeamApi, args: TeamArgs) {
                 team_id: TeamId::new(team_id),
             };
 
-            match api.get_team_icon(params).await {
-                Ok(icon) => match std::fs::write(&output, &icon.bytes) {
-                    Ok(_) => {
-                        println!("✅ Team icon saved to: {}", output.display());
-                    }
-                    Err(e) => {
-                        eprintln!("❌ Failed to save team icon: {e}");
-                        std::process::exit(1);
-                    }
-                },
-                Err(e) => {
-                    eprintln!("❌ Failed to download team icon: {e}");
-                    std::process::exit(1);
-                }
-            }
+            let icon = api.get_team_icon(params).await?;
+            std::fs::write(&output, &icon.bytes)?;
+            println!("✅ Team icon saved to: {}", output.display());
         }
     }
+    Ok(())
 }
 
 fn display_teams_table(teams: &ListTeamsResponse) {
@@ -179,14 +163,10 @@ fn display_teams_table(teams: &ListTeamsResponse) {
     }
 }
 
-fn display_teams_json(teams: &ListTeamsResponse) {
-    match serde_json::to_string_pretty(teams) {
-        Ok(json) => println!("{json}"),
-        Err(e) => {
-            eprintln!("❌ Failed to serialize teams to JSON: {e}");
-            std::process::exit(1);
-        }
-    }
+fn display_teams_json(teams: &ListTeamsResponse) -> CliResult<()> {
+    let json = serde_json::to_string_pretty(teams)?;
+    println!("{json}");
+    Ok(())
 }
 
 fn display_teams_csv(teams: &ListTeamsResponse) {

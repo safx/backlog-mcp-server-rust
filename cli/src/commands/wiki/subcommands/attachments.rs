@@ -12,34 +12,27 @@ use std::path::PathBuf;
 pub(crate) async fn list_attachments(client: &BacklogApiClient, wiki_id: u32) -> CliResult<()> {
     println!("Listing attachments for wiki ID: {wiki_id}");
 
-    match client
+    let attachments = client
         .wiki()
         .get_wiki_attachment_list(GetWikiAttachmentListParams::new(WikiId::new(wiki_id)))
-        .await
-    {
-        Ok(attachments) => {
-            if attachments.is_empty() {
-                println!("No attachments found for this wiki page");
-            } else {
-                println!("Found {} attachment(s):", attachments.len());
-                for attachment in attachments {
-                    println!(
-                        "[{}] {} ({} bytes)",
-                        attachment.id.value(),
-                        attachment.name,
-                        attachment.size
-                    );
-                    println!(
-                        "  Created by: {} at {}",
-                        attachment.created_user.name,
-                        attachment.created.format("%Y-%m-%d %H:%M:%S")
-                    );
-                }
-            }
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to list wiki attachments: {e}");
-            std::process::exit(1);
+        .await?;
+
+    if attachments.is_empty() {
+        println!("No attachments found for this wiki page");
+    } else {
+        println!("Found {} attachment(s):", attachments.len());
+        for attachment in attachments {
+            println!(
+                "[{}] {} ({} bytes)",
+                attachment.id.value(),
+                attachment.name,
+                attachment.size
+            );
+            println!(
+                "  Created by: {} at {}",
+                attachment.created_user.name,
+                attachment.created.format("%Y-%m-%d %H:%M:%S")
+            );
         }
     }
 
@@ -55,34 +48,20 @@ pub(crate) async fn download_attachment(
 ) -> CliResult<()> {
     println!("Downloading attachment {attachment_id} from wiki ID: {wiki_id}");
 
-    match client
+    let downloaded_file = client
         .wiki()
         .download_wiki_attachment(DownloadWikiAttachmentParams::new(
             WikiId::new(wiki_id),
             WikiAttachmentId::new(attachment_id),
         ))
-        .await
-    {
-        Ok(downloaded_file) => {
-            let filename = output.unwrap_or(downloaded_file.filename.clone());
+        .await?;
 
-            match tokio::fs::write(&filename, &downloaded_file.bytes).await {
-                Ok(_) => {
-                    println!("✅ Successfully downloaded to: {filename}");
-                    println!("   Content-Type: {}", downloaded_file.content_type);
-                    println!("   File size: {} bytes", downloaded_file.bytes.len());
-                }
-                Err(e) => {
-                    eprintln!("❌ Failed to write file '{filename}': {e}");
-                    std::process::exit(1);
-                }
-            }
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to download wiki attachment: {e}");
-            std::process::exit(1);
-        }
-    }
+    let filename = output.unwrap_or(downloaded_file.filename.clone());
+    tokio::fs::write(&filename, &downloaded_file.bytes).await?;
+
+    println!("✅ Successfully downloaded to: {filename}");
+    println!("   Content-Type: {}", downloaded_file.content_type);
+    println!("   File size: {} bytes", downloaded_file.bytes.len());
 
     Ok(())
 }
@@ -100,43 +79,28 @@ pub(crate) async fn attach_file(
     println!("📤 Uploading file: {}", file_path.display());
     let upload_params = UploadAttachmentParams::new(file_path.clone());
 
-    let attachment = match client.space().upload_attachment(upload_params).await {
-        Ok(attachment) => {
-            println!("✅ File uploaded successfully");
-            println!("   Attachment ID: {}", attachment.id);
-            println!("   File name: {}", attachment.name);
-            println!("   File size: {} bytes", attachment.size);
-            attachment
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to upload file: {e}");
-            std::process::exit(1);
-        }
-    };
+    let attachment = client.space().upload_attachment(upload_params).await?;
+    println!("✅ File uploaded successfully");
+    println!("   Attachment ID: {}", attachment.id);
+    println!("   File name: {}", attachment.name);
+    println!("   File size: {} bytes", attachment.size);
 
     // Step 2: Attach the uploaded file to the wiki page
     println!("🔗 Attaching file to wiki page...");
     let attach_params =
         AttachFilesToWikiParams::new(WikiId::new(wiki_id), vec![AttachmentId::new(attachment.id)]);
 
-    match client.wiki().attach_files_to_wiki(attach_params).await {
-        Ok(wiki_attachments) => {
-            println!("✅ File attached to wiki successfully");
-            for attachment in wiki_attachments {
-                println!("   Attachment ID: {}", attachment.id.value());
-                println!("   File name: {}", attachment.name);
-                println!("   File size: {} bytes", attachment.size);
-                println!(
-                    "   Attached by: {} at {}",
-                    attachment.created_user.name,
-                    attachment.created.format("%Y-%m-%d %H:%M:%S")
-                );
-            }
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to attach file to wiki: {e}");
-            std::process::exit(1);
-        }
+    let wiki_attachments = client.wiki().attach_files_to_wiki(attach_params).await?;
+    println!("✅ File attached to wiki successfully");
+    for attachment in wiki_attachments {
+        println!("   Attachment ID: {}", attachment.id.value());
+        println!("   File name: {}", attachment.name);
+        println!("   File size: {} bytes", attachment.size);
+        println!(
+            "   Attached by: {} at {}",
+            attachment.created_user.name,
+            attachment.created.format("%Y-%m-%d %H:%M:%S")
+        );
     }
 
     Ok(())
@@ -177,22 +141,15 @@ pub(crate) async fn delete_attachment(
     let delete_params =
         DeleteWikiAttachmentParams::new(WikiId::new(wiki_id), WikiAttachmentId::new(attachment_id));
 
-    match client.wiki().delete_wiki_attachment(delete_params).await {
-        Ok(deleted_attachment) => {
-            println!("✅ Attachment deleted successfully");
-            println!("   Deleted attachment: {}", deleted_attachment.name);
-            println!("   File size: {} bytes", deleted_attachment.size);
-            println!(
-                "   Originally attached by: {} at {}",
-                deleted_attachment.created_user.name,
-                deleted_attachment.created.format("%Y-%m-%d %H:%M:%S")
-            );
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to delete attachment: {e}");
-            std::process::exit(1);
-        }
-    }
+    let deleted_attachment = client.wiki().delete_wiki_attachment(delete_params).await?;
+    println!("✅ Attachment deleted successfully");
+    println!("   Deleted attachment: {}", deleted_attachment.name);
+    println!("   File size: {} bytes", deleted_attachment.size);
+    println!(
+        "   Originally attached by: {} at {}",
+        deleted_attachment.created_user.name,
+        deleted_attachment.created.format("%Y-%m-%d %H:%M:%S")
+    );
 
     Ok(())
 }

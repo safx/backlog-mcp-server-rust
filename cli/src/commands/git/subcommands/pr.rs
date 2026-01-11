@@ -64,74 +64,43 @@ pub(crate) async fn count(
 
     // Parse status IDs
     if let Some(status_ids_str) = status_ids {
-        let status_ids: Result<Vec<StatusId>, _> = status_ids_str
+        let status_ids: Vec<StatusId> = status_ids_str
             .split(',')
             .map(|s| s.trim().parse::<u32>().map(StatusId::new))
-            .collect();
-        match status_ids {
-            Ok(ids) => params = params.status_ids(ids),
-            Err(e) => {
-                eprintln!("❌ Failed to parse status_ids: {e}");
-                std::process::exit(1);
-            }
-        };
+            .collect::<Result<_, _>>()?;
+        params = params.status_ids(status_ids);
     }
 
     // Parse assignee IDs
     if let Some(assignee_ids_str) = assignee_ids {
-        let assignee_ids: Result<Vec<UserId>, _> = assignee_ids_str
+        let assignee_ids: Vec<UserId> = assignee_ids_str
             .split(',')
             .map(|s| s.trim().parse::<u32>().map(UserId::new))
-            .collect();
-        match assignee_ids {
-            Ok(ids) => params = params.assignee_ids(ids),
-            Err(e) => {
-                eprintln!("❌ Failed to parse assignee_ids: {e}");
-                std::process::exit(1);
-            }
-        };
+            .collect::<Result<_, _>>()?;
+        params = params.assignee_ids(assignee_ids);
     }
 
     // Parse issue IDs
     if let Some(issue_ids_str) = issue_ids {
-        let issue_ids: Result<Vec<IssueId>, _> = issue_ids_str
+        let issue_ids: Vec<IssueId> = issue_ids_str
             .split(',')
             .map(|s| s.trim().parse::<u32>().map(IssueId::new))
-            .collect();
-        match issue_ids {
-            Ok(ids) => params = params.issue_ids(ids),
-            Err(e) => {
-                eprintln!("❌ Failed to parse issue_ids: {e}");
-                std::process::exit(1);
-            }
-        };
+            .collect::<Result<_, _>>()?;
+        params = params.issue_ids(issue_ids);
     }
 
     // Parse created user IDs
     if let Some(created_user_ids_str) = created_user_ids {
-        let created_user_ids: Result<Vec<UserId>, _> = created_user_ids_str
+        let created_user_ids: Vec<UserId> = created_user_ids_str
             .split(',')
             .map(|s| s.trim().parse::<u32>().map(UserId::new))
-            .collect();
-        match created_user_ids {
-            Ok(ids) => params = params.created_user_ids(ids),
-            Err(e) => {
-                eprintln!("❌ Failed to parse created_user_ids: {e}");
-                std::process::exit(1);
-            }
-        };
+            .collect::<Result<_, _>>()?;
+        params = params.created_user_ids(created_user_ids);
     }
 
-    match client.git().get_pull_request_count(params).await {
-        Ok(count_response) => {
-            println!("✅ Pull request count retrieved successfully");
-            println!("Pull request count: {}", count_response.count);
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to get pull request count: {e}");
-            std::process::exit(1);
-        }
-    }
+    let count_response = client.git().get_pull_request_count(params).await?;
+    println!("✅ Pull request count retrieved successfully");
+    println!("Pull request count: {}", count_response.count);
     Ok(())
 }
 
@@ -178,56 +147,37 @@ pub(crate) async fn create(
 
     // Parse notify user IDs
     if let Some(notify_user_ids_str) = notify_user_ids {
-        let notify_user_ids: Result<Vec<UserId>, _> = notify_user_ids_str
+        let notify_user_ids: Vec<UserId> = notify_user_ids_str
             .split(',')
             .map(|s| s.trim().parse::<u32>().map(UserId::new))
-            .collect();
-        match notify_user_ids {
-            Ok(ids) => params = params.notified_user_ids(ids),
-            Err(e) => {
-                eprintln!("❌ Failed to parse notify_user_ids: {e}");
-                std::process::exit(1);
-            }
-        };
+            .collect::<Result<_, _>>()?;
+        params = params.notified_user_ids(notify_user_ids);
     }
 
     // Parse attachment IDs
     if let Some(attachment_ids_str) = attachment_ids {
-        let attachment_ids: Result<Vec<AttachmentId>, _> = attachment_ids_str
+        let attachment_ids: Vec<AttachmentId> = attachment_ids_str
             .split(',')
             .map(|s| s.trim().parse::<u32>().map(AttachmentId::new))
-            .collect();
-        match attachment_ids {
-            Ok(ids) => params = params.attachment_ids(ids),
-            Err(e) => {
-                eprintln!("❌ Failed to parse attachment_ids: {e}");
-                std::process::exit(1);
-            }
-        };
+            .collect::<Result<_, _>>()?;
+        params = params.attachment_ids(attachment_ids);
     }
 
-    match client.git().add_pull_request(params).await {
-        Ok(pull_request) => {
-            println!("✅ Pull request created successfully");
-            println!("ID: {}", pull_request.id.value());
-            println!("Number: {}", pull_request.number.value());
-            println!("Summary: {}", pull_request.summary);
-            if let Some(description) = &pull_request.description {
-                println!("Description: {description}");
-            }
-            println!("Base: {}", pull_request.base);
-            println!("Branch: {}", pull_request.branch);
-            if let Some(assignee) = &pull_request.assignee {
-                println!("Assignee: {} (ID: {})", assignee.name, assignee.id.value());
-            }
-            if let Some(issue) = &pull_request.related_issue {
-                println!("Related Issue ID: {}", issue.id.value());
-            }
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to create pull request: {e}");
-            std::process::exit(1);
-        }
+    let pull_request = client.git().add_pull_request(params).await?;
+    println!("✅ Pull request created successfully");
+    println!("ID: {}", pull_request.id.value());
+    println!("Number: {}", pull_request.number.value());
+    println!("Summary: {}", pull_request.summary);
+    if let Some(description) = &pull_request.description {
+        println!("Description: {description}");
+    }
+    println!("Base: {}", pull_request.base);
+    println!("Branch: {}", pull_request.branch);
+    if let Some(assignee) = &pull_request.assignee {
+        println!("Assignee: {} (ID: {})", assignee.name, assignee.id.value());
+    }
+    if let Some(issue) = &pull_request.related_issue {
+        println!("Related Issue ID: {}", issue.id.value());
     }
     Ok(())
 }
@@ -281,26 +231,19 @@ pub(crate) async fn update(
         params = params.comment(comment.clone());
     }
 
-    match client.git().update_pull_request(params).await {
-        Ok(pull_request) => {
-            println!("✅ Pull request updated successfully");
-            println!("ID: {}", pull_request.id.value());
-            println!("Number: {}", pull_request.number.value());
-            println!("Summary: {}", pull_request.summary);
-            if let Some(description) = &pull_request.description {
-                println!("Description: {description}");
-            }
-            if let Some(assignee) = &pull_request.assignee {
-                println!("Assignee: {} (ID: {})", assignee.name, assignee.id.value());
-            }
-            if let Some(issue) = &pull_request.related_issue {
-                println!("Related Issue ID: {}", issue.id.value());
-            }
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to update pull request: {e}");
-            std::process::exit(1);
-        }
+    let pull_request = client.git().update_pull_request(params).await?;
+    println!("✅ Pull request updated successfully");
+    println!("ID: {}", pull_request.id.value());
+    println!("Number: {}", pull_request.number.value());
+    println!("Summary: {}", pull_request.summary);
+    if let Some(description) = &pull_request.description {
+        println!("Description: {description}");
+    }
+    if let Some(assignee) = &pull_request.assignee {
+        println!("Assignee: {} (ID: {})", assignee.name, assignee.id.value());
+    }
+    if let Some(issue) = &pull_request.related_issue {
+        println!("Related Issue ID: {}", issue.id.value());
     }
     Ok(())
 }

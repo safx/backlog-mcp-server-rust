@@ -23,23 +23,16 @@ pub(crate) async fn create(
         params
     };
 
-    match client.wiki().add_wiki(params).await {
-        Ok(wiki_detail) => {
-            println!("✅ Wiki page created successfully");
-            println!("   ID: {}", wiki_detail.id.value());
-            println!("   Name: {}", wiki_detail.name);
-            println!("   Project ID: {}", wiki_detail.project_id.value());
-            println!(
-                "   Created by: {} at {}",
-                wiki_detail.created_user.name,
-                wiki_detail.created.format("%Y-%m-%d %H:%M:%S")
-            );
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to create wiki page: {e}");
-            std::process::exit(1);
-        }
-    }
+    let wiki_detail = client.wiki().add_wiki(params).await?;
+    println!("✅ Wiki page created successfully");
+    println!("   ID: {}", wiki_detail.id.value());
+    println!("   Name: {}", wiki_detail.name);
+    println!("   Project ID: {}", wiki_detail.project_id.value());
+    println!(
+        "   Created by: {} at {}",
+        wiki_detail.created_user.name,
+        wiki_detail.created.format("%Y-%m-%d %H:%M:%S")
+    );
 
     Ok(())
 }
@@ -70,31 +63,24 @@ pub(crate) async fn update(
         params = params.mail_notify(mail_notify);
     }
 
-    match client.wiki().update_wiki(params).await {
-        Ok(wiki_detail) => {
-            println!("✅ Wiki updated successfully");
-            println!("ID: {}", wiki_detail.id.value());
-            println!("Name: {}", wiki_detail.name);
-            println!("Project ID: {}", wiki_detail.project_id.value());
-            println!("Updated by: {}", wiki_detail.updated_user.name);
-            println!(
-                "Updated at: {}",
-                wiki_detail.updated.format("%Y-%m-%d %H:%M:%S")
-            );
+    let wiki_detail = client.wiki().update_wiki(params).await?;
+    println!("✅ Wiki updated successfully");
+    println!("ID: {}", wiki_detail.id.value());
+    println!("Name: {}", wiki_detail.name);
+    println!("Project ID: {}", wiki_detail.project_id.value());
+    println!("Updated by: {}", wiki_detail.updated_user.name);
+    println!(
+        "Updated at: {}",
+        wiki_detail.updated.format("%Y-%m-%d %H:%M:%S")
+    );
 
-            if !wiki_detail.tags.is_empty() {
-                let tag_names: Vec<String> = wiki_detail
-                    .tags
-                    .iter()
-                    .map(|tag| tag.name.clone())
-                    .collect();
-                println!("Tags: {}", tag_names.join(", "));
-            }
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to update wiki: {e}");
-            std::process::exit(1);
-        }
+    if !wiki_detail.tags.is_empty() {
+        let tag_names: Vec<String> = wiki_detail
+            .tags
+            .iter()
+            .map(|tag| tag.name.clone())
+            .collect();
+        println!("Tags: {}", tag_names.join(", "));
     }
 
     Ok(())
@@ -115,28 +101,21 @@ pub(crate) async fn delete(
         params = params.mail_notify(mail_notify);
     }
 
-    match client.wiki().delete_wiki(params).await {
-        Ok(wiki_detail) => {
-            println!("✅ Wiki deleted successfully");
-            println!("   ID: {}", wiki_detail.id.value());
-            println!("   Name: {}", wiki_detail.name);
-            println!("   Project ID: {}", wiki_detail.project_id.value());
-            println!(
-                "   Created by: {} at {}",
-                wiki_detail.created_user.name,
-                wiki_detail.created.format("%Y-%m-%d %H:%M:%S")
-            );
-            println!(
-                "   Last updated by: {} at {}",
-                wiki_detail.updated_user.name,
-                wiki_detail.updated.format("%Y-%m-%d %H:%M:%S")
-            );
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to delete wiki: {e}");
-            std::process::exit(1);
-        }
-    }
+    let wiki_detail = client.wiki().delete_wiki(params).await?;
+    println!("✅ Wiki deleted successfully");
+    println!("   ID: {}", wiki_detail.id.value());
+    println!("   Name: {}", wiki_detail.name);
+    println!("   Project ID: {}", wiki_detail.project_id.value());
+    println!(
+        "   Created by: {} at {}",
+        wiki_detail.created_user.name,
+        wiki_detail.created.format("%Y-%m-%d %H:%M:%S")
+    );
+    println!(
+        "   Last updated by: {} at {}",
+        wiki_detail.updated_user.name,
+        wiki_detail.updated.format("%Y-%m-%d %H:%M:%S")
+    );
 
     Ok(())
 }

@@ -29,13 +29,13 @@ pub async fn execute(client: &BacklogApiClient, space_args: SpaceArgs) -> CliRes
         }
         #[cfg(not(feature = "space_writable"))]
         _ => {
-            eprintln!(
+            return Err(
                 "This command requires write access to space and is not available. \
                 Please build with the 'space_writable' feature flag:\
 \
                 cargo build --package blg --features space_writable"
+                    .into(),
             );
-            std::process::exit(1);
         }
     }
 

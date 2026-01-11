@@ -61,18 +61,11 @@ pub async fn add(
         team_id: TeamId::new(team_id),
     };
 
-    match client.project().add_project_team(params).await {
-        Ok(team) => {
-            println!("✅ Team added successfully:");
-            println!("ID: {}", team.id);
-            println!("Name: {}", team.name);
-            println!("Members: {} users", team.members.len());
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to add team to project: {e}");
-            std::process::exit(1);
-        }
-    }
+    let team = client.project().add_project_team(params).await?;
+    println!("✅ Team added successfully:");
+    println!("ID: {}", team.id);
+    println!("Name: {}", team.name);
+    println!("Members: {} users", team.members.len());
     Ok(())
 }
 
@@ -91,16 +84,9 @@ pub async fn delete(
         team_id: TeamId::new(team_id),
     };
 
-    match client.project().delete_project_team(params).await {
-        Ok(team) => {
-            println!("✅ Team removed successfully:");
-            println!("ID: {}", team.id);
-            println!("Name: {}", team.name);
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to remove team from project: {e}");
-            std::process::exit(1);
-        }
-    }
+    let team = client.project().delete_project_team(params).await?;
+    println!("✅ Team removed successfully:");
+    println!("ID: {}", team.id);
+    println!("Name: {}", team.name);
     Ok(())
 }

@@ -22,15 +22,8 @@ pub(crate) async fn notification_count(
         params = params.with_resource_already_read(resource_already_read);
     }
 
-    match client.user().get_notification_count(params).await {
-        Ok(notification_count) => {
-            println!("✅ Notification count: {}", notification_count.count);
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to get notification count: {e}");
-            std::process::exit(1);
-        }
-    }
+    let notification_count = client.user().get_notification_count(params).await?;
+    println!("✅ Notification count: {}", notification_count.count);
 
     Ok(())
 }
@@ -64,10 +57,7 @@ pub(crate) async fn notifications(
         let notification_order = match order_str.to_lowercase().as_str() {
             "asc" => NotificationOrder::Asc,
             "desc" => NotificationOrder::Desc,
-            _ => {
-                eprintln!("❌ Invalid order. Use 'asc' or 'desc'");
-                std::process::exit(1);
-            }
+            _ => return Err("Invalid order. Use 'asc' or 'desc'".into()),
         };
         params = params.with_order(notification_order);
     }
@@ -76,56 +66,49 @@ pub(crate) async fn notifications(
         params = params.with_sender_id(UserId::new(sender_id));
     }
 
-    match client.user().get_notifications(params).await {
-        Ok(notifications) => {
-            if notifications.is_empty() {
-                println!("No notifications found");
-            } else {
-                println!("Found {} notification(s):", notifications.len());
-                println!();
+    let notifications = client.user().get_notifications(params).await?;
+    if notifications.is_empty() {
+        println!("No notifications found");
+    } else {
+        println!("Found {} notification(s):", notifications.len());
+        println!();
 
-                for (index, notification) in notifications.iter().enumerate() {
-                    println!("{}. Notification #{}", index + 1, notification.id.value());
-                    println!(
-                        "   Status: {}",
-                        if notification.already_read {
-                            "Read"
-                        } else {
-                            "Unread"
-                        }
-                    );
-                    println!("   Reason: {:?}", notification.reason);
-                    println!(
-                        "   Project: {} ({})",
-                        notification.project.name, notification.project.project_key
-                    );
-                    println!(
-                        "   From: {} ({})",
-                        notification.sender.name, notification.sender.mail_address
-                    );
-
-                    if let Some(issue) = &notification.issue {
-                        println!("   Issue: {} - {}", issue.issue_key, issue.summary);
-                    }
-
-                    if let Some(comment) = &notification.comment
-                        && let Some(content) = &comment.content
-                    {
-                        let preview = content.chars().take(100).collect::<String>();
-                        println!("   Comment: {preview}");
-                    }
-
-                    println!(
-                        "   Created: {}",
-                        notification.created.format("%Y-%m-%d %H:%M:%S")
-                    );
-                    println!();
+        for (index, notification) in notifications.iter().enumerate() {
+            println!("{}. Notification #{}", index + 1, notification.id.value());
+            println!(
+                "   Status: {}",
+                if notification.already_read {
+                    "Read"
+                } else {
+                    "Unread"
                 }
+            );
+            println!("   Reason: {:?}", notification.reason);
+            println!(
+                "   Project: {} ({})",
+                notification.project.name, notification.project.project_key
+            );
+            println!(
+                "   From: {} ({})",
+                notification.sender.name, notification.sender.mail_address
+            );
+
+            if let Some(issue) = &notification.issue {
+                println!("   Issue: {} - {}", issue.issue_key, issue.summary);
             }
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to get notifications: {e}");
-            std::process::exit(1);
+
+            if let Some(comment) = &notification.comment
+                && let Some(content) = &comment.content
+            {
+                let preview = content.chars().take(100).collect::<String>();
+                println!("   Comment: {preview}");
+            }
+
+            println!(
+                "   Created: {}",
+                notification.created.format("%Y-%m-%d %H:%M:%S")
+            );
+            println!();
         }
     }
 
@@ -140,19 +123,11 @@ pub(crate) async fn mark_notification_read(
 ) -> CliResult<()> {
     println!("Marking notification {notification_id} as read");
 
-    match client
+    client
         .user()
         .mark_notification_as_read(notification_id)
-        .await
-    {
-        Ok(()) => {
-            println!("✅ Notification marked as read");
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to mark notification as read: {e}");
-            std::process::exit(1);
-        }
-    }
+        .await?;
+    println!("✅ Notification marked as read");
 
     Ok(())
 }
@@ -162,16 +137,9 @@ pub(crate) async fn mark_notification_read(
 pub(crate) async fn reset_notifications(client: &BacklogApiClient) -> CliResult<()> {
     println!("Marking all unread notifications as read...");
 
-    match client.user().reset_unread_notification_count().await {
-        Ok(result) => {
-            println!("✅ All unread notifications marked as read");
-            println!("   Previously unread count: {}", result.count);
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to reset notifications: {e}");
-            std::process::exit(1);
-        }
-    }
+    let result = client.user().reset_unread_notification_count().await?;
+    println!("✅ All unread notifications marked as read");
+    println!("   Previously unread count: {}", result.count);
 
     Ok(())
 }

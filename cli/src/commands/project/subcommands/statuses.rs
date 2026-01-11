@@ -52,19 +52,12 @@ pub async fn add(
 
     let params = AddStatusParams::new(proj_id_or_key, name, parsed_color);
 
-    match client.project().add_status(params).await {
-        Ok(status) => {
-            println!("✅ Status added successfully:");
-            println!("ID: {}", status.id);
-            println!("Name: {}", status.name);
-            println!("Color: {}", status.color);
-            println!("Display Order: {}", status.display_order);
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to add status: {e}");
-            std::process::exit(1);
-        }
-    }
+    let status = client.project().add_status(params).await?;
+    println!("✅ Status added successfully:");
+    println!("ID: {}", status.id);
+    println!("Name: {}", status.name);
+    println!("Color: {}", status.color);
+    println!("Display Order: {}", status.display_order);
     Ok(())
 }
 
@@ -98,19 +91,12 @@ pub async fn update(
         params = params.color(color);
     }
 
-    match client.project().update_status(params).await {
-        Ok(status) => {
-            println!("✅ Status updated successfully:");
-            println!("ID: {}", status.id);
-            println!("Name: {}", status.name);
-            println!("Color: {}", status.color);
-            println!("Display Order: {}", status.display_order);
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to update status: {e}");
-            std::process::exit(1);
-        }
-    }
+    let status = client.project().update_status(params).await?;
+    println!("✅ Status updated successfully:");
+    println!("ID: {}", status.id);
+    println!("Name: {}", status.name);
+    println!("Color: {}", status.color);
+    println!("Display Order: {}", status.display_order);
     Ok(())
 }
 
@@ -132,19 +118,12 @@ pub async fn delete(
 
     let params = DeleteStatusParams::new(proj_id_or_key, status_id_val, substitute_id);
 
-    match client.project().delete_status(params).await {
-        Ok(status) => {
-            println!("✅ Status deleted successfully:");
-            println!("ID: {}", status.id);
-            println!("Name: {}", status.name);
-            println!("Color: {}", status.color);
-            println!("Display Order: {}", status.display_order);
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to delete status: {e}");
-            std::process::exit(1);
-        }
-    }
+    let status = client.project().delete_status(params).await?;
+    println!("✅ Status deleted successfully:");
+    println!("ID: {}", status.id);
+    println!("Name: {}", status.name);
+    println!("Color: {}", status.color);
+    println!("Display Order: {}", status.display_order);
     Ok(())
 }
 
@@ -160,38 +139,23 @@ pub async fn update_order(
     let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
 
     // Parse comma-separated status IDs
-    let parsed_status_ids: Result<Vec<StatusId>, _> = status_ids
+    let status_id_vec: Vec<StatusId> = status_ids
         .split(',')
         .map(|s| s.trim().parse::<u32>().map(StatusId::new))
-        .collect();
-
-    let status_id_vec = match parsed_status_ids {
-        Ok(ids) => ids,
-        Err(e) => {
-            eprintln!("❌ Error parsing status IDs '{status_ids}': {e}");
-            std::process::exit(1);
-        }
-    };
+        .collect::<Result<_, _>>()?;
 
     let params = UpdateStatusOrderParams::new(proj_id_or_key, status_id_vec);
 
-    match client.project().update_status_order(params).await {
-        Ok(statuses) => {
-            println!("✅ Status order updated successfully:");
-            for (index, status) in statuses.iter().enumerate() {
-                println!(
-                    "{}. [{}] {} (Color: {})",
-                    index + 1,
-                    status.id,
-                    status.name,
-                    status.color
-                );
-            }
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to update status order: {e}");
-            std::process::exit(1);
-        }
+    let statuses = client.project().update_status_order(params).await?;
+    println!("✅ Status order updated successfully:");
+    for (index, status) in statuses.iter().enumerate() {
+        println!(
+            "{}. [{}] {} (Color: {})",
+            index + 1,
+            status.id,
+            status.name,
+            status.color
+        );
     }
     Ok(())
 }

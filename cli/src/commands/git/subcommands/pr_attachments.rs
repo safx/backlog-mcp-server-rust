@@ -87,17 +87,10 @@ pub(crate) async fn delete_attachment(
         parsed_pr_number,
         parsed_attachment_id,
     );
-    match client.git().delete_pull_request_attachment(params).await {
-        Ok(deleted_attachment) => {
-            println!("✅ Attachment deleted successfully");
-            println!("Deleted attachment ID: {}", deleted_attachment.id.value());
-            println!("Name: {}", deleted_attachment.name);
-            println!("Size: {} bytes", deleted_attachment.size);
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to delete PR attachment: {e}");
-            std::process::exit(1);
-        }
-    }
+    let deleted_attachment = client.git().delete_pull_request_attachment(params).await?;
+    println!("✅ Attachment deleted successfully");
+    println!("Deleted attachment ID: {}", deleted_attachment.id.value());
+    println!("Name: {}", deleted_attachment.name);
+    println!("Size: {} bytes", deleted_attachment.size);
     Ok(())
 }

@@ -129,12 +129,6 @@ pub fn print_success(msg: &str) {
     println!("✅ {}", msg);
 }
 
-/// Print error message and exit with status code 1
-pub fn exit_with_error(msg: &str) -> ! {
-    eprintln!("❌ {}", msg);
-    std::process::exit(1);
-}
-
 /// Download file helper
 ///
 /// Writes bytes to the specified path and prints a success message

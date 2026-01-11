@@ -93,33 +93,28 @@ pub async fn add(
         "numeric" => AddCustomFieldParams::numeric(proj_id_or_key, name.to_string()),
         "date" => AddCustomFieldParams::date(proj_id_or_key, name.to_string()),
         "single-list" => {
-            if let Some(items_str) = items.as_ref() {
-                let items_vec: Vec<String> =
-                    items_str.split(',').map(|s| s.trim().to_string()).collect();
-                AddCustomFieldParams::single_list(proj_id_or_key, name.to_string(), items_vec)
-            } else {
-                eprintln!("Error: --items is required for single-list field type");
-                std::process::exit(1);
-            }
+            let items_str = items
+                .as_ref()
+                .ok_or("--items is required for single-list field type")?;
+            let items_vec: Vec<String> =
+                items_str.split(',').map(|s| s.trim().to_string()).collect();
+            AddCustomFieldParams::single_list(proj_id_or_key, name.to_string(), items_vec)
         }
         "multiple-list" => {
-            if let Some(items_str) = items.as_ref() {
-                let items_vec: Vec<String> =
-                    items_str.split(',').map(|s| s.trim().to_string()).collect();
-                AddCustomFieldParams::multiple_list(proj_id_or_key, name.to_string(), items_vec)
-            } else {
-                eprintln!("Error: --items is required for multiple-list field type");
-                std::process::exit(1);
-            }
+            let items_str = items
+                .as_ref()
+                .ok_or("--items is required for multiple-list field type")?;
+            let items_vec: Vec<String> =
+                items_str.split(',').map(|s| s.trim().to_string()).collect();
+            AddCustomFieldParams::multiple_list(proj_id_or_key, name.to_string(), items_vec)
         }
         "checkbox" => AddCustomFieldParams::checkbox(proj_id_or_key, name.to_string()),
         "radio" => AddCustomFieldParams::radio(proj_id_or_key, name.to_string()),
         _ => {
-            eprintln!("Error: Invalid field type '{field_type}'");
-            eprintln!(
-                "Valid types: text, textarea, numeric, date, single-list, multiple-list, checkbox, radio"
-            );
-            std::process::exit(1);
+            return Err(format!(
+                "Invalid field type '{field_type}'. Valid types: text, textarea, numeric, date, single-list, multiple-list, checkbox, radio"
+            )
+            .into());
         }
     };
 
@@ -176,36 +171,29 @@ pub async fn add(
         _ => {}
     }
 
-    match client.project().add_custom_field(params).await {
-        Ok(field) => {
-            println!("✅ Custom field added successfully:");
-            println!("[{}] {}", field.id, field.name);
-            let field_type = match &field.settings {
-                backlog_domain_models::CustomFieldSettings::Text => "Text",
-                backlog_domain_models::CustomFieldSettings::TextArea => "TextArea",
-                backlog_domain_models::CustomFieldSettings::Numeric(_) => "Numeric",
-                backlog_domain_models::CustomFieldSettings::Date(_) => "Date",
-                backlog_domain_models::CustomFieldSettings::SingleList(_) => "SingleList",
-                backlog_domain_models::CustomFieldSettings::MultipleList(_) => "MultipleList",
-                backlog_domain_models::CustomFieldSettings::Checkbox(_) => "Checkbox",
-                backlog_domain_models::CustomFieldSettings::Radio(_) => "Radio",
-            };
-            println!("Type: {field_type}");
-            if !field.description.is_empty() {
-                println!("Description: {}", field.description);
-            }
-            println!("Required: {}", field.required);
-            if let Some(issue_types) = &field.applicable_issue_types
-                && !issue_types.is_empty()
-            {
-                let ids: Vec<String> = issue_types.iter().map(|id| id.to_string()).collect();
-                println!("Applicable Issue Types: {}", ids.join(", "));
-            }
-        }
-        Err(e) => {
-            eprintln!("❌ Error adding custom field: {e}");
-            std::process::exit(1);
-        }
+    let field = client.project().add_custom_field(params).await?;
+    println!("✅ Custom field added successfully:");
+    println!("[{}] {}", field.id, field.name);
+    let field_type = match &field.settings {
+        backlog_domain_models::CustomFieldSettings::Text => "Text",
+        backlog_domain_models::CustomFieldSettings::TextArea => "TextArea",
+        backlog_domain_models::CustomFieldSettings::Numeric(_) => "Numeric",
+        backlog_domain_models::CustomFieldSettings::Date(_) => "Date",
+        backlog_domain_models::CustomFieldSettings::SingleList(_) => "SingleList",
+        backlog_domain_models::CustomFieldSettings::MultipleList(_) => "MultipleList",
+        backlog_domain_models::CustomFieldSettings::Checkbox(_) => "Checkbox",
+        backlog_domain_models::CustomFieldSettings::Radio(_) => "Radio",
+    };
+    println!("Type: {field_type}");
+    if !field.description.is_empty() {
+        println!("Description: {}", field.description);
+    }
+    println!("Required: {}", field.required);
+    if let Some(issue_types) = &field.applicable_issue_types
+        && !issue_types.is_empty()
+    {
+        let ids: Vec<String> = issue_types.iter().map(|id| id.to_string()).collect();
+        println!("Applicable Issue Types: {}", ids.join(", "));
     }
     Ok(())
 }
@@ -315,29 +303,22 @@ pub async fn delete(
     let field_id = CustomFieldId::new(custom_field_id);
     let params = DeleteCustomFieldParams::new(proj_id_or_key, field_id);
 
-    match client.project().delete_custom_field(params).await {
-        Ok(field) => {
-            println!("✅ Custom field deleted successfully:");
-            println!("[{}] {}", field.id, field.name);
-            let field_type = match &field.settings {
-                backlog_domain_models::CustomFieldSettings::Text => "Text",
-                backlog_domain_models::CustomFieldSettings::TextArea => "TextArea",
-                backlog_domain_models::CustomFieldSettings::Numeric(_) => "Numeric",
-                backlog_domain_models::CustomFieldSettings::Date(_) => "Date",
-                backlog_domain_models::CustomFieldSettings::SingleList(_) => "SingleList",
-                backlog_domain_models::CustomFieldSettings::MultipleList(_) => "MultipleList",
-                backlog_domain_models::CustomFieldSettings::Checkbox(_) => "Checkbox",
-                backlog_domain_models::CustomFieldSettings::Radio(_) => "Radio",
-            };
-            println!("Type: {field_type}");
-            if !field.description.is_empty() {
-                println!("Description: {}", field.description);
-            }
-        }
-        Err(e) => {
-            eprintln!("❌ Error deleting custom field: {e}");
-            std::process::exit(1);
-        }
+    let field = client.project().delete_custom_field(params).await?;
+    println!("✅ Custom field deleted successfully:");
+    println!("[{}] {}", field.id, field.name);
+    let field_type = match &field.settings {
+        backlog_domain_models::CustomFieldSettings::Text => "Text",
+        backlog_domain_models::CustomFieldSettings::TextArea => "TextArea",
+        backlog_domain_models::CustomFieldSettings::Numeric(_) => "Numeric",
+        backlog_domain_models::CustomFieldSettings::Date(_) => "Date",
+        backlog_domain_models::CustomFieldSettings::SingleList(_) => "SingleList",
+        backlog_domain_models::CustomFieldSettings::MultipleList(_) => "MultipleList",
+        backlog_domain_models::CustomFieldSettings::Checkbox(_) => "Checkbox",
+        backlog_domain_models::CustomFieldSettings::Radio(_) => "Radio",
+    };
+    println!("Type: {field_type}");
+    if !field.description.is_empty() {
+        println!("Description: {}", field.description);
     }
     Ok(())
 }
@@ -358,50 +339,46 @@ pub async fn add_item(
     let field_id = CustomFieldId::new(custom_field_id);
     let params = AddListItemToCustomFieldParams::new(proj_id_or_key, field_id, name.to_string());
 
-    match client.project().add_list_item_to_custom_field(params).await {
-        Ok(field) => {
-            println!("✅ List item added successfully to custom field:");
-            println!("[{}] {}", field.id, field.name);
+    let field = client
+        .project()
+        .add_list_item_to_custom_field(params)
+        .await?;
+    println!("✅ List item added successfully to custom field:");
+    println!("[{}] {}", field.id, field.name);
 
-            // Display list items if it's a list type field
-            match &field.settings {
-                backlog_domain_models::CustomFieldSettings::SingleList(settings) => {
-                    println!("Type: Single Selection List");
-                    println!("List items:");
-                    for item in &settings.items {
-                        println!(
-                            "  - [{}] {} (order: {})",
-                            item.id, item.name, item.display_order
-                        );
-                    }
-                    if let Some(allow) = settings.allow_add_item {
-                        println!("Allow add item: {allow}");
-                    }
-                }
-                backlog_domain_models::CustomFieldSettings::MultipleList(settings) => {
-                    println!("Type: Multiple Selection List");
-                    println!("List items:");
-                    for item in &settings.items {
-                        println!(
-                            "  - [{}] {} (order: {})",
-                            item.id, item.name, item.display_order
-                        );
-                    }
-                    if let Some(allow) = settings.allow_add_item {
-                        println!("Allow add item: {allow}");
-                    }
-                    if let Some(allow) = settings.allow_input {
-                        println!("Allow input: {allow}");
-                    }
-                }
-                _ => {
-                    eprintln!("⚠️  Warning: Custom field is not a list type");
-                }
+    // Display list items if it's a list type field
+    match &field.settings {
+        backlog_domain_models::CustomFieldSettings::SingleList(settings) => {
+            println!("Type: Single Selection List");
+            println!("List items:");
+            for item in &settings.items {
+                println!(
+                    "  - [{}] {} (order: {})",
+                    item.id, item.name, item.display_order
+                );
+            }
+            if let Some(allow) = settings.allow_add_item {
+                println!("Allow add item: {allow}");
             }
         }
-        Err(e) => {
-            eprintln!("❌ Error adding list item to custom field: {e}");
-            std::process::exit(1);
+        backlog_domain_models::CustomFieldSettings::MultipleList(settings) => {
+            println!("Type: Multiple Selection List");
+            println!("List items:");
+            for item in &settings.items {
+                println!(
+                    "  - [{}] {} (order: {})",
+                    item.id, item.name, item.display_order
+                );
+            }
+            if let Some(allow) = settings.allow_add_item {
+                println!("Allow add item: {allow}");
+            }
+            if let Some(allow) = settings.allow_input {
+                println!("Allow input: {allow}");
+            }
+        }
+        _ => {
+            eprintln!("⚠️  Warning: Custom field is not a list type");
         }
     }
     Ok(())
@@ -425,68 +402,60 @@ pub async fn update_item(
     let params =
         UpdateListItemToCustomFieldParams::new(proj_id_or_key, field_id, item_id, name.to_string());
 
-    match client
+    let field = client
         .project()
         .update_list_item_to_custom_field(params)
-        .await
-    {
-        Ok(field) => {
-            println!("✅ List item updated successfully in custom field:");
-            println!("[{}] {}", field.id, field.name);
+        .await?;
+    println!("✅ List item updated successfully in custom field:");
+    println!("[{}] {}", field.id, field.name);
 
-            // Display list items if it's a list type field
-            match &field.settings {
-                backlog_domain_models::CustomFieldSettings::SingleList(settings) => {
-                    println!("Type: Single Selection List");
-                    println!("List items:");
-                    for item in &settings.items {
-                        if item.id == CustomFieldItemId::new(item_id) {
-                            println!(
-                                "  - [{}] {} (order: {}) ← UPDATED",
-                                item.id, item.name, item.display_order
-                            );
-                        } else {
-                            println!(
-                                "  - [{}] {} (order: {})",
-                                item.id, item.name, item.display_order
-                            );
-                        }
-                    }
-                    if let Some(allow) = settings.allow_add_item {
-                        println!("Allow add item: {allow}");
-                    }
-                }
-                backlog_domain_models::CustomFieldSettings::MultipleList(settings) => {
-                    println!("Type: Multiple Selection List");
-                    println!("List items:");
-                    for item in &settings.items {
-                        if item.id == CustomFieldItemId::new(item_id) {
-                            println!(
-                                "  - [{}] {} (order: {}) ← UPDATED",
-                                item.id, item.name, item.display_order
-                            );
-                        } else {
-                            println!(
-                                "  - [{}] {} (order: {})",
-                                item.id, item.name, item.display_order
-                            );
-                        }
-                    }
-                    if let Some(allow) = settings.allow_add_item {
-                        println!("Allow add item: {allow}");
-                    }
-                    if let Some(allow) = settings.allow_input {
-                        println!("Allow input: {allow}");
-                    }
-                }
-                _ => {
-                    eprintln!("⚠️  Warning: Custom field is not a list type");
+    // Display list items if it's a list type field
+    match &field.settings {
+        backlog_domain_models::CustomFieldSettings::SingleList(settings) => {
+            println!("Type: Single Selection List");
+            println!("List items:");
+            for item in &settings.items {
+                if item.id == CustomFieldItemId::new(item_id) {
+                    println!(
+                        "  - [{}] {} (order: {}) ← UPDATED",
+                        item.id, item.name, item.display_order
+                    );
+                } else {
+                    println!(
+                        "  - [{}] {} (order: {})",
+                        item.id, item.name, item.display_order
+                    );
                 }
             }
+            if let Some(allow) = settings.allow_add_item {
+                println!("Allow add item: {allow}");
+            }
         }
-        Err(e) => {
-            eprintln!("❌ Error updating list item in custom field: {e}");
-            std::process::exit(1);
+        backlog_domain_models::CustomFieldSettings::MultipleList(settings) => {
+            println!("Type: Multiple Selection List");
+            println!("List items:");
+            for item in &settings.items {
+                if item.id == CustomFieldItemId::new(item_id) {
+                    println!(
+                        "  - [{}] {} (order: {}) ← UPDATED",
+                        item.id, item.name, item.display_order
+                    );
+                } else {
+                    println!(
+                        "  - [{}] {} (order: {})",
+                        item.id, item.name, item.display_order
+                    );
+                }
+            }
+            if let Some(allow) = settings.allow_add_item {
+                println!("Allow add item: {allow}");
+            }
+            if let Some(allow) = settings.allow_input {
+                println!("Allow input: {allow}");
+            }
+        }
+        _ => {
+            eprintln!("⚠️  Warning: Custom field is not a list type");
         }
     }
     Ok(())
@@ -509,54 +478,46 @@ pub async fn delete_item(
     let item_id_val = CustomFieldItemId::new(item_id);
     let params = DeleteListItemFromCustomFieldParams::new(proj_id_or_key, field_id, item_id_val);
 
-    match client
+    let field = client
         .project()
         .delete_list_item_from_custom_field(params)
-        .await
-    {
-        Ok(field) => {
-            println!("✅ List item deleted successfully from custom field:");
-            println!("[{}] {}", field.id, field.name);
+        .await?;
+    println!("✅ List item deleted successfully from custom field:");
+    println!("[{}] {}", field.id, field.name);
 
-            // Display remaining list items
-            match &field.settings {
-                backlog_domain_models::CustomFieldSettings::SingleList(settings) => {
-                    println!("Type: Single Selection List");
-                    println!("Remaining list items:");
-                    for item in &settings.items {
-                        println!(
-                            "  - [{}] {} (order: {})",
-                            item.id, item.name, item.display_order
-                        );
-                    }
-                    if let Some(allow) = settings.allow_add_item {
-                        println!("Allow add item: {allow}");
-                    }
-                }
-                backlog_domain_models::CustomFieldSettings::MultipleList(settings) => {
-                    println!("Type: Multiple Selection List");
-                    println!("Remaining list items:");
-                    for item in &settings.items {
-                        println!(
-                            "  - [{}] {} (order: {})",
-                            item.id, item.name, item.display_order
-                        );
-                    }
-                    if let Some(allow) = settings.allow_add_item {
-                        println!("Allow add item: {allow}");
-                    }
-                    if let Some(allow) = settings.allow_input {
-                        println!("Allow input: {allow}");
-                    }
-                }
-                _ => {
-                    eprintln!("⚠️  Warning: Custom field is not a list type");
-                }
+    // Display remaining list items
+    match &field.settings {
+        backlog_domain_models::CustomFieldSettings::SingleList(settings) => {
+            println!("Type: Single Selection List");
+            println!("Remaining list items:");
+            for item in &settings.items {
+                println!(
+                    "  - [{}] {} (order: {})",
+                    item.id, item.name, item.display_order
+                );
+            }
+            if let Some(allow) = settings.allow_add_item {
+                println!("Allow add item: {allow}");
             }
         }
-        Err(e) => {
-            eprintln!("❌ Error deleting list item from custom field: {e}");
-            std::process::exit(1);
+        backlog_domain_models::CustomFieldSettings::MultipleList(settings) => {
+            println!("Type: Multiple Selection List");
+            println!("Remaining list items:");
+            for item in &settings.items {
+                println!(
+                    "  - [{}] {} (order: {})",
+                    item.id, item.name, item.display_order
+                );
+            }
+            if let Some(allow) = settings.allow_add_item {
+                println!("Allow add item: {allow}");
+            }
+            if let Some(allow) = settings.allow_input {
+                println!("Allow input: {allow}");
+            }
+        }
+        _ => {
+            eprintln!("⚠️  Warning: Custom field is not a list type");
         }
     }
     Ok(())

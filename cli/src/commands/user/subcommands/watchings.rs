@@ -23,10 +23,7 @@ pub(crate) async fn watchings(
         let order_enum = match order_str.to_lowercase().as_str() {
             "asc" => WatchingOrder::Asc,
             "desc" => WatchingOrder::Desc,
-            _ => {
-                eprintln!("Invalid order: {order_str}. Use 'asc' or 'desc'");
-                std::process::exit(1);
-            }
+            _ => return Err(format!("Invalid order: {order_str}. Use 'asc' or 'desc'").into()),
         };
         params = params.order(order_enum);
     }
@@ -37,8 +34,10 @@ pub(crate) async fn watchings(
             "updated" => WatchingSort::Updated,
             "issueupdated" => WatchingSort::IssueUpdated,
             _ => {
-                eprintln!("Invalid sort: {sort_str}. Use 'created', 'updated', or 'issueUpdated'");
-                std::process::exit(1);
+                return Err(format!(
+                    "Invalid sort: {sort_str}. Use 'created', 'updated', or 'issueUpdated'"
+                )
+                .into());
             }
         };
         params = params.sort(sort_enum);
@@ -69,57 +68,50 @@ pub(crate) async fn watchings(
 
     let params = params.build()?;
 
-    match client.user().get_watching_list(user_id, params).await {
-        Ok(watchings) => {
-            if watchings.is_empty() {
-                println!("No watchings found");
-            } else {
-                println!("Found {} watching(s):", watchings.len());
-                println!();
+    let watchings = client.user().get_watching_list(user_id, params).await?;
+    if watchings.is_empty() {
+        println!("No watchings found");
+    } else {
+        println!("Found {} watching(s):", watchings.len());
+        println!();
 
-                for (index, watching) in watchings.iter().enumerate() {
-                    println!("{}. Watching #{}", index + 1, watching.id.value());
-                    println!("   Type: {:?}", watching.watching_type);
-                    println!(
-                        "   Status: {}",
-                        if watching.resource_already_read {
-                            "Read"
-                        } else {
-                            "Unread"
-                        }
-                    );
+        for (index, watching) in watchings.iter().enumerate() {
+            println!("{}. Watching #{}", index + 1, watching.id.value());
+            println!("   Type: {:?}", watching.watching_type);
+            println!(
+                "   Status: {}",
+                if watching.resource_already_read {
+                    "Read"
+                } else {
+                    "Unread"
+                }
+            );
 
-                    if let Some(note) = &watching.note {
-                        println!("   Note: {note}");
-                    }
+            if let Some(note) = &watching.note {
+                println!("   Note: {note}");
+            }
 
-                    if let Some(issue) = &watching.issue {
-                        println!("   Issue: {} - {}", issue.issue_key, issue.summary);
-                        println!("   Project ID: {}", issue.project_id.value());
-                        println!("   Status: {}", issue.status.name);
-                        if let Some(assignee) = &issue.assignee {
-                            println!("   Assignee: {}", assignee.name);
-                        }
-                    }
-
-                    if let Some(last_updated) = &watching.last_content_updated {
-                        println!(
-                            "   Last Updated: {}",
-                            last_updated.format("%Y-%m-%d %H:%M:%S")
-                        );
-                    }
-
-                    println!(
-                        "   Created: {}",
-                        watching.created.format("%Y-%m-%d %H:%M:%S")
-                    );
-                    println!();
+            if let Some(issue) = &watching.issue {
+                println!("   Issue: {} - {}", issue.issue_key, issue.summary);
+                println!("   Project ID: {}", issue.project_id.value());
+                println!("   Status: {}", issue.status.name);
+                if let Some(assignee) = &issue.assignee {
+                    println!("   Assignee: {}", assignee.name);
                 }
             }
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to get watchings: {e}");
-            std::process::exit(1);
+
+            if let Some(last_updated) = &watching.last_content_updated {
+                println!(
+                    "   Last Updated: {}",
+                    last_updated.format("%Y-%m-%d %H:%M:%S")
+                );
+            }
+
+            println!(
+                "   Created: {}",
+                watching.created.format("%Y-%m-%d %H:%M:%S")
+            );
+            println!();
         }
     }
 
@@ -145,24 +137,17 @@ pub(crate) async fn watching_count(
         params = params.with_already_read(read);
     }
 
-    match client.user().get_watching_count(params).await {
-        Ok(response) => {
-            println!("✅ Watching count retrieved successfully");
-            println!("Total watchings: {}", response.count);
+    let response = client.user().get_watching_count(params).await?;
+    println!("✅ Watching count retrieved successfully");
+    println!("Total watchings: {}", response.count);
 
-            if resource_already_read.is_some() || already_read.is_some() {
-                println!("\nFilters applied:");
-                if let Some(read) = resource_already_read {
-                    println!("  Resource already read: {read}");
-                }
-                if let Some(read) = already_read {
-                    println!("  Already read: {read}");
-                }
-            }
+    if resource_already_read.is_some() || already_read.is_some() {
+        println!("\nFilters applied:");
+        if let Some(read) = resource_already_read {
+            println!("  Resource already read: {read}");
         }
-        Err(e) => {
-            eprintln!("❌ Failed to get watching count: {e}");
-            std::process::exit(1);
+        if let Some(read) = already_read {
+            println!("  Already read: {read}");
         }
     }
 
