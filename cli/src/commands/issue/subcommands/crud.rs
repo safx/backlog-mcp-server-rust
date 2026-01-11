@@ -27,10 +27,9 @@ pub async fn create(
     let project_id = match project_id_or_key {
         ProjectIdOrKey::Id(id) => id,
         ProjectIdOrKey::Key(_) => {
-            eprintln!(
-                "Error: Project key not supported for issue creation. Please use project ID."
+            return Err(
+                "Project key not supported for issue creation. Please use project ID.".into(),
             );
-            return Ok(());
         }
         ProjectIdOrKey::EitherIdOrKey(id, _) => id,
     };
@@ -83,16 +82,14 @@ pub async fn create(
         match custom_fields::parse_custom_fields_json(path_str) {
             Ok(fields) => Some(fields),
             Err(e) => {
-                eprintln!("Error parsing custom fields JSON: {e}");
-                return Ok(());
+                return Err(format!("Error parsing custom fields JSON: {e}").into());
             }
         }
     } else if !args.custom_fields.is_empty() {
         match custom_fields::parse_custom_field_args(&args.custom_fields) {
             Ok(fields) => Some(fields),
             Err(e) => {
-                eprintln!("Error parsing custom fields: {e}");
-                return Ok(());
+                return Err(format!("Error parsing custom fields: {e}").into());
             }
         }
     } else {
@@ -105,18 +102,12 @@ pub async fn create(
 
     let params = builder.build()?;
 
-    match client.issue().add_issue(params).await {
-        Ok(issue) => {
-            println!("Issue created successfully!");
-            println!("Issue Key: {}", issue.issue_key);
-            println!("Issue ID: {}", issue.id);
-            println!("Summary: {}", issue.summary);
-            println!("Status: {}", issue.status.name);
-        }
-        Err(e) => {
-            eprintln!("Error creating issue: {e}");
-        }
-    }
+    let issue = client.issue().add_issue(params).await?;
+    println!("Issue created successfully!");
+    println!("Issue Key: {}", issue.issue_key);
+    println!("Issue ID: {}", issue.id);
+    println!("Summary: {}", issue.summary);
+    println!("Status: {}", issue.status.name);
     Ok(())
 }
 
@@ -177,16 +168,14 @@ pub async fn update(
         match custom_fields::parse_custom_fields_json(path_str) {
             Ok(fields) => Some(fields),
             Err(e) => {
-                eprintln!("Error parsing custom fields JSON: {e}");
-                return Ok(());
+                return Err(format!("Error parsing custom fields JSON: {e}").into());
             }
         }
     } else if !args.custom_fields.is_empty() {
         match custom_fields::parse_custom_field_args(&args.custom_fields) {
             Ok(fields) => Some(fields),
             Err(e) => {
-                eprintln!("Error parsing custom fields: {e}");
-                return Ok(());
+                return Err(format!("Error parsing custom fields: {e}").into());
             }
         }
     } else {
@@ -199,17 +188,11 @@ pub async fn update(
 
     let params = builder.build()?;
 
-    match client.issue().update_issue(params).await {
-        Ok(issue) => {
-            println!("Issue updated successfully!");
-            println!("Issue Key: {}", issue.issue_key);
-            println!("Summary: {}", issue.summary);
-            println!("Status: {}", issue.status.name);
-        }
-        Err(e) => {
-            eprintln!("Error updating issue: {e}");
-        }
-    }
+    let issue = client.issue().update_issue(params).await?;
+    println!("Issue updated successfully!");
+    println!("Issue Key: {}", issue.issue_key);
+    println!("Summary: {}", issue.summary);
+    println!("Status: {}", issue.status.name);
     Ok(())
 }
 
@@ -222,19 +205,12 @@ pub async fn delete(client: &BacklogApiClient, issue_key: String) -> CliResult<(
 
     let issue_key = issue_key.parse::<IssueKey>()?;
 
-    match client
+    let issue = client
         .issue()
         .delete_issue(DeleteIssueParams::new(issue_key))
-        .await
-    {
-        Ok(issue) => {
-            println!("Issue deleted successfully!");
-            println!("Deleted Issue Key: {}", issue.issue_key);
-            println!("Summary: {}", issue.summary);
-        }
-        Err(e) => {
-            eprintln!("Error deleting issue: {e}");
-        }
-    }
+        .await?;
+    println!("Issue deleted successfully!");
+    println!("Deleted Issue Key: {}", issue.issue_key);
+    println!("Summary: {}", issue.summary);
     Ok(())
 }

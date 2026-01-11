@@ -4,12 +4,23 @@ use crate::commands::common::{CliResult, parse_project_id_or_key};
 use backlog_api_client::client::BacklogApiClient;
 use backlog_core::identifier::MilestoneId;
 use backlog_project::GetMilestoneListParams;
-use chrono::{DateTime, Utc};
 
 #[cfg(feature = "project_writable")]
 use backlog_core::ApiDate;
 #[cfg(feature = "project_writable")]
 use backlog_project::api::{AddMilestoneParams, DeleteVersionParams, UpdateVersionParams};
+
+/// Parse date string and convert to ApiDate
+/// Returns an error if the date format is invalid (expected YYYY-MM-DD)
+#[cfg(feature = "project_writable")]
+fn parse_date_to_api_date(date_str: &str) -> CliResult<ApiDate> {
+    use crate::commands::common::date_to_start_of_day;
+    use chrono::NaiveDate;
+
+    let date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
+        .map_err(|_| format!("Invalid date format: {date_str}. Expected YYYY-MM-DD"))?;
+    Ok(ApiDate::from(date_to_start_of_day(date)))
+}
 
 /// List milestones for a project
 pub async fn list(client: &BacklogApiClient, project_id_or_key: &str) -> CliResult<()> {
@@ -67,16 +78,14 @@ pub async fn add(
     let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
     let mut params = AddMilestoneParams::new(proj_id_or_key, name);
     params.description = description.clone();
-    params.start_date = start_date.as_ref().map(|d| {
-        DateTime::parse_from_str(&format!("{d}T00:00:00Z"), "%Y-%m-%dT%H:%M:%SZ")
-            .map(|dt| ApiDate::from(dt.with_timezone(&Utc)))
-            .unwrap_or_else(|_| panic!("Invalid date format: {d}"))
-    });
-    params.release_due_date = release_due_date.as_ref().map(|d| {
-        DateTime::parse_from_str(&format!("{d}T00:00:00Z"), "%Y-%m-%dT%H:%M:%SZ")
-            .map(|dt| ApiDate::from(dt.with_timezone(&Utc)))
-            .unwrap_or_else(|_| panic!("Invalid date format: {d}"))
-    });
+    params.start_date = start_date
+        .as_ref()
+        .map(|d| parse_date_to_api_date(d))
+        .transpose()?;
+    params.release_due_date = release_due_date
+        .as_ref()
+        .map(|d| parse_date_to_api_date(d))
+        .transpose()?;
 
     match client.project().add_version(params).await {
         Ok(milestone) => {
@@ -124,16 +133,14 @@ pub async fn update(
     let version_id_val = MilestoneId::new(version_id);
     let mut params = UpdateVersionParams::new(proj_id_or_key, version_id_val, name);
     params.description = description.clone();
-    params.start_date = start_date.as_ref().map(|d| {
-        DateTime::parse_from_str(&format!("{d}T00:00:00Z"), "%Y-%m-%dT%H:%M:%SZ")
-            .map(|dt| ApiDate::from(dt.with_timezone(&Utc)))
-            .unwrap_or_else(|_| panic!("Invalid date format: {d}"))
-    });
-    params.release_due_date = release_due_date.as_ref().map(|d| {
-        DateTime::parse_from_str(&format!("{d}T00:00:00Z"), "%Y-%m-%dT%H:%M:%SZ")
-            .map(|dt| ApiDate::from(dt.with_timezone(&Utc)))
-            .unwrap_or_else(|_| panic!("Invalid date format: {d}"))
-    });
+    params.start_date = start_date
+        .as_ref()
+        .map(|d| parse_date_to_api_date(d))
+        .transpose()?;
+    params.release_due_date = release_due_date
+        .as_ref()
+        .map(|d| parse_date_to_api_date(d))
+        .transpose()?;
     params.archived = archived;
 
     match client.project().update_version(params).await {
