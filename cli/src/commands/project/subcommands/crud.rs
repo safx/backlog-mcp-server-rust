@@ -8,6 +8,7 @@ use backlog_project::api::{AddProjectParams, DeleteProjectParams, UpdateProjectP
 
 /// Add a new project
 #[cfg(feature = "project_writable")]
+#[allow(clippy::too_many_arguments)]
 pub async fn add(
     client: &BacklogApiClient,
     name: &str,
@@ -98,6 +99,7 @@ pub async fn add(
 
 /// Update project settings
 #[cfg(feature = "project_writable")]
+#[allow(clippy::too_many_arguments)]
 pub async fn update(
     client: &BacklogApiClient,
     project_id_or_key: &str,

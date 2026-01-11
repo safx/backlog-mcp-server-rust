@@ -5,6 +5,7 @@ use backlog_core::identifier::{Identifier, IssueId};
 use backlog_user::{GetWatchingCountParams, GetWatchingListParams};
 
 /// Get watching list
+#[allow(clippy::too_many_arguments)]
 pub(crate) async fn watchings(
     client: &BacklogApiClient,
     user_id: u32,

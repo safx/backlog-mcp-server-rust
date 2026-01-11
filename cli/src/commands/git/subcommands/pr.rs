@@ -105,6 +105,7 @@ pub(crate) async fn count(
 }
 
 #[cfg(feature = "git_writable")]
+#[allow(clippy::too_many_arguments)]
 pub(crate) async fn create(
     client: &BacklogApiClient,
     project_id: String,
@@ -183,6 +184,7 @@ pub(crate) async fn create(
 }
 
 #[cfg(feature = "git_writable")]
+#[allow(clippy::too_many_arguments)]
 pub(crate) async fn update(
     client: &BacklogApiClient,
     project_id: String,

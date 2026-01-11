@@ -117,6 +117,7 @@ pub async fn add(
 
 /// Update a version/milestone in a project
 #[cfg(feature = "project_writable")]
+#[allow(clippy::too_many_arguments)]
 pub async fn update(
     client: &BacklogApiClient,
     project_id_or_key: &str,

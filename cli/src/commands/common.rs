@@ -7,12 +7,10 @@
 //! - File operations (download files)
 //! - Error handling
 
-use backlog_core::identifier::{IssueId, ProjectId};
-use backlog_core::{IssueIdOrKey, IssueKey, ProjectIdOrKey, ProjectKey};
+use backlog_core::identifier::ProjectId;
+use backlog_core::{ProjectIdOrKey, ProjectKey};
 use chrono::{DateTime, NaiveDate, Utc};
 use std::error::Error;
-use std::path::Path;
-use tokio::fs;
 
 /// Type alias for CLI results
 pub type CliResult<T = ()> = Result<T, Box<dyn Error>>;
@@ -29,52 +27,6 @@ pub fn parse_project_id_or_key(input: &str) -> CliResult<ProjectIdOrKey> {
             .map_err(|e| format!("Invalid project key '{}': {}", input, e))?;
         Ok(ProjectIdOrKey::from(key))
     }
-}
-
-/// Parse a string into IssueIdOrKey
-///
-/// Tries to parse as u32 first (numeric ID), falls back to IssueKey
-pub fn parse_issue_id_or_key(input: &str) -> CliResult<IssueIdOrKey> {
-    if let Ok(id) = input.parse::<u32>() {
-        Ok(IssueIdOrKey::Id(IssueId::from(id)))
-    } else {
-        let key = input
-            .parse::<IssueKey>()
-            .map_err(|e| format!("Invalid issue key '{}': {}", input, e))?;
-        Ok(IssueIdOrKey::Key(key))
-    }
-}
-
-/// Parse comma-separated IDs into a vector
-///
-/// # Example
-/// ```no_run
-/// let ids = parse_comma_separated_ids("1,2,3", UserId::new)?;
-/// ```
-pub fn parse_comma_separated_ids<T, F>(input: &str, constructor: F) -> CliResult<Vec<T>>
-where
-    F: Fn(u32) -> T,
-{
-    input
-        .split(',')
-        .map(|s| {
-            s.trim()
-                .parse::<u32>()
-                .map(&constructor)
-                .map_err(|e| format!("Invalid ID '{}': {}", s.trim(), e).into())
-        })
-        .collect()
-}
-
-/// Parse date string in YYYY-MM-DD format
-pub fn parse_date(input: &str) -> CliResult<NaiveDate> {
-    NaiveDate::parse_from_str(input, "%Y-%m-%d").map_err(|e| {
-        format!(
-            "Invalid date format '{}': {}. Expected YYYY-MM-DD",
-            input, e
-        )
-        .into()
-    })
 }
 
 /// Convert NaiveDate to start of day DateTime<Utc> (00:00:00)
@@ -124,31 +76,6 @@ pub fn format_bytes(bytes: u64) -> String {
     }
 }
 
-/// Print success message with checkmark emoji
-pub fn print_success(msg: &str) {
-    println!("✅ {}", msg);
-}
-
-/// Download file helper
-///
-/// Writes bytes to the specified path and prints a success message
-pub async fn download_file(bytes: &[u8], output_path: &Path, resource_name: &str) -> CliResult<()> {
-    fs::write(output_path, bytes).await.map_err(|e| {
-        format!(
-            "Failed to save {} to {}: {}",
-            resource_name,
-            output_path.display(),
-            e
-        )
-    })?;
-    println!(
-        "{} downloaded successfully to: {}",
-        resource_name,
-        output_path.display()
-    );
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -168,13 +95,6 @@ mod tests {
         assert_eq!(format_bytes(1536), "1.5 KB");
         assert_eq!(format_bytes(1048576), "1.0 MB");
         assert_eq!(format_bytes(1073741824), "1.0 GB");
-    }
-
-    #[test]
-    fn test_parse_date() {
-        assert!(parse_date("2024-01-10").is_ok());
-        assert!(parse_date("invalid").is_err());
-        assert!(parse_date("2024/01/10").is_err());
     }
 
     #[test]
