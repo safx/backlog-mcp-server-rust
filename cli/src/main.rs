@@ -1,4 +1,3 @@
-mod activity_commands;
 #[cfg(any(
     feature = "project",
     feature = "issue",
@@ -14,7 +13,7 @@ mod activity_commands;
 ))]
 mod commands;
 #[cfg(feature = "project")]
-use activity_commands::{ActivityArgs, ActivityCommands};
+use commands::activity::ActivityArgs;
 #[cfg(feature = "project")]
 use commands::project::ProjectArgs;
 #[cfg(feature = "rate-limit")]
@@ -30,14 +29,7 @@ use commands::watching::handle_watching_command;
 #[cfg(feature = "wiki")]
 use commands::wiki::WikiArgs;
 
-use backlog_api_client::{ProjectIdOrKey, client::BacklogApiClient};
-#[cfg(feature = "project")]
-use backlog_core::identifier::ActivityTypeId;
-use backlog_core::identifier::Identifier;
-#[cfg(feature = "project")]
-use backlog_project::GetProjectRecentUpdatesParams;
-#[cfg(feature = "space")]
-use backlog_space::GetSpaceRecentUpdatesParams;
+use backlog_api_client::client::BacklogApiClient;
 use clap::{Args, Parser};
 use std::env;
 
@@ -105,19 +97,6 @@ struct WatchingArgs {
     command: commands::watching::WatchingSubcommand,
 }
 
-/// Truncates a string to a maximum length, ensuring UTF-8 character boundary safety
-fn truncate_text(text: &str, max_length: usize) -> String {
-    if text.len() <= max_length {
-        text.to_string()
-    } else {
-        let mut end = max_length;
-        while !text.is_char_boundary(end) && end > 0 {
-            end -= 1;
-        }
-        format!("{}...", &text[..end])
-    }
-}
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let base_url = env::var("BACKLOG_BASE_URL")?;
@@ -156,199 +135,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             commands::wiki::execute(&client, wiki_args).await?;
         }
         #[cfg(feature = "project")]
-        Commands::Activity(activity_args) => match activity_args.command {
-            ActivityCommands::Project {
-                project_id,
-                type_ids,
-                count,
-                order,
-            } => {
-                println!("Getting recent activities for project: {project_id}");
-
-                let proj_id_or_key = project_id.parse::<ProjectIdOrKey>()?;
-                let mut params = GetProjectRecentUpdatesParams::new(proj_id_or_key);
-
-                // Parse activity type IDs
-                if let Some(type_ids_str) = type_ids {
-                    let type_ids: Result<Vec<ActivityTypeId>, _> = type_ids_str
-                        .split(',')
-                        .map(|s| s.trim().parse::<u32>().map(ActivityTypeId::new))
-                        .collect();
-                    match type_ids {
-                        Ok(ids) => params.activity_type_ids = Some(ids),
-                        Err(e) => {
-                            eprintln!("❌ Failed to parse type_ids: {e}");
-                            std::process::exit(1);
-                        }
-                    };
-                }
-
-                if let Some(count) = count {
-                    params.count = Some(count);
-                }
-
-                if let Some(order) = order {
-                    params.order = Some(order);
-                }
-
-                match client.project().get_project_recent_updates(params).await {
-                    Ok(activities) => {
-                        if activities.is_empty() {
-                            println!("No activities found.");
-                        } else {
-                            println!("Found {} activities:", activities.len());
-                            for activity in activities {
-                                println!("---");
-                                println!("ID: {}", activity.id.value());
-                                println!("Type: {}", activity.type_id);
-                                // Use helper method to access project name
-                                let project_name = activity.project_name().unwrap_or("Unknown");
-                                println!("Project: {project_name}");
-                                println!("Created by: {}", activity.created_user.name);
-                                println!(
-                                    "Created at: {}",
-                                    activity.created.format("%Y-%m-%d %H:%M:%S")
-                                );
-
-                                // Display content based on type
-                                match &activity.content {
-                                    backlog_core::activity::Content::Standard {
-                                        summary,
-                                        description,
-                                        ..
-                                    } => {
-                                        if let Some(summary) = summary {
-                                            println!("Summary: {summary}");
-                                        }
-                                        if let Some(description) = description {
-                                            let preview = truncate_text(description, 100);
-                                            println!("Description: {preview}");
-                                        }
-                                    }
-                                    backlog_core::activity::Content::UserManagement {
-                                        users,
-                                        ..
-                                    } => {
-                                        if let Some(users) = users {
-                                            println!("Users involved: {}", users.len());
-                                            for user in users.iter().take(3) {
-                                                println!("  - {}", user.name);
-                                            }
-                                            if users.len() > 3 {
-                                                println!("  ... and {} more", users.len() - 3);
-                                            }
-                                        }
-                                    }
-                                    _ => {
-                                        // Other content types not yet implemented in CLI
-                                        println!("Activity type: {:?}", activity.type_id);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("❌ Failed to get project activities: {e}");
-                        std::process::exit(1);
-                    }
-                }
-            }
-            #[cfg(feature = "space")]
-            ActivityCommands::Space {
-                type_ids,
-                count,
-                order,
-            } => {
-                println!("Getting recent activities for space");
-
-                let mut params = GetSpaceRecentUpdatesParams::default();
-
-                // Parse activity type IDs
-                if let Some(type_ids_str) = type_ids {
-                    let type_ids: Result<Vec<ActivityTypeId>, _> = type_ids_str
-                        .split(',')
-                        .map(|s| s.trim().parse::<u32>().map(ActivityTypeId::new))
-                        .collect();
-                    match type_ids {
-                        Ok(ids) => params.activity_type_ids = Some(ids),
-                        Err(e) => {
-                            eprintln!("❌ Failed to parse type_ids: {e}");
-                            std::process::exit(1);
-                        }
-                    };
-                }
-
-                if let Some(count) = count {
-                    params.count = Some(count);
-                }
-
-                if let Some(order) = order {
-                    params.order = Some(order);
-                }
-
-                match client.space().get_space_recent_updates(params).await {
-                    Ok(activities) => {
-                        if activities.is_empty() {
-                            println!("No activities found.");
-                        } else {
-                            println!("Found {} activities:", activities.len());
-                            for activity in activities {
-                                println!("---");
-                                println!("ID: {}", activity.id.value());
-                                println!("Type: {}", activity.type_id);
-                                // Use helper method to access project name
-                                let project_name = activity.project_name().unwrap_or("Unknown");
-                                println!("Project: {project_name}");
-                                println!("Created by: {}", activity.created_user.name);
-                                println!(
-                                    "Created at: {}",
-                                    activity.created.format("%Y-%m-%d %H:%M:%S")
-                                );
-
-                                // Display content based on type
-                                match &activity.content {
-                                    backlog_core::activity::Content::Standard {
-                                        summary,
-                                        description,
-                                        ..
-                                    } => {
-                                        if let Some(summary) = summary {
-                                            println!("Summary: {summary}");
-                                        }
-                                        if let Some(description) = description {
-                                            let preview = truncate_text(description, 100);
-                                            println!("Description: {preview}");
-                                        }
-                                    }
-                                    backlog_core::activity::Content::UserManagement {
-                                        users,
-                                        ..
-                                    } => {
-                                        if let Some(users) = users {
-                                            println!("Users involved: {}", users.len());
-                                            for user in users.iter().take(3) {
-                                                println!("  - {}", user.name);
-                                            }
-                                            if users.len() > 3 {
-                                                println!("  ... and {} more", users.len() - 3);
-                                            }
-                                        }
-                                    }
-                                    _ => {
-                                        // Other content types not yet implemented in CLI
-                                        println!("Activity type: {:?}", activity.type_id);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("❌ Failed to get space activities: {e}");
-                        std::process::exit(1);
-                    }
-                }
-            }
-        },
+        Commands::Activity(activity_args) => {
+            commands::activity::execute(&client, activity_args).await?;
+        }
         #[cfg(feature = "team")]
         Commands::Team(team_args) => {
             handle_team_command(client.team(), team_args).await;
