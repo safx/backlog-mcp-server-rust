@@ -18,6 +18,7 @@ backlog-core = { path = "../crates/backlog-core" }
 backlog-domain-models = { path = "../crates/backlog-domain-models" }
 backlog-project = { path = "../crates/backlog-project" }
 backlog-issue = { path = "../crates/backlog-issue" }
+backlog-document = { path = "../crates/backlog-document" }
 backlog-wiki = { path = "../crates/backlog-wiki" }
 backlog-user = { path = "../crates/backlog-user" }
 backlog-space = { path = "../crates/backlog-space" }

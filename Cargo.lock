@@ -459,6 +459,7 @@ dependencies = [
  "anyhow",
  "backlog-api-client",
  "backlog-core",
+ "backlog-document",
  "backlog-domain-models",
  "backlog-issue",
  "backlog-project",
