@@ -3,13 +3,13 @@ use backlog_api_core::{HttpMethod, IntoRequest};
 use backlog_core::identifier::DocumentId;
 use serde::Serialize;
 
-use crate::models::DocumentDetail;
+use crate::models::DocumentResponse;
 
 /// Response type for deleting a document.
 ///
 /// Corresponds to `DELETE /api/v2/documents/:documentId`.
 #[cfg(feature = "writable")]
-pub type DeleteDocumentResponse = DocumentDetail;
+pub type DeleteDocumentResponse = DocumentResponse;
 
 /// Parameters for deleting a document.
 ///

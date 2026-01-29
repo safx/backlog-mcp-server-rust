@@ -45,6 +45,34 @@ pub async fn execute(client: &BacklogApiClient, args: DocumentArgs) -> CliResult
             attachment_id,
             output,
         } => subcommands::list::download(client, document_id, attachment_id, output).await?,
+        #[cfg(feature = "document_writable")]
+        DocumentCommands::Add {
+            project_id,
+            title,
+            content,
+            emoji,
+            parent_id,
+            add_last,
+            json,
+        } => {
+            subcommands::list::add(
+                client,
+                subcommands::list::AddOptions {
+                    project_id,
+                    title,
+                    content,
+                    emoji,
+                    parent_id,
+                    add_last,
+                    json,
+                },
+            )
+            .await?
+        }
+        #[cfg(feature = "document_writable")]
+        DocumentCommands::Delete { document_id, json } => {
+            subcommands::list::delete(client, document_id, json).await?
+        }
     }
     Ok(())
 }

@@ -1,11 +1,13 @@
 use crate::commands::common::CliResult;
 use backlog_api_client::client::BacklogApiClient;
 use backlog_core::ProjectIdOrKey;
-use backlog_core::identifier::{DocumentAttachmentId, DocumentId, Identifier};
+use backlog_core::identifier::{DocumentAttachmentId, DocumentId, Identifier, ProjectId};
 use backlog_document::{
     DocumentOrder, DocumentSortKey, DownloadAttachmentParams, GetDocumentParams,
     GetDocumentTreeParamsBuilder, ListDocumentsParamsBuilder,
 };
+#[cfg(feature = "document_writable")]
+use backlog_document::{AddDocumentParams, DeleteDocumentParams};
 use std::str::FromStr;
 
 /// Parameters for list command
@@ -16,6 +18,18 @@ pub(crate) struct ListOptions {
     pub order: Option<String>,
     pub offset: Option<u32>,
     pub count: Option<u32>,
+    pub json: bool,
+}
+
+/// Parameters for add command
+#[cfg(feature = "document_writable")]
+pub(crate) struct AddOptions {
+    pub project_id: String,
+    pub title: String,
+    pub content: Option<String>,
+    pub emoji: Option<String>,
+    pub parent_id: Option<String>,
+    pub add_last: bool,
     pub json: bool,
 }
 
@@ -217,6 +231,98 @@ pub(crate) async fn download(
     println!("✅ Downloaded to: {}", output_path);
     println!("   Size: {} bytes", downloaded_file.bytes.len());
     println!("   Content-Type: {}", downloaded_file.content_type);
+
+    Ok(())
+}
+
+/// Create a new document
+#[cfg(feature = "document_writable")]
+pub(crate) async fn add(client: &BacklogApiClient, options: AddOptions) -> CliResult<()> {
+    let AddOptions {
+        project_id,
+        title,
+        content,
+        emoji,
+        parent_id,
+        add_last,
+        json,
+    } = options;
+
+    if !json {
+        println!("Creating document in project: {project_id}");
+    }
+
+    // Parse project_id (numeric only)
+    let project_id_value = ProjectId::from_str(&project_id)?;
+
+    // Build params
+    let mut params = AddDocumentParams::new(project_id_value).title(title);
+
+    if let Some(content) = content {
+        params = params.content(content);
+    }
+    if let Some(emoji) = emoji {
+        params = params.emoji(emoji);
+    }
+    if let Some(parent_id_str) = parent_id {
+        let parent_doc_id = DocumentId::from_str(&parent_id_str)?;
+        params = params.parent_id(parent_doc_id);
+    }
+    if add_last {
+        params = params.add_last(true);
+    }
+
+    // Execute API call
+    let doc = client.document().add_document(params).await?;
+
+    // Output
+    if json {
+        println!("{}", serde_json::to_string_pretty(&doc)?);
+    } else {
+        let emoji_str = doc.emoji.as_deref().unwrap_or("📄");
+        let id_short = &doc.id.to_string()[..8];
+        println!("✅ Document created successfully");
+        println!("   {} {}... \"{}\"", emoji_str, id_short, doc.title);
+        println!("   Project ID: {}", doc.project_id.value());
+        println!(
+            "   Created by user ID: {} at {}",
+            doc.created_user_id,
+            doc.created.format("%Y-%m-%d %H:%M:%S")
+        );
+    }
+
+    Ok(())
+}
+
+/// Delete a document
+#[cfg(feature = "document_writable")]
+pub(crate) async fn delete(
+    client: &BacklogApiClient,
+    document_id: String,
+    json: bool,
+) -> CliResult<()> {
+    if !json {
+        println!("Deleting document: {document_id}");
+    }
+
+    let doc_id = DocumentId::from_str(&document_id)?;
+    let params = DeleteDocumentParams::new(doc_id);
+
+    let doc = client.document().delete_document(params).await?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&doc)?);
+    } else {
+        let emoji_str = doc.emoji.as_deref().unwrap_or("📄");
+        let id_short = &doc.id.to_string()[..8];
+        println!("✅ Document deleted successfully");
+        println!("   {} {}... \"{}\"", emoji_str, id_short, doc.title);
+        println!(
+            "   Created by user ID: {} at {}",
+            doc.created_user_id,
+            doc.created.format("%Y-%m-%d %H:%M:%S")
+        );
+    }
 
     Ok(())
 }

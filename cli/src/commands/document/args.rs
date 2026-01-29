@@ -64,4 +64,39 @@ pub enum DocumentCommands {
         #[clap(short, long)]
         output: Option<String>,
     },
+    #[cfg(feature = "document_writable")]
+    /// Create a new document
+    Add {
+        /// Project ID (required, numeric only)
+        #[clap(short, long)]
+        project_id: String,
+        /// Document title
+        #[clap(short, long)]
+        title: String,
+        /// Document content
+        #[clap(short, long)]
+        content: Option<String>,
+        /// Emoji
+        #[clap(short, long)]
+        emoji: Option<String>,
+        /// Parent document ID (32-char hex)
+        #[clap(long)]
+        parent_id: Option<String>,
+        /// Add as last child of parent
+        #[clap(long)]
+        add_last: bool,
+        /// Output in JSON format
+        #[clap(long)]
+        json: bool,
+    },
+    #[cfg(feature = "document_writable")]
+    /// Delete a document
+    Delete {
+        /// Document ID (32-char hex)
+        #[clap(name = "DOCUMENT_ID")]
+        document_id: String,
+        /// Output in JSON format
+        #[clap(long)]
+        json: bool,
+    },
 }

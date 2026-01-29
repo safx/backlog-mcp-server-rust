@@ -4,13 +4,13 @@ use backlog_api_macros::ToFormParams;
 use backlog_core::identifier::{DocumentId, ProjectId};
 use serde::Serialize;
 
-use crate::models::DocumentDetail;
+use crate::models::DocumentResponse;
 
 /// Response type for adding a document.
 ///
 /// Corresponds to `POST /api/v2/documents`.
 #[cfg(feature = "writable")]
-pub type AddDocumentResponse = DocumentDetail;
+pub type AddDocumentResponse = DocumentResponse;
 
 /// Parameters for adding a new document.
 ///
