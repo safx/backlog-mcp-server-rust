@@ -2,6 +2,9 @@ use super::{
     DownloadAttachmentParams, GetDocumentParams, GetDocumentTreeParams, GetDocumentTreeResponse,
     ListDocumentsParams, ListDocumentsResponse,
 };
+
+#[cfg(feature = "writable")]
+use super::{AddDocumentParams, AddDocumentResponse, DeleteDocumentParams, DeleteDocumentResponse};
 use crate::models::DocumentDetail;
 use backlog_api_core::Result;
 use client::{Client, DownloadedFile};
@@ -48,5 +51,24 @@ impl DocumentApi {
         params: DownloadAttachmentParams,
     ) -> Result<DownloadedFile> {
         self.0.download_file(params).await
+    }
+
+    /// Add document
+    ///
+    /// Corresponds to `POST /api/v2/documents`.
+    #[cfg(feature = "writable")]
+    pub async fn add_document(&self, params: AddDocumentParams) -> Result<AddDocumentResponse> {
+        self.0.execute(params).await
+    }
+
+    /// Delete document
+    ///
+    /// Corresponds to `DELETE /api/v2/documents/:documentId`.
+    #[cfg(feature = "writable")]
+    pub async fn delete_document(
+        &self,
+        params: DeleteDocumentParams,
+    ) -> Result<DeleteDocumentResponse> {
+        self.0.execute(params).await
     }
 }

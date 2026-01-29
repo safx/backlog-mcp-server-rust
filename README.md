@@ -114,9 +114,9 @@ The following tools are grouped by their respective modules:
 
 ### Tool Summary
 
-With the default configuration, you have access to **34 tools** for Backlog automation:
+With the default configuration, you have access to **36 tools** for Backlog automation:
 
-- **Documents** (3 tools): View document trees, get details, download attachments
+- **Documents** (5 tools): View document trees, get details, download attachments, add documents, delete documents
 - **Git/Pull Requests** (8 tools): Manage repositories, PRs, comments, and attachments
 - **Issues** (12 tools): View, create, update issues, manage comments, attachments, shared files, and priorities
 - **Projects** (3 tools): Get project status, issue types, and custom field definitions
@@ -132,6 +132,8 @@ The server includes both **read operations** for information gathering and **wri
 -   **`document_details_get`**: Retrieves details for a specific Backlog document
 -   **`document_attachment_download`**: Download a document attachment
 -   **`document_tree_get`**: Get the document tree for a specified project
+-   **`document_add`**: Add a new document to a Backlog project
+-   **`document_delete`**: Delete a document from Backlog
 
 ### Git Tools
 -   **`git_repository_list_get`**: Get a list of Git repositories for a specified project
@@ -220,6 +222,10 @@ The MCP server supports multiple feature flags to enable different write operati
     -   Enables: `wiki_update` tool
     -   Allows AI agents to update wiki page content, names, and notification settings
 
+-   **`document_writable`** (enabled by default)
+    -   Enables: `document_add` and `document_delete` tools
+    -   Allows AI agents to create and delete documents
+
 ### Build Configuration
 
 ```bash
@@ -229,7 +235,7 @@ cargo build --package mcp-backlog-server --no-default-features
 # Selective features
 cargo build --package mcp-backlog-server --features issue_writable
 cargo build --package mcp-backlog-server --features "issue_writable,git_writable"
-cargo build --package mcp-backlog-server --features "issue_writable,git_writable,wiki_writable"
+cargo build --package mcp-backlog-server --features "issue_writable,git_writable,wiki_writable,document_writable"
 ```
 
 ## Configuration

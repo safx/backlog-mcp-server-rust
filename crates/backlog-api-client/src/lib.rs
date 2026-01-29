@@ -31,6 +31,11 @@ pub use backlog_document::{
     GetDocumentTreeParams, GetDocumentTreeResponse,
 };
 
+#[cfg(all(feature = "document", feature = "document_writable"))]
+pub use backlog_document::{
+    AddDocumentParams, AddDocumentResponse, DeleteDocumentParams, DeleteDocumentResponse,
+};
+
 // File module (from backlog_file)
 #[cfg(feature = "file")]
 pub use backlog_file::models::FileContent;

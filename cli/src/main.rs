@@ -1,6 +1,7 @@
 #[cfg(any(
     feature = "project",
     feature = "issue",
+    feature = "document",
     feature = "team",
     feature = "star",
     feature = "rate-limit",
@@ -14,6 +15,8 @@
 mod commands;
 #[cfg(feature = "project")]
 use commands::activity::ActivityArgs;
+#[cfg(feature = "document")]
+use commands::document::DocumentArgs;
 #[cfg(feature = "project")]
 use commands::project::ProjectArgs;
 #[cfg(feature = "rate-limit")]
@@ -51,6 +54,9 @@ enum Commands {
     /// Manage issues
     #[cfg(feature = "issue")]
     Issue(commands::issue::IssueArgs),
+    /// Manage documents
+    #[cfg(feature = "document")]
+    Document(DocumentArgs),
     /// Manage space
     #[cfg(feature = "space")]
     Space(commands::space::SpaceArgs),
@@ -117,6 +123,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         #[cfg(feature = "issue")]
         Commands::Issue(issue_args) => {
             commands::issue::execute(&client, issue_args).await?;
+        }
+        #[cfg(feature = "document")]
+        Commands::Document(document_args) => {
+            commands::document::execute(&client, document_args).await?;
         }
         #[cfg(feature = "space")]
         Commands::Space(space_args) => {

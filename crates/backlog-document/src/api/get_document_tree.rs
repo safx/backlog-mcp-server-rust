@@ -35,6 +35,6 @@ impl IntoRequest for GetDocumentTreeParams {
     }
 
     fn to_query(&self) -> impl Serialize {
-        self
+        vec![("projectIdOrKey".to_string(), self.project_id_or_key.to_string())]
     }
 }

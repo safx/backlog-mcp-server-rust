@@ -35,11 +35,12 @@ schemars = [ # Added schemars feature to propagate to sub-crates
     # "backlog-star?/schemars", # Removed as backlog-star doesn't have this feature
     "backlog-webhook?/schemars",
 ]
-all_writable = ["issue_writable", "project_writable", "space_writable", "user_writable", "git_writable", "wiki_writable", "team_writable", "star_writable", "watching_writable", "webhook_writable"]
+all_writable = ["issue_writable", "project_writable", "space_writable", "user_writable", "document_writable", "git_writable", "wiki_writable", "team_writable", "star_writable", "watching_writable", "webhook_writable"]
 issue_writable = ["backlog-issue?/writable", "client/writable"]
 project_writable = ["backlog-project?/writable", "client/writable"]
 space_writable = ["backlog-space?/writable", "client/writable"]
 user_writable = ["backlog-user?/writable", "client/writable"]
+document_writable = ["backlog-document?/writable", "client/writable"]
 git_writable = ["backlog-git?/writable", "client/writable"]
 wiki_writable = ["backlog-wiki?/writable", "client/writable"]
 team_writable = ["backlog-team?/writable", "client/writable"]

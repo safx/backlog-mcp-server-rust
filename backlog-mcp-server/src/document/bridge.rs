@@ -10,14 +10,22 @@ use backlog_api_client::{
 };
 use backlog_core::{
     ProjectIdOrKey,
-    identifier::{DocumentAttachmentId, DocumentId},
+    identifier::{DocumentAttachmentId, DocumentId, ProjectId},
 };
 
 use super::request::{
     DownloadDocumentAttachmentRequest, GetDocumentDetailsRequest, GetDocumentTreeRequest,
 };
+#[cfg(feature = "document_writable")]
+use super::request::{AddDocumentRequest, DeleteDocumentRequest};
+
 use crate::access_control::AccessControl;
 use crate::error::Result;
+
+#[cfg(feature = "document_writable")]
+use backlog_api_client::{
+    AddDocumentParams, AddDocumentResponse, DeleteDocumentParams, DeleteDocumentResponse,
+};
 
 pub(crate) async fn get_document_details(
     client: Arc<Mutex<BacklogApiClient>>,
@@ -85,6 +93,76 @@ pub(crate) async fn get_document_tree_tool(
     client_guard
         .document()
         .get_document_tree(params)
+        .await
+        .map_err(crate::error::Error::from)
+}
+
+#[cfg(feature = "document_writable")]
+pub(crate) async fn add_document_bridge(
+    client: Arc<Mutex<BacklogApiClient>>,
+    req: AddDocumentRequest,
+    access_control: &AccessControl,
+) -> Result<AddDocumentResponse> {
+    let client_guard = client.lock().await;
+    let project_id = ProjectId::new(req.project_id);
+
+    // Check project access first
+    access_control
+        .check_project_access_by_id_async(&project_id, &client_guard)
+        .await?;
+
+    // Build AddDocumentParams
+    let mut params = AddDocumentParams::new(project_id);
+
+    if let Some(title) = req.title {
+        params = params.title(title);
+    }
+    if let Some(content) = req.content {
+        params = params.content(content);
+    }
+    if let Some(emoji) = req.emoji {
+        params = params.emoji(emoji);
+    }
+    if let Some(parent_id_str) = req.parent_id {
+        let parent_id = DocumentId::from_str(parent_id_str.trim())?;
+        params = params.parent_id(parent_id);
+    }
+    if let Some(add_last) = req.add_last {
+        params = params.add_last(add_last);
+    }
+
+    client_guard
+        .document()
+        .add_document(params)
+        .await
+        .map_err(crate::error::Error::from)
+}
+
+#[cfg(feature = "document_writable")]
+pub(crate) async fn delete_document_bridge(
+    client: Arc<Mutex<BacklogApiClient>>,
+    req: DeleteDocumentRequest,
+    access_control: &AccessControl,
+) -> Result<DeleteDocumentResponse> {
+    let client_guard = client.lock().await;
+    let document_id = DocumentId::from_str(req.document_id.trim())?;
+
+    // First get document details to verify project access
+    let document = client_guard
+        .document()
+        .get_document(GetDocumentParams::new(document_id.clone()))
+        .await?;
+
+    // Check project access
+    access_control
+        .check_project_access_by_id_async(&document.project_id, &client_guard)
+        .await?;
+
+    // Delete the document
+    let params = DeleteDocumentParams::new(document_id);
+    client_guard
+        .document()
+        .delete_document(params)
         .await
         .map_err(crate::error::Error::from)
 }

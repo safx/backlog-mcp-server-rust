@@ -54,6 +54,9 @@ use crate::{
 #[cfg(feature = "wiki_writable")]
 use crate::wiki::request::UpdateWikiRequest;
 
+#[cfg(feature = "document_writable")]
+use crate::document::request::{AddDocumentRequest, DeleteDocumentRequest};
+
 use crate::access_control::AccessControl;
 #[cfg(feature = "git_writable")]
 use crate::git::request::AddPullRequestCommentRequest;
@@ -654,6 +657,34 @@ impl Server {
         )
         .await?;
         Ok(CallToolResult::success(vec![Content::json(comment)?]))
+    }
+
+    #[cfg(feature = "document_writable")]
+    #[tool(
+        description = "Add a new document to a Backlog project. Requires project_id (numeric). Optional: title, content (markdown), emoji, parent_id (for hierarchy), add_last (placement order)."
+    )]
+    async fn document_add(&self, request: Parameters<AddDocumentRequest>) -> McpResult {
+        let document = document::bridge::add_document_bridge(
+            self.client.clone(),
+            request.0,
+            &self.access_control,
+        )
+        .await?;
+        Ok(CallToolResult::success(vec![Content::json(document)?]))
+    }
+
+    #[cfg(feature = "document_writable")]
+    #[tool(
+        description = "Delete a document from Backlog. Requires document_id (32-digit hex string). Returns the deleted document information."
+    )]
+    async fn document_delete(&self, request: Parameters<DeleteDocumentRequest>) -> McpResult {
+        let deleted_document = document::bridge::delete_document_bridge(
+            self.client.clone(),
+            request.0,
+            &self.access_control,
+        )
+        .await?;
+        Ok(CallToolResult::success(vec![Content::json(deleted_document)?]))
     }
 }
 

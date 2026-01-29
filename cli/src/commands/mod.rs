@@ -3,6 +3,9 @@ pub mod common;
 #[cfg(feature = "project")]
 pub mod activity;
 
+#[cfg(feature = "document")]
+pub mod document;
+
 #[cfg(feature = "issue")]
 pub mod issue;
 

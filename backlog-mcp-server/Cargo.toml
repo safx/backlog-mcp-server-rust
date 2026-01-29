@@ -7,10 +7,11 @@ license.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-default = ["issue_writable", "git_writable", "wiki_writable"]
+default = ["issue_writable", "git_writable", "wiki_writable", "document_writable"]
 issue_writable = ["backlog-api-client/issue_writable"]
 git_writable = ["backlog-api-client/git_writable"]
 wiki_writable = ["backlog-api-client/wiki_writable"]
+document_writable = ["backlog-api-client/document_writable"]
 
 [dependencies]
 rmcp = { version = "0.12", features = ["transport-io"] }
