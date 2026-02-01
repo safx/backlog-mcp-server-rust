@@ -38,8 +38,11 @@ mod writable_tests {
         let mock_server = MockServer::start().await;
         let doc_api = setup_document_api(&mock_server).await;
 
-        let response_body =
-            create_mock_document_response_json("00112233445566778899aabbccddeeff", 1, "New Document");
+        let response_body = create_mock_document_response_json(
+            "00112233445566778899aabbccddeeff",
+            1,
+            "New Document",
+        );
 
         Mock::given(method("POST"))
             .and(path("/api/v2/documents"))

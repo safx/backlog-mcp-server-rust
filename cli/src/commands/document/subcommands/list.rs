@@ -2,12 +2,12 @@ use crate::commands::common::CliResult;
 use backlog_api_client::client::BacklogApiClient;
 use backlog_core::ProjectIdOrKey;
 use backlog_core::identifier::{DocumentAttachmentId, DocumentId, Identifier, ProjectId};
+#[cfg(feature = "document_writable")]
+use backlog_document::{AddDocumentParams, DeleteDocumentParams};
 use backlog_document::{
     DocumentOrder, DocumentSortKey, DownloadAttachmentParams, GetDocumentParams,
     GetDocumentTreeParamsBuilder, ListDocumentsParamsBuilder,
 };
-#[cfg(feature = "document_writable")]
-use backlog_document::{AddDocumentParams, DeleteDocumentParams};
 use std::str::FromStr;
 
 /// Parameters for list command
@@ -34,10 +34,7 @@ pub(crate) struct AddOptions {
 }
 
 /// List documents in a project
-pub(crate) async fn list(
-    client: &BacklogApiClient,
-    options: ListOptions,
-) -> CliResult<()> {
+pub(crate) async fn list(client: &BacklogApiClient, options: ListOptions) -> CliResult<()> {
     let ListOptions {
         project_id,
         keyword,
@@ -72,7 +69,13 @@ pub(crate) async fn list(
         let sort_key = match sort_str.as_str() {
             "created" => DocumentSortKey::Created,
             "updated" => DocumentSortKey::Updated,
-            _ => return Err(format!("Invalid sort key: {}. Valid options are: created, updated", sort_str).into()),
+            _ => {
+                return Err(format!(
+                    "Invalid sort key: {}. Valid options are: created, updated",
+                    sort_str
+                )
+                .into());
+            }
         };
         params_builder.sort(sort_key);
     }
@@ -143,20 +146,21 @@ pub(crate) async fn get(
         println!("Status ID: {}", doc.status_id);
         println!("\nPlain text content:");
         println!("{}", doc.plain);
-        println!("\nCreated: {} by {}",
+        println!(
+            "\nCreated: {} by {}",
             doc.created.format("%Y-%m-%d %H:%M:%S"),
-            doc.created_user.name);
-        println!("Updated: {} by {}",
+            doc.created_user.name
+        );
+        println!(
+            "Updated: {} by {}",
             doc.updated.format("%Y-%m-%d %H:%M:%S"),
-            doc.updated_user.name);
+            doc.updated_user.name
+        );
 
         if !doc.attachments.is_empty() {
             println!("\nAttachments ({}):", doc.attachments.len());
             for att in &doc.attachments {
-                println!("  [{}] {} ({} bytes)",
-                    att.id.value(),
-                    att.name,
-                    att.size);
+                println!("  [{}] {} ({} bytes)", att.id.value(), att.name, att.size);
             }
         }
 
@@ -217,7 +221,10 @@ pub(crate) async fn download(
     attachment_id: u32,
     output: Option<String>,
 ) -> CliResult<()> {
-    println!("Downloading attachment {} from document {}", attachment_id, document_id);
+    println!(
+        "Downloading attachment {} from document {}",
+        attachment_id, document_id
+    );
 
     let doc_id = DocumentId::from_str(&document_id)?;
     let att_id = DocumentAttachmentId::new(attachment_id);

@@ -17,7 +17,9 @@ mod delete_document;
 // Re-export parameter types and response types
 pub use download_attachment::DownloadAttachmentParams;
 pub use get_document::{GetDocumentParams, GetDocumentResponse};
-pub use get_document_tree::{GetDocumentTreeParams, GetDocumentTreeParamsBuilder, GetDocumentTreeResponse};
+pub use get_document_tree::{
+    GetDocumentTreeParams, GetDocumentTreeParamsBuilder, GetDocumentTreeResponse,
+};
 pub use list_documents::{
     DocumentOrder, DocumentSortKey, ListDocumentsParams, ListDocumentsParamsBuilder,
     ListDocumentsResponse,

@@ -13,11 +13,11 @@ use backlog_core::{
     identifier::{DocumentAttachmentId, DocumentId, ProjectId},
 };
 
+#[cfg(feature = "document_writable")]
+use super::request::{AddDocumentRequest, DeleteDocumentRequest};
 use super::request::{
     DownloadDocumentAttachmentRequest, GetDocumentDetailsRequest, GetDocumentTreeRequest,
 };
-#[cfg(feature = "document_writable")]
-use super::request::{AddDocumentRequest, DeleteDocumentRequest};
 
 use crate::access_control::AccessControl;
 use crate::error::Result;

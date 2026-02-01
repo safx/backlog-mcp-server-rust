@@ -684,7 +684,9 @@ impl Server {
             &self.access_control,
         )
         .await?;
-        Ok(CallToolResult::success(vec![Content::json(deleted_document)?]))
+        Ok(CallToolResult::success(vec![Content::json(
+            deleted_document,
+        )?]))
     }
 }
 
