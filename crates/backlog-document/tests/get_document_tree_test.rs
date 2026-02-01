@@ -1,9 +1,10 @@
 mod common;
-use common::*;
+use common::setup_document_api;
 
 use backlog_core::identifier::{DocumentId, ProjectId};
 use backlog_document::GetDocumentTreeParams;
-use wiremock::matchers::query_param;
+use wiremock::matchers::{method, path, query_param};
+use wiremock::{Mock, ResponseTemplate};
 
 #[tokio::test]
 async fn test_get_document_tree_success() {

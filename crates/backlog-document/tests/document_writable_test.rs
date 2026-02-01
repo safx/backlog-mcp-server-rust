@@ -2,13 +2,17 @@ mod common;
 
 #[cfg(feature = "writable")]
 mod writable_tests {
-    use super::common::*;
+    use super::common::setup_document_api;
     use backlog_core::identifier::{Identifier, ProjectId};
     use backlog_document::api::{AddDocumentParams, DeleteDocumentParams};
     use wiremock::matchers::{body_string_contains, header, method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
-    fn create_mock_document_detail_json(
+    /// Creates mock JSON for DocumentResponse (used by add_document and delete_document)
+    ///
+    /// Note: DocumentResponse uses createdUserId/updatedUserId (u32) instead of
+    /// full User objects that DocumentDetail uses.
+    fn create_mock_document_response_json(
         id: &str,
         project_id: u32,
         title: &str,
@@ -21,30 +25,9 @@ mod writable_tests {
             "plain": "Plain text content",
             "statusId": 1,
             "emoji": "📄",
-            "attachments": [],
-            "createdUser": {
-                "id": 1,
-                "userId": "admin",
-                "name": "AdminUser",
-                "roleType": 1,
-                "lang": "ja",
-                "mailAddress": "admin@example.com",
-                "nulabAccount": null,
-                "keyword": "AdminUser",
-                "lastLoginTime": "2023-11-30T12:00:00Z"
-            },
+            "createdUserId": 1,
             "created": "2023-12-01T10:00:00Z",
-            "updatedUser": {
-                "id": 1,
-                "userId": "admin",
-                "name": "AdminUser",
-                "roleType": 1,
-                "lang": "ja",
-                "mailAddress": "admin@example.com",
-                "nulabAccount": null,
-                "keyword": "AdminUser",
-                "lastLoginTime": "2023-11-30T12:00:00Z"
-            },
+            "updatedUserId": 1,
             "updated": "2023-12-01T10:00:00Z",
             "tags": []
         })
@@ -56,7 +39,7 @@ mod writable_tests {
         let doc_api = setup_document_api(&mock_server).await;
 
         let response_body =
-            create_mock_document_detail_json("00112233445566778899aabbccddeeff", 1, "New Document");
+            create_mock_document_response_json("00112233445566778899aabbccddeeff", 1, "New Document");
 
         Mock::given(method("POST"))
             .and(path("/api/v2/documents"))
@@ -69,8 +52,7 @@ mod writable_tests {
         let params = AddDocumentParams::new(ProjectId::new(1));
 
         let result = doc_api.add_document(params).await;
-        assert!(result.is_ok());
-        let detail = result.unwrap();
+        let detail = result.expect("add_document with project_id only should succeed");
         assert_eq!(detail.project_id.value(), 1);
     }
 
@@ -79,7 +61,7 @@ mod writable_tests {
         let mock_server = MockServer::start().await;
         let doc_api = setup_document_api(&mock_server).await;
 
-        let response_body = create_mock_document_detail_json(
+        let response_body = create_mock_document_response_json(
             "00112233445566778899aabbccddeeff",
             1,
             "Complete Document",
@@ -104,8 +86,7 @@ mod writable_tests {
             .add_last(true);
 
         let result = doc_api.add_document(params).await;
-        assert!(result.is_ok());
-        let detail = result.unwrap();
+        let detail = result.expect("add_document with all params should succeed");
         assert_eq!(detail.title, "Complete Document");
     }
 
@@ -115,7 +96,7 @@ mod writable_tests {
         let doc_api = setup_document_api(&mock_server).await;
 
         let parent_id_str = "aabbccddeeff00112233445566778899";
-        let response_body = create_mock_document_detail_json(
+        let response_body = create_mock_document_response_json(
             "00112233445566778899aabbccddeeff",
             1,
             "Child Document",
@@ -126,7 +107,7 @@ mod writable_tests {
             .and(header("Content-Type", "application/x-www-form-urlencoded"))
             .and(body_string_contains("projectId=1"))
             .and(body_string_contains("title=Child+Document"))
-            .and(body_string_contains(&format!("parentId={}", parent_id_str)))
+            .and(body_string_contains(format!("parentId={}", parent_id_str)))
             .respond_with(ResponseTemplate::new(200).set_body_json(&response_body))
             .mount(&mock_server)
             .await;
@@ -136,8 +117,7 @@ mod writable_tests {
             .parent_id(parent_id_str.to_string());
 
         let result = doc_api.add_document(params).await;
-        assert!(result.is_ok());
-        let detail = result.unwrap();
+        let detail = result.expect("add_document with parent_id should succeed");
         assert_eq!(detail.title, "Child Document");
     }
 
@@ -147,7 +127,7 @@ mod writable_tests {
         let doc_api = setup_document_api(&mock_server).await;
 
         let response_body =
-            create_mock_document_detail_json("00112233445566778899aabbccddeeff", 1, "Title Only");
+            create_mock_document_response_json("00112233445566778899aabbccddeeff", 1, "Title Only");
 
         Mock::given(method("POST"))
             .and(path("/api/v2/documents"))
@@ -161,8 +141,7 @@ mod writable_tests {
         let params = AddDocumentParams::new(ProjectId::new(1)).title("Title Only");
 
         let result = doc_api.add_document(params).await;
-        assert!(result.is_ok());
-        let detail = result.unwrap();
+        let detail = result.expect("add_document with title only should succeed");
         assert_eq!(detail.title, "Title Only");
     }
 
@@ -173,7 +152,7 @@ mod writable_tests {
 
         let document_id_str = "00112233445566778899aabbccddeeff";
         let response_body =
-            create_mock_document_detail_json(document_id_str, 1, "Deleted Document");
+            create_mock_document_response_json(document_id_str, 1, "Deleted Document");
 
         Mock::given(method("DELETE"))
             .and(path(format!("/api/v2/documents/{}", document_id_str)))
@@ -184,8 +163,7 @@ mod writable_tests {
         let params = DeleteDocumentParams::new(document_id_str.to_string());
 
         let result = doc_api.delete_document(params).await;
-        assert!(result.is_ok());
-        let detail = result.unwrap();
+        let detail = result.expect("delete_document should succeed");
         assert_eq!(detail.title, "Deleted Document");
         assert_eq!(detail.id.to_string(), document_id_str);
     }
