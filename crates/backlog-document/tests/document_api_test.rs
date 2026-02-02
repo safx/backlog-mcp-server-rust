@@ -1,9 +1,11 @@
 mod common;
-use common::*;
+use common::setup_document_api;
 
 use backlog_api_core::bytes;
 use backlog_core::identifier::{DocumentAttachmentId, DocumentId};
 use backlog_document::DownloadAttachmentParams;
+use wiremock::matchers::{method, path};
+use wiremock::{Mock, ResponseTemplate};
 
 #[tokio::test]
 async fn test_download_attachment_success() {

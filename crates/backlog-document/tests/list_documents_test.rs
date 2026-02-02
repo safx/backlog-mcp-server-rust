@@ -1,9 +1,10 @@
 mod common;
-use common::*;
+use common::setup_document_api;
 
 use backlog_core::identifier::ProjectId;
 use backlog_document::{DocumentOrder, DocumentSortKey, ListDocumentsParamsBuilder};
-use wiremock::matchers::query_param;
+use wiremock::matchers::{method, path, query_param};
+use wiremock::{Mock, ResponseTemplate};
 
 #[tokio::test]
 async fn test_list_documents_with_multiple_project_ids() {

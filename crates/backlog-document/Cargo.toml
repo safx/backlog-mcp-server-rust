@@ -24,4 +24,5 @@ tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 [features]
 default = []
+writable = ["client/writable"]
 schemars = ["dep:schemars", "backlog-core/schemars"]

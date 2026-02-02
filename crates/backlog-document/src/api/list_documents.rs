@@ -28,7 +28,7 @@ pub struct ListDocumentsParams {
     pub sort: Option<DocumentSortKey>, // Enum to be defined
     #[builder(default, setter(into))]
     pub order: Option<DocumentOrder>, // Sort order
-    #[builder(default)]
+    #[builder(default = "Some(0)")]
     pub offset: Option<u32>,
     #[builder(default)]
     pub count: Option<u32>,
