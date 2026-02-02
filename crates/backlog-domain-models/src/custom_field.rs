@@ -95,6 +95,21 @@ impl RawCustomFieldBase {
     }
 }
 
+/// Parse an optional date string with error context
+fn parse_optional_date<'de, D>(
+    date_str: Option<&str>,
+    field_name: &str,
+) -> Result<Option<Date>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use std::str::FromStr;
+    date_str
+        .map(Date::from_str)
+        .transpose()
+        .map_err(|e| D::Error::custom(format!("Failed to parse {} date: {}", field_name, e)))
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct RawTextFieldType {
@@ -130,6 +145,24 @@ struct RawDateFieldType {
     initial_value_type: Option<InitialDate>,
     initial_shift: Option<i32>,
     initial_date: Option<String>,
+}
+
+impl RawDateFieldType {
+    fn into_date_settings<'de, D>(self) -> Result<(RawCustomFieldBase, DateSettings), D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Ok((
+            self.base,
+            DateSettings {
+                min: parse_optional_date::<D>(self.min.as_deref(), "min")?,
+                max: parse_optional_date::<D>(self.max.as_deref(), "max")?,
+                initial_value_type: self.initial_value_type,
+                initial_shift: self.initial_shift,
+                initial_date: parse_optional_date::<D>(self.initial_date.as_deref(), "initial")?,
+            },
+        ))
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -193,6 +226,32 @@ struct RawUntaggedCustomFieldType {
     allow_add_item: Option<bool>,
     #[serde(default)]
     allow_input: Option<bool>,
+}
+
+impl RawUntaggedCustomFieldType {
+    fn to_list_settings(&self) -> ListSettings {
+        ListSettings {
+            items: self.items.clone().unwrap_or_default(),
+            allow_input: self.allow_input,
+            allow_add_item: self.allow_add_item,
+        }
+    }
+
+    fn to_date_settings<'de, D>(&self) -> Result<DateSettings, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Ok(DateSettings {
+            min: parse_optional_date::<D>(self.min.as_ref().and_then(|v| v.as_str()), "min")?,
+            max: parse_optional_date::<D>(self.max.as_ref().and_then(|v| v.as_str()), "max")?,
+            initial_value_type: self.initial_value_type.clone(),
+            initial_shift: self.initial_shift,
+            initial_date: parse_optional_date::<D>(
+                self.initial_date.as_ref().and_then(|v| v.as_str()),
+                "initial",
+            )?,
+        })
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -334,8 +393,6 @@ impl CustomFieldType {
     where
         D: Deserializer<'de>,
     {
-        use std::str::FromStr;
-
         let (base, settings) = match tagged {
             RawTaggedCustomFieldType::Text(raw) => (raw.base, CustomFieldSettings::Text),
             RawTaggedCustomFieldType::TextArea(raw) => (raw.base, CustomFieldSettings::TextArea),
@@ -349,34 +406,8 @@ impl CustomFieldType {
                 }),
             ),
             RawTaggedCustomFieldType::Date(raw) => {
-                let min = raw
-                    .min
-                    .map(|s| Date::from_str(&s))
-                    .transpose()
-                    .map_err(|e| D::Error::custom(format!("Failed to parse min date: {}", e)))?;
-                let max = raw
-                    .max
-                    .map(|s| Date::from_str(&s))
-                    .transpose()
-                    .map_err(|e| D::Error::custom(format!("Failed to parse max date: {}", e)))?;
-                let initial_date = raw
-                    .initial_date
-                    .map(|s| Date::from_str(&s))
-                    .transpose()
-                    .map_err(|e| {
-                        D::Error::custom(format!("Failed to parse initial date: {}", e))
-                    })?;
-
-                (
-                    raw.base,
-                    CustomFieldSettings::Date(DateSettings {
-                        min,
-                        max,
-                        initial_value_type: raw.initial_value_type,
-                        initial_shift: raw.initial_shift,
-                        initial_date,
-                    }),
-                )
+                let (base, settings) = raw.into_date_settings::<D>()?;
+                (base, CustomFieldSettings::Date(settings))
             }
             RawTaggedCustomFieldType::SingleList(raw) => {
                 let (base, settings) = raw.into_list_settings();
@@ -412,65 +443,13 @@ impl CustomFieldType {
                 min: untagged.min.as_ref().and_then(|v| v.as_f64()),
                 max: untagged.max.as_ref().and_then(|v| v.as_f64()),
                 initial_value: untagged.initial_value,
-                unit: untagged.unit,
+                unit: untagged.unit.clone(),
             }),
-            4 => {
-                use std::str::FromStr;
-
-                let min = untagged
-                    .min
-                    .as_ref()
-                    .and_then(|v| v.as_str())
-                    .map(Date::from_str)
-                    .transpose()
-                    .map_err(|e| D::Error::custom(format!("Failed to parse min date: {}", e)))?;
-
-                let max = untagged
-                    .max
-                    .as_ref()
-                    .and_then(|v| v.as_str())
-                    .map(Date::from_str)
-                    .transpose()
-                    .map_err(|e| D::Error::custom(format!("Failed to parse max date: {}", e)))?;
-
-                let initial_date = untagged
-                    .initial_date
-                    .as_ref()
-                    .and_then(|v| v.as_str())
-                    .map(Date::from_str)
-                    .transpose()
-                    .map_err(|e| {
-                        D::Error::custom(format!("Failed to parse initial date: {}", e))
-                    })?;
-
-                CustomFieldSettings::Date(DateSettings {
-                    min,
-                    max,
-                    initial_value_type: untagged.initial_value_type,
-                    initial_shift: untagged.initial_shift,
-                    initial_date,
-                })
-            }
-            5 => CustomFieldSettings::SingleList(ListSettings {
-                items: untagged.items.unwrap_or_default(),
-                allow_input: untagged.allow_input,
-                allow_add_item: untagged.allow_add_item,
-            }),
-            6 => CustomFieldSettings::MultipleList(ListSettings {
-                items: untagged.items.unwrap_or_default(),
-                allow_input: untagged.allow_input,
-                allow_add_item: untagged.allow_add_item,
-            }),
-            7 => CustomFieldSettings::Checkbox(ListSettings {
-                items: untagged.items.unwrap_or_default(),
-                allow_input: untagged.allow_input,
-                allow_add_item: untagged.allow_add_item,
-            }),
-            8 => CustomFieldSettings::Radio(ListSettings {
-                items: untagged.items.unwrap_or_default(),
-                allow_input: untagged.allow_input,
-                allow_add_item: untagged.allow_add_item,
-            }),
+            4 => CustomFieldSettings::Date(untagged.to_date_settings::<D>()?),
+            5 => CustomFieldSettings::SingleList(untagged.to_list_settings()),
+            6 => CustomFieldSettings::MultipleList(untagged.to_list_settings()),
+            7 => CustomFieldSettings::Checkbox(untagged.to_list_settings()),
+            8 => CustomFieldSettings::Radio(untagged.to_list_settings()),
             _ => {
                 return Err(serde::de::Error::custom(format!(
                     "Unknown typeId: {}",
@@ -588,6 +567,127 @@ mod tests {
             assert_eq!(settings.min, Some(0.0));
         } else {
             panic!("Expected Numeric settings");
+        }
+    }
+
+    // ============================================
+    // InitialDate Tests
+    // ============================================
+
+    #[test]
+    fn test_initial_date_deserialize_integer_today() {
+        let result: InitialDate = serde_json::from_str("1").expect("should deserialize 1 as Today");
+        assert_eq!(result, InitialDate::Today);
+    }
+
+    #[test]
+    fn test_initial_date_deserialize_integer_tomorrow() {
+        let result: InitialDate =
+            serde_json::from_str("2").expect("should deserialize 2 as Tomorrow");
+        assert_eq!(result, InitialDate::Tomorrow);
+    }
+
+    #[test]
+    fn test_initial_date_deserialize_integer_yesterday() {
+        let result: InitialDate =
+            serde_json::from_str("3").expect("should deserialize 3 as Yesterday");
+        assert_eq!(result, InitialDate::Yesterday);
+    }
+
+    #[test]
+    fn test_initial_date_deserialize_integer_specified() {
+        let result: InitialDate =
+            serde_json::from_str("4").expect("should deserialize 4 as Specified");
+        assert_eq!(result, InitialDate::Specified);
+    }
+
+    #[test]
+    fn test_initial_date_deserialize_string_today() {
+        let result: InitialDate =
+            serde_json::from_str("\"today\"").expect("should deserialize 'today'");
+        assert_eq!(result, InitialDate::Today);
+    }
+
+    #[test]
+    fn test_initial_date_deserialize_string_tomorrow() {
+        let result: InitialDate =
+            serde_json::from_str("\"tomorrow\"").expect("should deserialize 'tomorrow'");
+        assert_eq!(result, InitialDate::Tomorrow);
+    }
+
+    #[test]
+    fn test_initial_date_deserialize_string_yesterday() {
+        let result: InitialDate =
+            serde_json::from_str("\"yesterday\"").expect("should deserialize 'yesterday'");
+        assert_eq!(result, InitialDate::Yesterday);
+    }
+
+    #[test]
+    fn test_initial_date_deserialize_string_specified() {
+        let result: InitialDate =
+            serde_json::from_str("\"specified\"").expect("should deserialize 'specified'");
+        assert_eq!(result, InitialDate::Specified);
+    }
+
+    #[test]
+    fn test_initial_date_deserialize_invalid_integer() {
+        let result = serde_json::from_str::<InitialDate>("0");
+        assert!(result.is_err(), "0 should be invalid");
+
+        let result = serde_json::from_str::<InitialDate>("5");
+        assert!(result.is_err(), "5 should be invalid");
+
+        let result = serde_json::from_str::<InitialDate>("99");
+        assert!(result.is_err(), "99 should be invalid");
+
+        let result = serde_json::from_str::<InitialDate>("-1");
+        assert!(result.is_err(), "-1 should be invalid");
+    }
+
+    #[test]
+    fn test_initial_date_deserialize_invalid_string() {
+        let result = serde_json::from_str::<InitialDate>("\"invalid\"");
+        assert!(result.is_err(), "'invalid' should fail");
+
+        let result = serde_json::from_str::<InitialDate>("\"Today\"");
+        assert!(result.is_err(), "'Today' (capitalized) should fail");
+
+        let result = serde_json::from_str::<InitialDate>("\"\"");
+        assert!(result.is_err(), "empty string should fail");
+    }
+
+    #[test]
+    fn test_initial_date_serialize() {
+        assert_eq!(
+            serde_json::to_string(&InitialDate::Today).expect("should serialize Today"),
+            "\"today\""
+        );
+        assert_eq!(
+            serde_json::to_string(&InitialDate::Tomorrow).expect("should serialize Tomorrow"),
+            "\"tomorrow\""
+        );
+        assert_eq!(
+            serde_json::to_string(&InitialDate::Yesterday).expect("should serialize Yesterday"),
+            "\"yesterday\""
+        );
+        assert_eq!(
+            serde_json::to_string(&InitialDate::Specified).expect("should serialize Specified"),
+            "\"specified\""
+        );
+    }
+
+    #[test]
+    fn test_initial_date_roundtrip() {
+        for original in [
+            InitialDate::Today,
+            InitialDate::Tomorrow,
+            InitialDate::Yesterday,
+            InitialDate::Specified,
+        ] {
+            let json = serde_json::to_string(&original).expect("should serialize");
+            let deserialized: InitialDate =
+                serde_json::from_str(&json).expect("should deserialize");
+            assert_eq!(original, deserialized);
         }
     }
 }
