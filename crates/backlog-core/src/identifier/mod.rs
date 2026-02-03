@@ -109,3 +109,6 @@ pub use document_id::DocumentId;
 
 #[cfg(test)]
 mod activity_id_test;
+
+#[cfg(test)]
+mod u64_identifier_test;
