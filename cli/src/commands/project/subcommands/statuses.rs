@@ -1,6 +1,7 @@
 //! Project status management commands
 
 use crate::commands::common::CliResult;
+use anyhow::Context;
 use backlog_api_client::client::BacklogApiClient;
 use backlog_core::{ProjectIdOrKey, identifier::StatusId};
 use backlog_project::GetStatusListParams;
@@ -20,7 +21,7 @@ pub async fn list(client: &BacklogApiClient, project_id_or_key: &str) -> CliResu
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| "Invalid project")?;
     let params = GetStatusListParams::new(proj_id_or_key);
     match client.project().get_status_list(params).await {
         Ok(statuses) => {
@@ -51,7 +52,7 @@ pub async fn add(
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| "Invalid project")?;
     let parsed_color = StatusColor::from_str(color)?;
 
     let params = AddStatusParams::new(proj_id_or_key, name, parsed_color);
@@ -78,7 +79,7 @@ pub async fn update(
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| "Invalid project")?;
     let status_id_val = StatusId::new(status_id);
 
     let parsed_color = if let Some(color_str) = &color {
@@ -120,7 +121,7 @@ pub async fn delete(
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| "Invalid project")?;
     let status_id_val = StatusId::new(status_id);
     let substitute_id = StatusId::new(substitute_status_id);
 
@@ -146,7 +147,7 @@ pub async fn update_order(
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| "Invalid project")?;
 
     // Parse comma-separated status IDs
     let status_id_vec: Vec<StatusId> = status_ids

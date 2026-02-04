@@ -6,11 +6,11 @@
 //! - Unlinking shared files from issues
 
 use crate::commands::common::CliResult;
+use anyhow::Context;
 use backlog_api_client::client::BacklogApiClient;
 use backlog_api_client::{IssueIdOrKey, LinkSharedFilesToIssueParamsBuilder};
 use backlog_core::identifier::SharedFileId;
 use backlog_issue::{GetSharedFileListParams, UnlinkSharedFileParams};
-use std::str::FromStr;
 
 /// List shared files linked to an issue
 ///
@@ -21,8 +21,9 @@ pub async fn list_shared_files(
 ) -> CliResult<()> {
     println!("Listing shared files for issue: {issue_id_or_key}");
 
-    let parsed_issue_id_or_key = IssueIdOrKey::from_str(&issue_id_or_key)
-        .map_err(|e| format!("Failed to parse issue_id_or_key '{issue_id_or_key}': {e}"))?;
+    let parsed_issue_id_or_key: IssueIdOrKey = issue_id_or_key
+        .parse()
+        .with_context(|| format!("Failed to parse issue_id_or_key '{issue_id_or_key}'"))?;
 
     match client
         .issue()
@@ -83,8 +84,9 @@ pub async fn link_shared_files(
         issue_id_or_key
     );
 
-    let parsed_issue_id_or_key = IssueIdOrKey::from_str(&issue_id_or_key)
-        .map_err(|e| format!("Failed to parse issue_id_or_key '{issue_id_or_key}': {e}"))?;
+    let parsed_issue_id_or_key: IssueIdOrKey = issue_id_or_key
+        .parse()
+        .with_context(|| format!("Failed to parse issue_id_or_key '{issue_id_or_key}'"))?;
 
     let shared_file_ids: Vec<SharedFileId> =
         file_ids.iter().map(|&id| SharedFileId::new(id)).collect();
@@ -93,7 +95,7 @@ pub async fn link_shared_files(
         .issue_id_or_key(parsed_issue_id_or_key)
         .shared_file_ids(shared_file_ids)
         .build()
-        .map_err(|e| format!("Failed to build parameters: {e}"))?;
+        .context("Failed to build parameters")?;
 
     let linked_files = client.issue().link_shared_files_to_issue(params).await?;
     println!(
@@ -133,8 +135,9 @@ pub async fn unlink_shared_file(
 ) -> CliResult<()> {
     println!("Unlinking shared file {file_id} from issue: {issue_id_or_key}");
 
-    let parsed_issue_id_or_key = IssueIdOrKey::from_str(&issue_id_or_key)
-        .map_err(|e| format!("Failed to parse issue_id_or_key '{issue_id_or_key}': {e}"))?;
+    let parsed_issue_id_or_key: IssueIdOrKey = issue_id_or_key
+        .parse()
+        .with_context(|| format!("Failed to parse issue_id_or_key '{issue_id_or_key}'"))?;
 
     let params = UnlinkSharedFileParams::new(parsed_issue_id_or_key, SharedFileId::new(file_id));
 

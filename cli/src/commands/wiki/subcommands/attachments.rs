@@ -1,4 +1,5 @@
 use crate::commands::common::CliResult;
+use anyhow::Context;
 use backlog_api_client::client::BacklogApiClient;
 use backlog_core::identifier::{AttachmentId, Identifier, WikiAttachmentId, WikiId};
 use backlog_space::UploadAttachmentParams;
@@ -122,12 +123,12 @@ pub(crate) async fn delete_attachment(
         use std::io::{self, Write};
         io::stdout()
             .flush()
-            .map_err(|e| format!("Failed to flush stdout: {}", e))?;
+            .with_context(|| "Failed to flush stdout")?;
 
         let mut input = String::new();
         io::stdin()
             .read_line(&mut input)
-            .map_err(|e| format!("Failed to read input: {}", e))?;
+            .with_context(|| "Failed to read input")?;
         let input = input.trim().to_lowercase();
 
         if input != "y" && input != "yes" {

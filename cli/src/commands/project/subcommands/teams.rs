@@ -1,6 +1,7 @@
 //! Project team management commands
 
 use crate::commands::common::CliResult;
+use anyhow::Context;
 use backlog_api_client::client::BacklogApiClient;
 use backlog_core::{ProjectIdOrKey, identifier::TeamId};
 use backlog_project::GetProjectTeamListParams;
@@ -14,7 +15,7 @@ pub async fn list(client: &BacklogApiClient, project_id_or_key: &str) -> CliResu
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| "Invalid project")?;
     let params = GetProjectTeamListParams {
         project_id_or_key: proj_id_or_key,
     };
@@ -59,7 +60,7 @@ pub async fn add(
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| "Invalid project")?;
     let params = AddProjectTeamParams {
         project_id_or_key: proj_id_or_key,
         team_id: TeamId::new(team_id),
@@ -84,7 +85,7 @@ pub async fn delete(
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| "Invalid project")?;
     let params = DeleteProjectTeamParams {
         project_id_or_key: proj_id_or_key,
         team_id: TeamId::new(team_id),

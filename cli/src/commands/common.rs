@@ -7,10 +7,9 @@
 //! - Error handling
 
 use chrono::{DateTime, NaiveDate, Utc};
-use std::error::Error;
 
 /// Type alias for CLI results
-pub type CliResult<T = ()> = Result<T, Box<dyn Error>>;
+pub type CliResult<T = ()> = anyhow::Result<T>;
 
 /// Convert NaiveDate to start of day DateTime<Utc> (00:00:00)
 pub fn date_to_start_of_day(date: NaiveDate) -> DateTime<Utc> {

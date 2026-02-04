@@ -5,11 +5,11 @@
 //! - Deleting attachments
 
 use crate::commands::common::CliResult;
+use anyhow::Context;
 use backlog_api_client::client::BacklogApiClient;
 use backlog_api_client::{AttachmentId, IssueIdOrKey};
 use backlog_core::IssueKey;
 use backlog_issue::{DeleteAttachmentParams, GetAttachmentFileParams};
-use std::str::FromStr;
 use tokio::fs;
 
 /// Download an issue attachment
@@ -26,12 +26,10 @@ pub async fn download_attachment(
         args.output.display()
     );
 
-    let parsed_issue_id_or_key = IssueIdOrKey::from_str(&args.issue_id_or_key).map_err(|e| {
-        format!(
-            "Failed to parse issue_id_or_key '{}': {}",
-            args.issue_id_or_key, e
-        )
-    })?;
+    let parsed_issue_id_or_key: IssueIdOrKey = args
+        .issue_id_or_key
+        .parse()
+        .with_context(|| format!("Failed to parse issue_id_or_key '{}'", args.issue_id_or_key))?;
 
     let parsed_attachment_id = AttachmentId::new(args.attachment_id);
 

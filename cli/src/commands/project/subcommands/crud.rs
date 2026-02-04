@@ -1,6 +1,7 @@
 //! Project CRUD (Create, Update, Delete) operations
 
 use crate::commands::common::CliResult;
+use anyhow::Context;
 use backlog_api_client::client::BacklogApiClient;
 use backlog_core::ProjectIdOrKey;
 
@@ -124,7 +125,7 @@ pub async fn update(
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| format!("Invalid project: {project_id_or_key}"))?;
     let mut params = UpdateProjectParams::new(proj_id_or_key);
 
     if let Some(name) = name {
@@ -168,10 +169,9 @@ pub async fn update(
         params.text_formatting_rule = Some(match text_formatting_rule.as_str() {
             "backlog" => backlog_project::api::TextFormattingRule::Backlog,
             "markdown" => backlog_project::api::TextFormattingRule::Markdown,
-            _ => return Err(format!(
+            _ => anyhow::bail!(
                 "Invalid text formatting rule: {text_formatting_rule}. Use 'backlog' or 'markdown'"
-            )
-            .into()),
+            ),
         });
     }
     if let Some(archived) = archived {
@@ -221,7 +221,7 @@ pub async fn delete(client: &BacklogApiClient, project_id_or_key: &str) -> CliRe
     let mut confirmation = String::new();
     std::io::stdin()
         .read_line(&mut confirmation)
-        .map_err(|e| format!("Failed to read confirmation: {}", e))?;
+        .context("Failed to read confirmation")?;
 
     if confirmation.trim() != "yes" {
         println!("Project deletion cancelled.");
@@ -230,7 +230,7 @@ pub async fn delete(client: &BacklogApiClient, project_id_or_key: &str) -> CliRe
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| format!("Invalid project: {project_id_or_key}"))?;
     let params = DeleteProjectParams::new(proj_id_or_key);
 
     match client.project().delete_project(params).await {

@@ -1,6 +1,7 @@
 //! Project list and detail viewing commands
 
 use crate::commands::common::CliResult;
+use anyhow::Context;
 use backlog_api_client::client::BacklogApiClient;
 use backlog_core::ProjectIdOrKey;
 use backlog_project::{
@@ -46,7 +47,7 @@ pub async fn show(client: &BacklogApiClient, project_id_or_key: &str) -> CliResu
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| format!("Invalid project: {project_id_or_key}"))?;
     let params = GetProjectDetailParams::new(proj_id_or_key);
     match client.project().get_project(params).await {
         Ok(project) => {

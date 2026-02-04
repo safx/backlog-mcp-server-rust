@@ -6,6 +6,7 @@
 //! - RecentlyViewed: Get recently viewed issues for the current user
 
 use crate::commands::common::{CliResult, date_to_end_of_day, date_to_start_of_day};
+use anyhow::Context;
 use backlog_api_client::client::BacklogApiClient;
 use backlog_api_client::{GetIssueListParamsBuilder, IssueIdOrKey};
 use backlog_core::ApiDate;
@@ -67,25 +68,25 @@ pub async fn list(
     // Handle date range parameters
     if let Some(start_date_since) = params.start_date_since {
         let date = NaiveDate::parse_from_str(&start_date_since, "%Y-%m-%d")
-            .map_err(|_| format!("Invalid start-date-since format: {start_date_since}"))?;
+            .with_context(|| format!("Invalid start-date-since format: {start_date_since}"))?;
         let datetime = date_to_start_of_day(date);
         builder.start_date_since(ApiDate::from(datetime));
     }
     if let Some(start_date_until) = params.start_date_until {
         let date = NaiveDate::parse_from_str(&start_date_until, "%Y-%m-%d")
-            .map_err(|_| format!("Invalid start-date-until format: {start_date_until}"))?;
+            .with_context(|| format!("Invalid start-date-until format: {start_date_until}"))?;
         let datetime = date_to_end_of_day(date);
         builder.start_date_until(ApiDate::from(datetime));
     }
     if let Some(due_date_since) = params.due_date_since {
         let date = NaiveDate::parse_from_str(&due_date_since, "%Y-%m-%d")
-            .map_err(|_| format!("Invalid due-date-since format: {due_date_since}"))?;
+            .with_context(|| format!("Invalid due-date-since format: {due_date_since}"))?;
         let datetime = date_to_start_of_day(date);
         builder.due_date_since(ApiDate::from(datetime));
     }
     if let Some(due_date_until) = params.due_date_until {
         let date = NaiveDate::parse_from_str(&due_date_until, "%Y-%m-%d")
-            .map_err(|_| format!("Invalid due-date-until format: {due_date_until}"))?;
+            .with_context(|| format!("Invalid due-date-until format: {due_date_until}"))?;
         let datetime = date_to_end_of_day(date);
         builder.due_date_until(ApiDate::from(datetime));
     }

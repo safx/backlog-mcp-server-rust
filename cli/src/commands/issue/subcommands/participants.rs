@@ -3,11 +3,11 @@
 //! This module provides handlers for listing participants in an issue.
 
 use crate::commands::common::CliResult;
+use anyhow::Context;
 use backlog_api_client::IssueIdOrKey;
 use backlog_api_client::client::BacklogApiClient;
 use backlog_core::identifier::Identifier;
 use backlog_issue::GetParticipantListParams;
-use std::str::FromStr;
 
 /// List participants in an issue
 ///
@@ -18,8 +18,9 @@ pub async fn list_participants(
 ) -> CliResult<()> {
     println!("Listing participants for issue: {issue_id_or_key}");
 
-    let parsed_issue_id_or_key = IssueIdOrKey::from_str(&issue_id_or_key)
-        .map_err(|e| format!("Failed to parse issue_id_or_key '{issue_id_or_key}': {e}"))?;
+    let parsed_issue_id_or_key: IssueIdOrKey = issue_id_or_key
+        .parse()
+        .with_context(|| format!("Failed to parse issue_id_or_key '{issue_id_or_key}'"))?;
 
     match client
         .issue()

@@ -92,11 +92,10 @@ pub async fn execute(client: &BacklogApiClient, args: WikiArgs) -> CliResult<()>
         // Fallback for disabled write features
         #[cfg(not(feature = "wiki_writable"))]
         _ => {
-            return Err(
+            anyhow::bail!(
                 "This command requires write access to wikis and is not available. \
                 Please build with the 'wiki_writable' feature flag:\n\
                 cargo build --package blg --features wiki_writable"
-                    .into(),
             );
         }
     }

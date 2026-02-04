@@ -1,11 +1,11 @@
 use crate::commands::common::CliResult;
 use crate::commands::git::args::DownloadPrAttachmentArgs;
+use anyhow::Context;
 use backlog_api_client::{
     ProjectIdOrKey, PullRequestAttachmentId, PullRequestNumber, RepositoryIdOrName,
     client::BacklogApiClient,
 };
 use backlog_core::identifier::Identifier;
-use std::str::FromStr;
 use tokio::fs;
 
 #[cfg(feature = "git_writable")]
@@ -24,10 +24,14 @@ pub(crate) async fn download_attachment(
         dl_args.output.display()
     );
 
-    let parsed_project_id = ProjectIdOrKey::from_str(&dl_args.project_id)
-        .map_err(|e| format!("Failed to parse project_id '{}': {}", dl_args.project_id, e))?;
-    let parsed_repo_id = RepositoryIdOrName::from_str(&dl_args.repo_id)
-        .map_err(|e| format!("Failed to parse repo_id '{}': {}", dl_args.repo_id, e))?;
+    let parsed_project_id: ProjectIdOrKey = dl_args
+        .project_id
+        .parse()
+        .with_context(|| format!("Failed to parse project_id '{}'", dl_args.project_id))?;
+    let parsed_repo_id: RepositoryIdOrName = dl_args
+        .repo_id
+        .parse()
+        .with_context(|| format!("Failed to parse repo_id '{}'", dl_args.repo_id))?;
     let parsed_attachment_id = PullRequestAttachmentId::new(dl_args.attachment_id);
 
     let parsed_pr_number = PullRequestNumber::from(dl_args.pr_number);
@@ -70,14 +74,14 @@ pub(crate) async fn delete_attachment(
         del_args.attachment_id, del_args.pr_number, del_args.repo_id, del_args.project_id
     );
 
-    let parsed_project_id = ProjectIdOrKey::from_str(&del_args.project_id).map_err(|e| {
-        format!(
-            "Failed to parse project_id '{}': {}",
-            del_args.project_id, e
-        )
-    })?;
-    let parsed_repo_id = RepositoryIdOrName::from_str(&del_args.repo_id)
-        .map_err(|e| format!("Failed to parse repo_id '{}': {}", del_args.repo_id, e))?;
+    let parsed_project_id: ProjectIdOrKey = del_args
+        .project_id
+        .parse()
+        .with_context(|| format!("Failed to parse project_id '{}'", del_args.project_id))?;
+    let parsed_repo_id: RepositoryIdOrName = del_args
+        .repo_id
+        .parse()
+        .with_context(|| format!("Failed to parse repo_id '{}'", del_args.repo_id))?;
     let parsed_attachment_id = PullRequestAttachmentId::new(del_args.attachment_id);
     let parsed_pr_number = PullRequestNumber::from(del_args.pr_number);
 

@@ -1,6 +1,7 @@
 //! Project user and administrator management commands
 
 use crate::commands::common::CliResult;
+use anyhow::Context;
 use backlog_api_client::client::BacklogApiClient;
 use backlog_core::ProjectIdOrKey;
 use backlog_project::{GetProjectUserListParams, api::GetProjectAdministratorListParams};
@@ -17,7 +18,7 @@ pub async fn list(client: &BacklogApiClient, project_id_or_key: &str) -> CliResu
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| "Invalid project")?;
     let params = GetProjectUserListParams::new(proj_id_or_key);
     match client.project().get_project_user_list(params).await {
         Ok(users) => {
@@ -56,7 +57,7 @@ pub async fn admin_list(client: &BacklogApiClient, project_id_or_key: &str) -> C
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| "Invalid project")?;
     let params = GetProjectAdministratorListParams::new(proj_id_or_key);
     match client
         .project()
@@ -99,7 +100,7 @@ pub async fn admin_add(
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| "Invalid project")?;
     let params = AddProjectAdministratorParams::new(proj_id_or_key, user_id);
     let user = client.project().add_project_administrator(params).await?;
     println!("✅ Successfully added administrator:");
@@ -128,7 +129,7 @@ pub async fn admin_remove(
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| "Invalid project")?;
     let params = DeleteProjectAdministratorParams::new(proj_id_or_key, user_id);
     let user = client
         .project()
@@ -152,7 +153,7 @@ pub async fn user_add(
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| "Invalid project")?;
     let params = AddProjectUserParams::new(proj_id_or_key, user_id);
     match client.project().add_project_user(params).await {
         Ok(user) => {
@@ -179,7 +180,7 @@ pub async fn user_remove(
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| "Invalid project")?;
     let params = DeleteProjectUserParams::new(proj_id_or_key, user_id);
     match client.project().delete_project_user(params).await {
         Ok(user) => {

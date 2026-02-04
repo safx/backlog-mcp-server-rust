@@ -1,6 +1,7 @@
 //! Project issue type management commands
 
 use crate::commands::common::CliResult;
+use anyhow::Context;
 use backlog_api_client::client::BacklogApiClient;
 use backlog_core::{ProjectIdOrKey, identifier::IssueTypeId};
 use backlog_project::GetIssueTypeListParams;
@@ -16,7 +17,7 @@ pub async fn list(client: &BacklogApiClient, project_id_or_key: &str) -> CliResu
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| format!("Invalid project: {project_id_or_key}"))?;
     let params = GetIssueTypeListParams::new(proj_id_or_key);
     match client.project().get_issue_type_list(params).await {
         Ok(issue_types) => {
@@ -52,14 +53,13 @@ pub async fn add(
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| format!("Invalid project: {project_id_or_key}"))?;
 
     // Parse and validate the color
-    let parsed_color = color.parse::<IssueTypeColor>().map_err(|e| {
+    let parsed_color = color.parse::<IssueTypeColor>().with_context(|| {
         format!(
-            "Invalid color '{}': {}\nAvailable colors: {}",
+            "Invalid color '{}'\nAvailable colors: {}",
             color,
-            e,
             IssueTypeColor::all_names().join(", ")
         )
     })?;
@@ -105,16 +105,15 @@ pub async fn update(
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| format!("Invalid project: {project_id_or_key}"))?;
     let issue_type_id_val = IssueTypeId::new(issue_type_id);
 
     // Parse color if provided
     let parsed_color = if let Some(color_str) = color {
-        Some(color_str.parse::<IssueTypeColor>().map_err(|e| {
+        Some(color_str.parse::<IssueTypeColor>().with_context(|| {
             format!(
-                "Invalid color '{}': {}\nAvailable colors: {}",
+                "Invalid color '{}'\nAvailable colors: {}",
                 color_str,
-                e,
                 IssueTypeColor::all_names().join(", ")
             )
         })?)
@@ -164,7 +163,7 @@ pub async fn delete(
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| format!("Invalid project: {project_id_or_key}"))?;
     let issue_type_id_val = IssueTypeId::new(issue_type_id);
     let substitute_id = IssueTypeId::new(substitute_issue_type_id);
 

@@ -1,6 +1,7 @@
 //! Project version/milestone management commands
 
 use crate::commands::common::CliResult;
+use anyhow::Context;
 use backlog_api_client::client::BacklogApiClient;
 use backlog_core::{ProjectIdOrKey, identifier::MilestoneId};
 use backlog_project::GetMilestoneListParams;
@@ -18,7 +19,7 @@ fn parse_date_to_api_date(date_str: &str) -> CliResult<ApiDate> {
     use chrono::NaiveDate;
 
     let date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
-        .map_err(|_| format!("Invalid date format: {date_str}. Expected YYYY-MM-DD"))?;
+        .with_context(|| format!("Invalid date format: {date_str}. Expected YYYY-MM-DD"))?;
     Ok(ApiDate::from(date_to_start_of_day(date)))
 }
 
@@ -28,7 +29,7 @@ pub async fn list(client: &BacklogApiClient, project_id_or_key: &str) -> CliResu
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| "Invalid project")?;
     match client
         .project()
         .get_version_milestone_list(GetMilestoneListParams::new(proj_id_or_key))
@@ -79,7 +80,7 @@ pub async fn add(
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| "Invalid project")?;
     let mut params = AddMilestoneParams::new(proj_id_or_key, name);
     params.description = description.clone();
     params.start_date = start_date
@@ -136,7 +137,7 @@ pub async fn update(
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| "Invalid project")?;
     let version_id_val = MilestoneId::new(version_id);
     let mut params = UpdateVersionParams::new(proj_id_or_key, version_id_val, name);
     params.description = description.clone();
@@ -189,7 +190,7 @@ pub async fn delete(
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| "Invalid project")?;
     let version_id_val = MilestoneId::new(version_id);
     let params = DeleteVersionParams::new(proj_id_or_key, version_id_val);
 

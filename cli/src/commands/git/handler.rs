@@ -140,9 +140,8 @@ pub async fn execute_pr(client: &BacklogApiClient, args: PrArgs) -> CliResult<()
         }
         #[cfg(not(feature = "git_writable"))]
         _ => {
-            return Err(
+            anyhow::bail!(
                 "This command requires write access. Please rebuild with --features git_writable"
-                    .into(),
             );
         }
     }

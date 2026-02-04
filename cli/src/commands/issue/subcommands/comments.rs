@@ -6,6 +6,7 @@
 //! - Managing comment notifications
 
 use crate::commands::common::CliResult;
+use anyhow::Context;
 use backlog_api_client::client::BacklogApiClient;
 use backlog_api_client::{
     AddCommentParamsBuilder, AttachmentId, GetCommentNotificationsParams, IssueIdOrKey,
@@ -16,7 +17,6 @@ use backlog_issue::{
     AddCommentNotificationParams, CountCommentParams, DeleteCommentParams, GetCommentParams,
     UpdateCommentParams,
 };
-use std::str::FromStr;
 
 /// Add a comment to an issue
 ///
@@ -31,12 +31,10 @@ pub async fn add_comment(
         args.issue_id_or_key, args.content
     );
 
-    let parsed_issue_id_or_key = IssueIdOrKey::from_str(&args.issue_id_or_key).map_err(|e| {
-        format!(
-            "Failed to parse issue_id_or_key '{}': {}",
-            args.issue_id_or_key, e
-        )
-    })?;
+    let parsed_issue_id_or_key: IssueIdOrKey = args
+        .issue_id_or_key
+        .parse()
+        .with_context(|| format!("Failed to parse issue_id_or_key '{}'", args.issue_id_or_key))?;
 
     let mut builder = AddCommentParamsBuilder::default();
     builder.issue_id_or_key(parsed_issue_id_or_key);
@@ -44,49 +42,41 @@ pub async fn add_comment(
 
     // Parse notify_users if provided
     if let Some(notify_str) = &args.notify_users {
-        let user_ids: Result<Vec<UserId>, _> = notify_str
+        let user_ids: Vec<UserId> = notify_str
             .split(',')
-            .map(|s| s.trim().parse::<u32>().map(UserId::new))
-            .collect();
-        match user_ids {
-            Ok(ids) => builder.notified_user_id(ids),
-            Err(e) => {
-                eprintln!("Error parsing notify_users '{notify_str}': {e}");
-                return Ok(());
-            }
-        };
+            .map(|s| {
+                s.trim()
+                    .parse::<u32>()
+                    .map(UserId::new)
+                    .with_context(|| format!("Invalid user ID in notify_users: '{}'", s.trim()))
+            })
+            .collect::<anyhow::Result<_>>()?;
+        builder.notified_user_id(user_ids);
     }
 
     // Parse attachments if provided
     if let Some(attach_str) = &args.attachments {
-        let attachment_ids: Result<Vec<AttachmentId>, _> = attach_str
+        let attachment_ids: Vec<AttachmentId> = attach_str
             .split(',')
-            .map(|s| s.trim().parse::<u32>().map(AttachmentId::new))
-            .collect();
-        match attachment_ids {
-            Ok(ids) => builder.attachment_id(ids),
-            Err(e) => {
-                eprintln!("Error parsing attachments '{attach_str}': {e}");
-                return Ok(());
-            }
-        };
+            .map(|s| {
+                s.trim()
+                    .parse::<u32>()
+                    .map(AttachmentId::new)
+                    .with_context(|| format!("Invalid attachment ID: '{}'", s.trim()))
+            })
+            .collect::<anyhow::Result<_>>()?;
+        builder.attachment_id(attachment_ids);
     }
 
     let params = builder.build()?;
 
-    match client.issue().add_comment(params).await {
-        Ok(comment) => {
-            println!("Comment added successfully!");
-            println!("Comment ID: {}", comment.id);
-            println!("Created by: {}", comment.created_user.name);
-            println!("Created at: {}", comment.created);
-            if let Some(content) = &comment.content {
-                println!("Content: {content}");
-            }
-        }
-        Err(e) => {
-            eprintln!("Error adding comment: {e}");
-        }
+    let comment = client.issue().add_comment(params).await?;
+    println!("Comment added successfully!");
+    println!("Comment ID: {}", comment.id);
+    println!("Created by: {}", comment.created_user.name);
+    println!("Created at: {}", comment.created);
+    if let Some(content) = &comment.content {
+        println!("Content: {content}");
     }
     Ok(())
 }
@@ -140,24 +130,18 @@ pub async fn delete_comment(
 pub async fn count_comment(client: &BacklogApiClient, issue_id_or_key: String) -> CliResult<()> {
     println!("Counting comments for issue: {issue_id_or_key}");
 
-    let parsed_issue_id_or_key = IssueIdOrKey::from_str(&issue_id_or_key)
-        .map_err(|e| format!("Failed to parse issue_id_or_key '{issue_id_or_key}': {e}"))?;
+    let parsed_issue_id_or_key: IssueIdOrKey = issue_id_or_key
+        .parse()
+        .with_context(|| format!("Failed to parse issue_id_or_key '{issue_id_or_key}'"))?;
 
-    match client
+    let response = client
         .issue()
         .count_comment(CountCommentParams::new(parsed_issue_id_or_key))
-        .await
-    {
-        Ok(response) => {
-            println!(
-                "Comment count for issue {issue_id_or_key}: {}",
-                response.count
-            );
-        }
-        Err(e) => {
-            eprintln!("Error counting comments: {e}");
-        }
-    }
+        .await?;
+    println!(
+        "Comment count for issue {issue_id_or_key}: {}",
+        response.count
+    );
     Ok(())
 }
 
@@ -171,39 +155,33 @@ pub async fn get_comment(
 ) -> CliResult<()> {
     println!("Getting comment {comment_id} for issue: {issue_id_or_key}");
 
-    let parsed_issue_id_or_key = IssueIdOrKey::from_str(&issue_id_or_key)
-        .map_err(|e| format!("Failed to parse issue_id_or_key '{issue_id_or_key}': {e}"))?;
+    let parsed_issue_id_or_key: IssueIdOrKey = issue_id_or_key
+        .parse()
+        .with_context(|| format!("Failed to parse issue_id_or_key '{issue_id_or_key}'"))?;
 
     let comment_id = CommentId::new(comment_id);
 
-    match client
+    let comment = client
         .issue()
         .get_comment(GetCommentParams::new(parsed_issue_id_or_key, comment_id))
-        .await
-    {
-        Ok(comment) => {
-            println!("Comment ID: {}", comment.id);
-            println!("Created by: {}", comment.created_user.name);
-            println!("Created at: {}", comment.created);
-            println!("Updated at: {}", comment.updated);
-            if let Some(content) = &comment.content {
-                println!("Content: {content}");
-            } else {
-                println!("Content: (empty)");
-            }
-            if !comment.change_log.is_empty() {
-                println!("Change log entries: {}", comment.change_log.len());
-            }
-            if !comment.notifications.is_empty() {
-                println!("Notifications: {}", comment.notifications.len());
-            }
-            if !comment.stars.is_empty() {
-                println!("Stars: {}", comment.stars.len());
-            }
-        }
-        Err(e) => {
-            eprintln!("Error getting comment: {e}");
-        }
+        .await?;
+    println!("Comment ID: {}", comment.id);
+    println!("Created by: {}", comment.created_user.name);
+    println!("Created at: {}", comment.created);
+    println!("Updated at: {}", comment.updated);
+    if let Some(content) = &comment.content {
+        println!("Content: {content}");
+    } else {
+        println!("Content: (empty)");
+    }
+    if !comment.change_log.is_empty() {
+        println!("Change log entries: {}", comment.change_log.len());
+    }
+    if !comment.notifications.is_empty() {
+        println!("Notifications: {}", comment.notifications.len());
+    }
+    if !comment.stars.is_empty() {
+        println!("Stars: {}", comment.stars.len());
     }
     Ok(())
 }
@@ -218,42 +196,36 @@ pub async fn get_comment_notifications(
 ) -> CliResult<()> {
     println!("Getting notifications for comment {comment_id} in issue: {issue_id_or_key}");
 
-    let parsed_issue_id_or_key = IssueIdOrKey::from_str(&issue_id_or_key)
-        .map_err(|e| format!("Failed to parse issue_id_or_key '{issue_id_or_key}': {e}"))?;
+    let parsed_issue_id_or_key: IssueIdOrKey = issue_id_or_key
+        .parse()
+        .with_context(|| format!("Failed to parse issue_id_or_key '{issue_id_or_key}'"))?;
 
     let comment_id = CommentId::new(comment_id);
 
-    match client
+    let notifications = client
         .issue()
         .get_comment_notifications(GetCommentNotificationsParams::new(
             parsed_issue_id_or_key,
             comment_id,
         ))
-        .await
-    {
-        Ok(notifications) => {
-            if notifications.is_empty() {
-                println!("No notifications found for this comment.");
-            } else {
-                println!("Found {} notification(s):", notifications.len());
-                for (i, notification) in notifications.iter().enumerate() {
-                    println!("  {}. Notification ID: {}", i + 1, notification.id.value());
-                    println!("     User: {}", notification.user.name);
-                    if let Some(user_id) = &notification.user.user_id {
-                        println!("     User ID: {user_id}");
-                    }
-                    println!("     Already Read: {}", notification.already_read);
-                    println!(
-                        "     Resource Already Read: {}",
-                        notification.resource_already_read
-                    );
-                    println!("     Reason: {:?}", notification.reason);
-                    println!();
-                }
+        .await?;
+    if notifications.is_empty() {
+        println!("No notifications found for this comment.");
+    } else {
+        println!("Found {} notification(s):", notifications.len());
+        for (i, notification) in notifications.iter().enumerate() {
+            println!("  {}. Notification ID: {}", i + 1, notification.id.value());
+            println!("     User: {}", notification.user.name);
+            if let Some(user_id) = &notification.user.user_id {
+                println!("     User ID: {user_id}");
             }
-        }
-        Err(e) => {
-            eprintln!("Error getting comment notifications: {e}");
+            println!("     Already Read: {}", notification.already_read);
+            println!(
+                "     Resource Already Read: {}",
+                notification.resource_already_read
+            );
+            println!("     Reason: {:?}", notification.reason);
+            println!();
         }
     }
     Ok(())
@@ -271,51 +243,38 @@ pub async fn add_comment_notification(
 ) -> CliResult<()> {
     println!("Adding notifications to comment {comment_id} in issue: {issue_id_or_key}");
 
-    let parsed_issue_id_or_key = IssueIdOrKey::from_str(&issue_id_or_key)
-        .map_err(|e| format!("Failed to parse issue_id_or_key '{issue_id_or_key}': {e}"))?;
+    let parsed_issue_id_or_key: IssueIdOrKey = issue_id_or_key
+        .parse()
+        .with_context(|| format!("Failed to parse issue_id_or_key '{issue_id_or_key}'"))?;
 
     let comment_id = CommentId::new(comment_id);
 
     // Parse user IDs from comma-separated string
-    let user_ids: Result<Vec<UserId>, _> = users
+    let user_ids: Vec<UserId> = users
         .split(',')
         .map(|id_str| {
             id_str
                 .trim()
                 .parse::<u32>()
                 .map(UserId::new)
-                .map_err(|e| format!("Invalid user ID '{}': {}", id_str.trim(), e))
+                .with_context(|| format!("Invalid user ID '{}'", id_str.trim()))
         })
-        .collect();
-
-    let user_ids = match user_ids {
-        Ok(ids) => ids,
-        Err(e) => {
-            eprintln!("Error parsing user IDs: {e}");
-            return Ok(());
-        }
-    };
+        .collect::<anyhow::Result<_>>()?;
 
     let params = AddCommentNotificationParams::new(parsed_issue_id_or_key, comment_id, user_ids);
 
-    match client.issue().add_comment_notification(params).await {
-        Ok(comment) => {
-            println!("✅ Comment notifications added successfully!");
-            println!("Comment ID: {}", comment.id.value());
-            println!("Notifications count: {}", comment.notifications.len());
-            if !comment.notifications.is_empty() {
-                println!("Notified users:");
-                for notification in &comment.notifications {
-                    println!(
-                        "  - {} (ID: {})",
-                        notification.user.name,
-                        notification.user.id.value()
-                    );
-                }
-            }
-        }
-        Err(e) => {
-            eprintln!("❌ Error adding comment notifications: {e}");
+    let comment = client.issue().add_comment_notification(params).await?;
+    println!("✅ Comment notifications added successfully!");
+    println!("Comment ID: {}", comment.id.value());
+    println!("Notifications count: {}", comment.notifications.len());
+    if !comment.notifications.is_empty() {
+        println!("Notified users:");
+        for notification in &comment.notifications {
+            println!(
+                "  - {} (ID: {})",
+                notification.user.name,
+                notification.user.id.value()
+            );
         }
     }
     Ok(())

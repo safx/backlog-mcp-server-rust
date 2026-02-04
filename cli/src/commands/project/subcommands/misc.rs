@@ -1,6 +1,7 @@
 //! Miscellaneous project commands (priorities, resolutions, icon, disk usage)
 
 use crate::commands::common::{CliResult, format_bytes};
+use anyhow::Context;
 use backlog_api_client::client::BacklogApiClient;
 use backlog_core::ProjectIdOrKey;
 use backlog_project::api::{GetProjectDiskUsageParams, GetProjectIconParams};
@@ -59,7 +60,7 @@ pub async fn download_icon(
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| "Invalid project")?;
     let params = GetProjectIconParams::new(proj_id_or_key);
     match client.project().get_project_icon(params).await {
         Ok(icon_bytes) => {
@@ -89,7 +90,7 @@ pub async fn disk_usage(
 
     let proj_id_or_key = project_id_or_key
         .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+        .with_context(|| "Invalid project")?;
     let params = GetProjectDiskUsageParams::new(proj_id_or_key);
     match client.project().get_disk_usage(params).await {
         Ok(disk_usage) => {

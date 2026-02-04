@@ -13,7 +13,7 @@ pub(crate) async fn upload_attachment(client: &BacklogApiClient, file: PathBuf) 
 
     // Check if file exists
     if !file.exists() {
-        return Err(format!("File does not exist: {}", file.display()).into());
+        anyhow::bail!("File does not exist: {}", file.display());
     }
 
     let params = UploadAttachmentParams::new(file.clone());

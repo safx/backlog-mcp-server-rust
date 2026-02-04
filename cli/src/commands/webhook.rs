@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use backlog_api_client::{Webhook, client::BacklogApiClient};
 use backlog_core::{
     ProjectIdOrKey,
@@ -5,7 +6,6 @@ use backlog_core::{
 };
 use clap::{Parser, Subcommand, ValueEnum};
 use prettytable::{Cell, Row, Table, row};
-use std::error::Error;
 
 #[derive(Parser)]
 pub struct WebhookArgs {
@@ -119,7 +119,7 @@ pub enum OutputFormat {
     Csv,
 }
 
-pub async fn execute(client: &BacklogApiClient, args: WebhookArgs) -> Result<(), Box<dyn Error>> {
+pub async fn execute(client: &BacklogApiClient, args: WebhookArgs) -> Result<()> {
     match args.command {
         WebhookCommands::List { project, format } => list_webhooks(client, &project, format).await,
         WebhookCommands::Get {
@@ -181,10 +181,10 @@ async fn list_webhooks(
     client: &BacklogApiClient,
     project: &str,
     format: OutputFormat,
-) -> Result<(), Box<dyn Error>> {
-    let project_id_or_key = project
-        .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+) -> Result<()> {
+    let project_id_or_key: ProjectIdOrKey = project
+        .parse()
+        .with_context(|| format!("Invalid project: '{project}'"))?;
     let webhooks = client.webhook().get_webhook_list(project_id_or_key).await?;
 
     match format {
@@ -239,7 +239,7 @@ fn display_webhooks_table(webhooks: &[Webhook]) {
     println!("\nTotal: {} webhook(s)", webhooks.len());
 }
 
-fn display_webhooks_json(webhooks: &[Webhook]) -> Result<(), Box<dyn Error>> {
+fn display_webhooks_json(webhooks: &[Webhook]) -> Result<()> {
     let json = serde_json::to_string_pretty(webhooks)?;
     println!("{json}");
     Ok(())
@@ -285,10 +285,10 @@ async fn get_webhook(
     project: &str,
     webhook_id: u32,
     format: OutputFormat,
-) -> Result<(), Box<dyn Error>> {
-    let project_id_or_key = project
-        .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+) -> Result<()> {
+    let project_id_or_key: ProjectIdOrKey = project
+        .parse()
+        .with_context(|| format!("Invalid project: '{project}'"))?;
     let webhook = client
         .webhook()
         .get_webhook(project_id_or_key, WebhookId::new(webhook_id))
@@ -339,7 +339,7 @@ fn display_webhook_table(webhook: &Webhook) {
     table.printstd();
 }
 
-fn display_webhook_json(webhook: &Webhook) -> Result<(), Box<dyn Error>> {
+fn display_webhook_json(webhook: &Webhook) -> Result<()> {
     let json = serde_json::to_string_pretty(webhook)?;
     println!("{json}");
     Ok(())
@@ -380,10 +380,10 @@ async fn add_webhook(
     description: Option<String>,
     all_event: Option<bool>,
     activity_type_ids: Option<Vec<u32>>,
-) -> Result<(), Box<dyn Error>> {
-    let project_id_or_key = project
-        .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+) -> Result<()> {
+    let project_id_or_key: ProjectIdOrKey = project
+        .parse()
+        .with_context(|| format!("Invalid project: '{project}'"))?;
 
     let mut builder = client.webhook().add_webhook(project_id_or_key);
 
@@ -421,7 +421,7 @@ async fn update_webhook(
     hook_url: Option<String>,
     all_event: Option<bool>,
     activity_type_ids: Option<Vec<u32>>,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<()> {
     // Check if at least one parameter is provided
     if name.is_none()
         && description.is_none()
@@ -429,12 +429,12 @@ async fn update_webhook(
         && all_event.is_none()
         && activity_type_ids.is_none()
     {
-        return Err("At least one parameter must be provided to update".into());
+        anyhow::bail!("At least one parameter must be provided to update");
     }
 
-    let project_id_or_key = project
-        .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+    let project_id_or_key: ProjectIdOrKey = project
+        .parse()
+        .with_context(|| format!("Invalid project: '{project}'"))?;
 
     let mut builder = client
         .webhook()
@@ -467,14 +467,10 @@ async fn update_webhook(
 }
 
 #[cfg(feature = "webhook_writable")]
-async fn delete_webhook(
-    client: &BacklogApiClient,
-    project: &str,
-    webhook_id: u32,
-) -> Result<(), Box<dyn Error>> {
-    let project_id_or_key = project
-        .parse::<ProjectIdOrKey>()
-        .map_err(|e| format!("Invalid project: {e}"))?;
+async fn delete_webhook(client: &BacklogApiClient, project: &str, webhook_id: u32) -> Result<()> {
+    let project_id_or_key: ProjectIdOrKey = project
+        .parse()
+        .with_context(|| format!("Invalid project: '{project}'"))?;
 
     let deleted_webhook = client
         .webhook()

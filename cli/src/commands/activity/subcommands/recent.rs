@@ -72,14 +72,16 @@ fn print_activities(activities: &[Activity]) {
 
 /// Helper function to parse comma-separated activity type IDs
 #[cfg(any(feature = "project", feature = "space"))]
-fn parse_type_ids(type_ids_str: &str) -> Result<Vec<ActivityTypeId>, String> {
+fn parse_type_ids(type_ids_str: &str) -> anyhow::Result<Vec<ActivityTypeId>> {
+    use anyhow::Context;
+
     type_ids_str
         .split(',')
         .map(|s| {
             s.trim()
                 .parse::<u32>()
                 .map(ActivityTypeId::new)
-                .map_err(|e| format!("Failed to parse type_id '{}': {}", s.trim(), e))
+                .with_context(|| format!("Failed to parse type_id '{}'", s.trim()))
         })
         .collect()
 }

@@ -1,10 +1,10 @@
 use crate::commands::common::CliResult;
+use anyhow::Context;
 use backlog_api_client::{
     GetPullRequestCountParams, ProjectIdOrKey, PullRequestNumber, RepositoryIdOrName, UserId,
     client::BacklogApiClient,
 };
 use backlog_core::identifier::{AttachmentId, Identifier, IssueId, StatusId};
-use std::str::FromStr;
 
 #[cfg(feature = "git_writable")]
 use backlog_api_client::{AddPullRequestParams, UpdatePullRequestParams};
@@ -54,10 +54,12 @@ pub(crate) async fn count(
 ) -> CliResult<()> {
     println!("Getting pull request count for repo {repo_id} (project {project_id})");
 
-    let parsed_project_id = ProjectIdOrKey::from_str(&project_id)
-        .map_err(|e| format!("Failed to parse project_id '{project_id}': {e}"))?;
-    let parsed_repo_id = RepositoryIdOrName::from_str(&repo_id)
-        .map_err(|e| format!("Failed to parse repo_id '{repo_id}': {e}"))?;
+    let parsed_project_id: ProjectIdOrKey = project_id
+        .parse()
+        .with_context(|| format!("Failed to parse project_id '{project_id}'"))?;
+    let parsed_repo_id: RepositoryIdOrName = repo_id
+        .parse()
+        .with_context(|| format!("Failed to parse repo_id '{repo_id}'"))?;
 
     // Parse filter parameters
     let mut params = GetPullRequestCountParams::new(parsed_project_id, parsed_repo_id);
@@ -121,10 +123,12 @@ pub(crate) async fn create(
 ) -> CliResult<()> {
     println!("Creating pull request in repo {repo_id} (project {project_id})");
 
-    let parsed_project_id = ProjectIdOrKey::from_str(&project_id)
-        .map_err(|e| format!("Failed to parse project_id '{project_id}': {e}"))?;
-    let parsed_repo_id = RepositoryIdOrName::from_str(&repo_id)
-        .map_err(|e| format!("Failed to parse repo_id '{repo_id}': {e}"))?;
+    let parsed_project_id: ProjectIdOrKey = project_id
+        .parse()
+        .with_context(|| format!("Failed to parse project_id '{project_id}'"))?;
+    let parsed_repo_id: RepositoryIdOrName = repo_id
+        .parse()
+        .with_context(|| format!("Failed to parse repo_id '{repo_id}'"))?;
 
     // Build parameters
     let mut params = AddPullRequestParams::new(
@@ -199,10 +203,12 @@ pub(crate) async fn update(
 ) -> CliResult<()> {
     println!("Updating PR #{pr_number} in repo {repo_id} (project {project_id})");
 
-    let parsed_project_id = ProjectIdOrKey::from_str(&project_id)
-        .map_err(|e| format!("Failed to parse project_id '{project_id}': {e}"))?;
-    let parsed_repo_id = RepositoryIdOrName::from_str(&repo_id)
-        .map_err(|e| format!("Failed to parse repo_id '{repo_id}': {e}"))?;
+    let parsed_project_id: ProjectIdOrKey = project_id
+        .parse()
+        .with_context(|| format!("Failed to parse project_id '{project_id}'"))?;
+    let parsed_repo_id: RepositoryIdOrName = repo_id
+        .parse()
+        .with_context(|| format!("Failed to parse repo_id '{repo_id}'"))?;
     let parsed_pr_number = PullRequestNumber::from(pr_number);
 
     let mut params =
