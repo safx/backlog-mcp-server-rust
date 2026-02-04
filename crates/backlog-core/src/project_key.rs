@@ -45,9 +45,7 @@ impl FromStr for ProjectKey {
     /// the ProjectKey.
     fn from_str(key: &str) -> Result<Self, Self::Err> {
         // Length check is redundant with regex {1,25}, but uses constant for consistency
-        if key.is_empty()
-            || key.len() > MAX_PROJECT_KEY_LENGTH
-            || !PROJECT_KEY_REGEXP.is_match(key)
+        if key.is_empty() || key.len() > MAX_PROJECT_KEY_LENGTH || !PROJECT_KEY_REGEXP.is_match(key)
         {
             return Err(Error::InvalidProjectKey(key.to_string()));
         }

@@ -1,8 +1,11 @@
 //! Project custom field management commands
 
-use crate::commands::common::{CliResult, parse_project_id_or_key};
+use crate::commands::common::CliResult;
 use backlog_api_client::client::BacklogApiClient;
-use backlog_core::identifier::{CustomFieldId, CustomFieldItemId, IssueTypeId};
+use backlog_core::{
+    ProjectIdOrKey,
+    identifier::{CustomFieldId, CustomFieldItemId, IssueTypeId},
+};
 use backlog_project::GetCustomFieldListParams;
 
 #[cfg(feature = "project_writable")]
@@ -16,7 +19,9 @@ use backlog_project::api::{
 pub async fn list(client: &BacklogApiClient, project_id_or_key: &str) -> CliResult<()> {
     println!("Listing custom fields for project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     let params = GetCustomFieldListParams::new(proj_id_or_key);
     match client.project().get_custom_field_list(params).await {
         Ok(custom_fields) => {
@@ -84,7 +89,9 @@ pub async fn add(
 ) -> CliResult<()> {
     println!("Adding custom field '{name}' to project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
 
     // Create params based on field type
     let mut params = match field_type {
@@ -217,7 +224,9 @@ pub async fn update(
 ) -> CliResult<()> {
     println!("Updating custom field {custom_field_id} in project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     let field_id = CustomFieldId::new(custom_field_id);
     let mut params = UpdateCustomFieldParams::new(proj_id_or_key, field_id);
 
@@ -299,7 +308,9 @@ pub async fn delete(
 ) -> CliResult<()> {
     println!("Deleting custom field {custom_field_id} from project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     let field_id = CustomFieldId::new(custom_field_id);
     let params = DeleteCustomFieldParams::new(proj_id_or_key, field_id);
 
@@ -335,7 +346,9 @@ pub async fn add_item(
         "Adding list item '{name}' to custom field {custom_field_id} in project: {project_id_or_key}"
     );
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     let field_id = CustomFieldId::new(custom_field_id);
     let params = AddListItemToCustomFieldParams::new(proj_id_or_key, field_id, name.to_string());
 
@@ -397,7 +410,9 @@ pub async fn update_item(
         "Updating list item {item_id} in custom field {custom_field_id} in project: {project_id_or_key}"
     );
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     let field_id = CustomFieldId::new(custom_field_id);
     let params =
         UpdateListItemToCustomFieldParams::new(proj_id_or_key, field_id, item_id, name.to_string());
@@ -473,7 +488,9 @@ pub async fn delete_item(
         "Deleting list item {item_id} from custom field {custom_field_id} in project: {project_id_or_key}"
     );
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     let field_id = CustomFieldId::new(custom_field_id);
     let item_id_val = CustomFieldItemId::new(item_id);
     let params = DeleteListItemFromCustomFieldParams::new(proj_id_or_key, field_id, item_id_val);

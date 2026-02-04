@@ -182,7 +182,9 @@ async fn list_webhooks(
     project: &str,
     format: OutputFormat,
 ) -> Result<(), Box<dyn Error>> {
-    let project_id_or_key = parse_project_id_or_key(project)?;
+    let project_id_or_key = project
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     let webhooks = client.webhook().get_webhook_list(project_id_or_key).await?;
 
     match format {
@@ -192,19 +194,6 @@ async fn list_webhooks(
     }
 
     Ok(())
-}
-
-fn parse_project_id_or_key(project: &str) -> Result<ProjectIdOrKey, Box<dyn Error>> {
-    // Try to parse as numeric ID first
-    if let Ok(id) = project.parse::<u32>() {
-        Ok(ProjectIdOrKey::from(backlog_core::id::ProjectId::new(id)))
-    } else {
-        // Otherwise treat as project key
-        let key = project
-            .parse::<backlog_core::ProjectKey>()
-            .map_err(|e| format!("Invalid project key '{project}': {e}"))?;
-        Ok(ProjectIdOrKey::from(key))
-    }
 }
 
 fn display_webhooks_table(webhooks: &[Webhook]) {
@@ -297,7 +286,9 @@ async fn get_webhook(
     webhook_id: u32,
     format: OutputFormat,
 ) -> Result<(), Box<dyn Error>> {
-    let project_id_or_key = parse_project_id_or_key(project)?;
+    let project_id_or_key = project
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     let webhook = client
         .webhook()
         .get_webhook(project_id_or_key, WebhookId::new(webhook_id))
@@ -390,7 +381,9 @@ async fn add_webhook(
     all_event: Option<bool>,
     activity_type_ids: Option<Vec<u32>>,
 ) -> Result<(), Box<dyn Error>> {
-    let project_id_or_key = parse_project_id_or_key(project)?;
+    let project_id_or_key = project
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
 
     let mut builder = client.webhook().add_webhook(project_id_or_key);
 
@@ -439,7 +432,9 @@ async fn update_webhook(
         return Err("At least one parameter must be provided to update".into());
     }
 
-    let project_id_or_key = parse_project_id_or_key(project)?;
+    let project_id_or_key = project
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
 
     let mut builder = client
         .webhook()
@@ -477,7 +472,9 @@ async fn delete_webhook(
     project: &str,
     webhook_id: u32,
 ) -> Result<(), Box<dyn Error>> {
-    let project_id_or_key = parse_project_id_or_key(project)?;
+    let project_id_or_key = project
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
 
     let deleted_webhook = client
         .webhook()

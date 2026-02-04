@@ -1,8 +1,8 @@
 //! Project version/milestone management commands
 
-use crate::commands::common::{CliResult, parse_project_id_or_key};
+use crate::commands::common::CliResult;
 use backlog_api_client::client::BacklogApiClient;
-use backlog_core::identifier::MilestoneId;
+use backlog_core::{ProjectIdOrKey, identifier::MilestoneId};
 use backlog_project::GetMilestoneListParams;
 
 #[cfg(feature = "project_writable")]
@@ -26,7 +26,9 @@ fn parse_date_to_api_date(date_str: &str) -> CliResult<ApiDate> {
 pub async fn list(client: &BacklogApiClient, project_id_or_key: &str) -> CliResult<()> {
     println!("Listing milestones for project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     match client
         .project()
         .get_version_milestone_list(GetMilestoneListParams::new(proj_id_or_key))
@@ -75,7 +77,9 @@ pub async fn add(
 ) -> CliResult<()> {
     println!("Adding version/milestone '{name}' to project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     let mut params = AddMilestoneParams::new(proj_id_or_key, name);
     params.description = description.clone();
     params.start_date = start_date
@@ -130,7 +134,9 @@ pub async fn update(
 ) -> CliResult<()> {
     println!("Updating version/milestone {version_id} in project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     let version_id_val = MilestoneId::new(version_id);
     let mut params = UpdateVersionParams::new(proj_id_or_key, version_id_val, name);
     params.description = description.clone();
@@ -181,7 +187,9 @@ pub async fn delete(
 ) -> CliResult<()> {
     println!("Deleting version/milestone {version_id} from project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     let version_id_val = MilestoneId::new(version_id);
     let params = DeleteVersionParams::new(proj_id_or_key, version_id_val);
 

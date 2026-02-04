@@ -1,7 +1,8 @@
 //! Project user and administrator management commands
 
-use crate::commands::common::{CliResult, parse_project_id_or_key};
+use crate::commands::common::CliResult;
 use backlog_api_client::client::BacklogApiClient;
+use backlog_core::ProjectIdOrKey;
 use backlog_project::{GetProjectUserListParams, api::GetProjectAdministratorListParams};
 
 #[cfg(feature = "project_writable")]
@@ -14,7 +15,9 @@ use backlog_project::api::{
 pub async fn list(client: &BacklogApiClient, project_id_or_key: &str) -> CliResult<()> {
     println!("Listing users for project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     let params = GetProjectUserListParams::new(proj_id_or_key);
     match client.project().get_project_user_list(params).await {
         Ok(users) => {
@@ -51,7 +54,9 @@ pub async fn list(client: &BacklogApiClient, project_id_or_key: &str) -> CliResu
 pub async fn admin_list(client: &BacklogApiClient, project_id_or_key: &str) -> CliResult<()> {
     println!("Listing administrators for project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     let params = GetProjectAdministratorListParams::new(proj_id_or_key);
     match client
         .project()
@@ -92,7 +97,9 @@ pub async fn admin_add(
 ) -> CliResult<()> {
     println!("Adding user {user_id} as administrator to project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     let params = AddProjectAdministratorParams::new(proj_id_or_key, user_id);
     let user = client.project().add_project_administrator(params).await?;
     println!("✅ Successfully added administrator:");
@@ -119,7 +126,9 @@ pub async fn admin_remove(
 ) -> CliResult<()> {
     println!("Removing administrator {user_id} from project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     let params = DeleteProjectAdministratorParams::new(proj_id_or_key, user_id);
     let user = client
         .project()
@@ -141,7 +150,9 @@ pub async fn user_add(
 ) -> CliResult<()> {
     println!("Adding user {user_id} to project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     let params = AddProjectUserParams::new(proj_id_or_key, user_id);
     match client.project().add_project_user(params).await {
         Ok(user) => {
@@ -166,7 +177,9 @@ pub async fn user_remove(
 ) -> CliResult<()> {
     println!("Removing user {user_id} from project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     let params = DeleteProjectUserParams::new(proj_id_or_key, user_id);
     match client.project().delete_project_user(params).await {
         Ok(user) => {

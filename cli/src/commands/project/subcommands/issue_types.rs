@@ -1,8 +1,8 @@
 //! Project issue type management commands
 
-use crate::commands::common::{CliResult, parse_project_id_or_key};
+use crate::commands::common::CliResult;
 use backlog_api_client::client::BacklogApiClient;
-use backlog_core::identifier::IssueTypeId;
+use backlog_core::{ProjectIdOrKey, identifier::IssueTypeId};
 use backlog_project::GetIssueTypeListParams;
 
 #[cfg(feature = "project_writable")]
@@ -14,7 +14,9 @@ use backlog_project::api::{AddIssueTypeParams, DeleteIssueTypeParams, UpdateIssu
 pub async fn list(client: &BacklogApiClient, project_id_or_key: &str) -> CliResult<()> {
     println!("Listing issue types for project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     let params = GetIssueTypeListParams::new(proj_id_or_key);
     match client.project().get_issue_type_list(params).await {
         Ok(issue_types) => {
@@ -48,7 +50,9 @@ pub async fn add(
 ) -> CliResult<()> {
     println!("Adding issue type '{name}' to project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
 
     // Parse and validate the color
     let parsed_color = color.parse::<IssueTypeColor>().map_err(|e| {
@@ -99,7 +103,9 @@ pub async fn update(
 ) -> CliResult<()> {
     println!("Updating issue type {issue_type_id} in project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     let issue_type_id_val = IssueTypeId::new(issue_type_id);
 
     // Parse color if provided
@@ -156,7 +162,9 @@ pub async fn delete(
         "Deleting issue type {issue_type_id} from project: {project_id_or_key} (substitute: {substitute_issue_type_id})"
     );
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     let issue_type_id_val = IssueTypeId::new(issue_type_id);
     let substitute_id = IssueTypeId::new(substitute_issue_type_id);
 

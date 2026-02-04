@@ -1,7 +1,8 @@
 //! Project CRUD (Create, Update, Delete) operations
 
-use crate::commands::common::{CliResult, parse_project_id_or_key};
+use crate::commands::common::CliResult;
 use backlog_api_client::client::BacklogApiClient;
+use backlog_core::ProjectIdOrKey;
 
 #[cfg(feature = "project_writable")]
 use backlog_project::api::{AddProjectParams, DeleteProjectParams, UpdateProjectParams};
@@ -121,7 +122,9 @@ pub async fn update(
 ) -> CliResult<()> {
     println!("Updating project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     let mut params = UpdateProjectParams::new(proj_id_or_key);
 
     if let Some(name) = name {
@@ -225,7 +228,9 @@ pub async fn delete(client: &BacklogApiClient, project_id_or_key: &str) -> CliRe
         return Ok(());
     }
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .map_err(|e| format!("Invalid project: {e}"))?;
     let params = DeleteProjectParams::new(proj_id_or_key);
 
     match client.project().delete_project(params).await {

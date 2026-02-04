@@ -1,33 +1,16 @@
 //! Common utilities and helpers for CLI commands
 //!
 //! This module provides reusable functions for:
-//! - ID parsing (ProjectIdOrKey, IssueIdOrKey, comma-separated IDs)
 //! - Date parsing and conversion
 //! - Display helpers (truncate text, format bytes)
 //! - File operations (download files)
 //! - Error handling
 
-use backlog_core::identifier::ProjectId;
-use backlog_core::{ProjectIdOrKey, ProjectKey};
 use chrono::{DateTime, NaiveDate, Utc};
 use std::error::Error;
 
 /// Type alias for CLI results
 pub type CliResult<T = ()> = Result<T, Box<dyn Error>>;
-
-/// Parse a string into ProjectIdOrKey
-///
-/// Tries to parse as u32 first (numeric ID), falls back to ProjectKey
-pub fn parse_project_id_or_key(input: &str) -> CliResult<ProjectIdOrKey> {
-    if let Ok(id) = input.parse::<u32>() {
-        Ok(ProjectIdOrKey::from(ProjectId::new(id)))
-    } else {
-        let key = input
-            .parse::<ProjectKey>()
-            .map_err(|e| format!("Invalid project key '{}': {}", input, e))?;
-        Ok(ProjectIdOrKey::from(key))
-    }
-}
 
 /// Convert NaiveDate to start of day DateTime<Utc> (00:00:00)
 pub fn date_to_start_of_day(date: NaiveDate) -> DateTime<Utc> {
