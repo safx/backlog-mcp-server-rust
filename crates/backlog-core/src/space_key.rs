@@ -4,6 +4,12 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::sync::LazyLock;
 
+/// Minimum length for space keys
+const MIN_SPACE_KEY_LENGTH: usize = 3;
+/// Maximum length for space keys
+const MAX_SPACE_KEY_LENGTH: usize = 10;
+
+// NOTE: Regex uses {3,10} which must match MIN/MAX_SPACE_KEY_LENGTH
 static SPACE_KEY_REGEXP: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-]{3,10}$").expect("valid regex pattern"));
 
@@ -44,11 +50,14 @@ impl FromStr for SpaceKey {
     /// Will return [`Err`] if it's not possible to parse this string slice into
     /// the `SpaceKey`.
     fn from_str(key: &str) -> Result<Self, Self::Err> {
-        if SPACE_KEY_REGEXP.is_match(key) {
-            Ok(SpaceKey(key.to_string()))
-        } else {
-            Err(Error::InvalidSpaceKey(key.to_string()))
+        // Length check is redundant with regex {3,10}, but uses constants for consistency
+        if key.len() < MIN_SPACE_KEY_LENGTH
+            || key.len() > MAX_SPACE_KEY_LENGTH
+            || !SPACE_KEY_REGEXP.is_match(key)
+        {
+            return Err(Error::InvalidSpaceKey(key.to_string()));
         }
+        Ok(SpaceKey(key.to_string()))
     }
 }
 

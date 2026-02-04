@@ -102,4 +102,11 @@ mod tests {
         assert!(date1 < date2);
         assert_eq!(date1, date1);
     }
+
+    #[test]
+    fn test_api_date_datetime_reference() {
+        let datetime = Utc.with_ymd_and_hms(2024, 6, 24, 12, 30, 45).unwrap();
+        let api_date = ApiDate::new(datetime);
+        assert_eq!(*api_date.datetime(), datetime);
+    }
 }

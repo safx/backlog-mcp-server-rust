@@ -5,6 +5,10 @@ use std::fmt;
 use std::str::FromStr;
 use std::sync::LazyLock;
 
+/// Maximum length for repository names (1-100 characters)
+const MAX_REPOSITORY_NAME_LENGTH: usize = 100;
+
+// NOTE: Regex uses {0,99} for additional chars (total 1-100), matching MAX_REPOSITORY_NAME_LENGTH
 static REPOSITORY_NAME_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,99}$").expect("valid regex pattern")
 });
@@ -20,7 +24,10 @@ impl FromStr for RepositoryName {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.is_empty() || s.len() > 100 || !REPOSITORY_NAME_REGEX.is_match(s) {
+        if s.is_empty()
+            || s.len() > MAX_REPOSITORY_NAME_LENGTH
+            || !REPOSITORY_NAME_REGEX.is_match(s)
+        {
             return Err(Error::InvalidRepositoryName(s.to_string()));
         }
 

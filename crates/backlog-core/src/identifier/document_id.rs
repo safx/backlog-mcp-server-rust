@@ -7,6 +7,10 @@ use std::{str::FromStr, sync::LazyLock};
 #[cfg(feature = "schemars")]
 use schemars::JsonSchema;
 
+/// Length of document ID hex string (32 lowercase hex characters)
+const DOCUMENT_ID_HEX_LENGTH: usize = 32;
+
+// NOTE: Regex uses {32} which must match DOCUMENT_ID_HEX_LENGTH
 static DOCUMENT_ID_REGEXP: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[0-9a-f]{32}$").expect("valid regex pattern"));
 
@@ -37,12 +41,11 @@ impl FromStr for DocumentId {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let cap = DOCUMENT_ID_REGEXP.captures(s);
-        if cap.is_some() {
-            Ok(DocumentId(s.to_string()))
-        } else {
-            Err(Error::InvalidDocumentId(s.to_string()))
+        // Length check is redundant with regex {32}, but uses constant for consistency
+        if s.len() != DOCUMENT_ID_HEX_LENGTH || !DOCUMENT_ID_REGEXP.is_match(s) {
+            return Err(Error::InvalidDocumentId(s.to_string()));
         }
+        Ok(DocumentId(s.to_string()))
     }
 }
 
