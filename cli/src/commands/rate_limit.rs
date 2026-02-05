@@ -63,3 +63,47 @@ fn format_timestamp(timestamp: i32) -> String {
 
     dt.format("%Y-%m-%d %H:%M:%S %Z").to_string()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_format_timestamp_valid() {
+        // 2024-01-15 00:00:00 UTC
+        let timestamp = 1705276800;
+        let result = format_timestamp(timestamp);
+
+        // Should contain date components (timezone-independent check)
+        assert!(result.contains("2024-01-"));
+        assert!(result.contains(":"));
+    }
+
+    #[test]
+    fn test_format_timestamp_epoch() {
+        // Unix epoch: 1970-01-01 00:00:00 UTC
+        let timestamp = 0;
+        let result = format_timestamp(timestamp);
+
+        // Should contain 1970 (timezone-independent check)
+        assert!(result.contains("1970-"));
+    }
+
+    #[test]
+    fn test_format_timestamp_format() {
+        let timestamp = 1705276800;
+        let result = format_timestamp(timestamp);
+
+        // Should match format: YYYY-MM-DD HH:MM:SS TZ
+        let parts: Vec<&str> = result.split_whitespace().collect();
+        assert_eq!(parts.len(), 3, "Expected 3 parts: date, time, timezone");
+
+        // Date format check
+        let date_parts: Vec<&str> = parts[0].split('-').collect();
+        assert_eq!(date_parts.len(), 3, "Date should have 3 parts");
+
+        // Time format check
+        let time_parts: Vec<&str> = parts[1].split(':').collect();
+        assert_eq!(time_parts.len(), 3, "Time should have 3 parts");
+    }
+}
