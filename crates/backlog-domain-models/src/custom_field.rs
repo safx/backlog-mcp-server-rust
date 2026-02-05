@@ -690,4 +690,340 @@ mod tests {
             assert_eq!(original, deserialized);
         }
     }
+
+    // ============================================
+    // CustomFieldType Deserialization Tests (API Response Format)
+    // ============================================
+
+    #[test]
+    fn test_custom_field_type_deserialize_text() {
+        let json = r#"{
+            "id": 1,
+            "projectId": 100,
+            "typeId": 1,
+            "name": "Text Field",
+            "description": "A text field",
+            "required": false,
+            "applicableIssueTypes": [1, 2],
+            "displayOrder": 0
+        }"#;
+
+        let field: CustomFieldType =
+            serde_json::from_str(json).expect("should deserialize Text custom field");
+
+        assert_eq!(field.id.value(), 1);
+        assert_eq!(field.project_id.value(), 100);
+        assert_eq!(field.name, "Text Field");
+        assert_eq!(field.description, "A text field");
+        assert!(!field.required);
+        assert_eq!(
+            field.applicable_issue_types,
+            Some(vec![IssueTypeId::new(1), IssueTypeId::new(2)])
+        );
+        assert_eq!(field.display_order, 0);
+        assert!(matches!(field.settings, CustomFieldSettings::Text));
+    }
+
+    #[test]
+    fn test_custom_field_type_deserialize_textarea() {
+        let json = r#"{
+            "id": 2,
+            "projectId": 100,
+            "typeId": 2,
+            "name": "TextArea Field",
+            "description": "",
+            "required": true,
+            "applicableIssueTypes": [],
+            "displayOrder": 1
+        }"#;
+
+        let field: CustomFieldType =
+            serde_json::from_str(json).expect("should deserialize TextArea custom field");
+
+        assert_eq!(field.id.value(), 2);
+        assert!(field.required);
+        assert!(matches!(field.settings, CustomFieldSettings::TextArea));
+    }
+
+    #[test]
+    fn test_custom_field_type_deserialize_numeric() {
+        let json = r#"{
+            "id": 3,
+            "projectId": 100,
+            "typeId": 3,
+            "name": "Estimate Hours",
+            "description": "Estimated work hours",
+            "required": false,
+            "applicableIssueTypes": null,
+            "displayOrder": 2,
+            "min": 0.0,
+            "max": 100.0,
+            "initialValue": 8.0,
+            "unit": "hours"
+        }"#;
+
+        let field: CustomFieldType =
+            serde_json::from_str(json).expect("should deserialize Numeric custom field");
+
+        assert_eq!(field.id.value(), 3);
+        assert_eq!(field.name, "Estimate Hours");
+
+        if let CustomFieldSettings::Numeric(settings) = &field.settings {
+            assert_eq!(settings.min, Some(0.0));
+            assert_eq!(settings.max, Some(100.0));
+            assert_eq!(settings.initial_value, Some(8.0));
+            assert_eq!(settings.unit, Some("hours".to_string()));
+        } else {
+            panic!("Expected Numeric settings");
+        }
+    }
+
+    #[test]
+    fn test_custom_field_type_deserialize_numeric_minimal() {
+        let json = r#"{
+            "id": 3,
+            "projectId": 100,
+            "typeId": 3,
+            "name": "Points",
+            "description": "",
+            "required": false,
+            "applicableIssueTypes": null,
+            "displayOrder": 0
+        }"#;
+
+        let field: CustomFieldType = serde_json::from_str(json)
+            .expect("should deserialize Numeric custom field without optional fields");
+
+        if let CustomFieldSettings::Numeric(settings) = &field.settings {
+            assert_eq!(settings.min, None);
+            assert_eq!(settings.max, None);
+            assert_eq!(settings.initial_value, None);
+            assert_eq!(settings.unit, None);
+        } else {
+            panic!("Expected Numeric settings");
+        }
+    }
+
+    #[test]
+    fn test_custom_field_type_deserialize_date() {
+        let json = r#"{
+            "id": 4,
+            "projectId": 100,
+            "typeId": 4,
+            "name": "Due Date",
+            "description": "Expected completion date",
+            "required": true,
+            "applicableIssueTypes": [1],
+            "displayOrder": 3,
+            "min": "2024-01-01",
+            "max": "2024-12-31",
+            "initialValueType": 1,
+            "initialShift": 7,
+            "initialDate": "2024-06-15"
+        }"#;
+
+        let field: CustomFieldType =
+            serde_json::from_str(json).expect("should deserialize Date custom field");
+
+        assert_eq!(field.id.value(), 4);
+        assert_eq!(field.name, "Due Date");
+        assert!(field.required);
+
+        if let CustomFieldSettings::Date(settings) = &field.settings {
+            assert!(settings.min.is_some());
+            assert!(settings.max.is_some());
+            assert_eq!(settings.initial_value_type, Some(InitialDate::Today));
+            assert_eq!(settings.initial_shift, Some(7));
+            assert!(settings.initial_date.is_some());
+        } else {
+            panic!("Expected Date settings");
+        }
+    }
+
+    #[test]
+    fn test_custom_field_type_deserialize_date_minimal() {
+        let json = r#"{
+            "id": 4,
+            "projectId": 100,
+            "typeId": 4,
+            "name": "Start Date",
+            "description": "",
+            "required": false,
+            "applicableIssueTypes": null,
+            "displayOrder": 0
+        }"#;
+
+        let field: CustomFieldType = serde_json::from_str(json)
+            .expect("should deserialize Date custom field without optional fields");
+
+        if let CustomFieldSettings::Date(settings) = &field.settings {
+            assert_eq!(settings.min, None);
+            assert_eq!(settings.max, None);
+            assert_eq!(settings.initial_value_type, None);
+            assert_eq!(settings.initial_shift, None);
+            assert_eq!(settings.initial_date, None);
+        } else {
+            panic!("Expected Date settings");
+        }
+    }
+
+    #[test]
+    fn test_custom_field_type_deserialize_single_list() {
+        let json = r#"{
+            "id": 5,
+            "projectId": 100,
+            "typeId": 5,
+            "name": "Priority Level",
+            "description": "Select priority",
+            "required": false,
+            "applicableIssueTypes": null,
+            "displayOrder": 4,
+            "items": [
+                {"id": 1, "name": "Low", "displayOrder": 0},
+                {"id": 2, "name": "Medium", "displayOrder": 1},
+                {"id": 3, "name": "High", "displayOrder": 2}
+            ],
+            "allowInput": false,
+            "allowAddItem": true
+        }"#;
+
+        let field: CustomFieldType =
+            serde_json::from_str(json).expect("should deserialize SingleList custom field");
+
+        assert_eq!(field.id.value(), 5);
+
+        if let CustomFieldSettings::SingleList(settings) = &field.settings {
+            assert_eq!(settings.items.len(), 3);
+            assert_eq!(settings.items[0].name, "Low");
+            assert_eq!(settings.items[1].name, "Medium");
+            assert_eq!(settings.items[2].name, "High");
+            assert_eq!(settings.allow_input, Some(false));
+            assert_eq!(settings.allow_add_item, Some(true));
+        } else {
+            panic!("Expected SingleList settings");
+        }
+    }
+
+    #[test]
+    fn test_custom_field_type_deserialize_multiple_list() {
+        let json = r#"{
+            "id": 6,
+            "projectId": 100,
+            "typeId": 6,
+            "name": "Tags",
+            "description": "Multiple tags",
+            "required": false,
+            "applicableIssueTypes": null,
+            "displayOrder": 5,
+            "items": [
+                {"id": 10, "name": "Frontend", "displayOrder": 0},
+                {"id": 11, "name": "Backend", "displayOrder": 1}
+            ],
+            "allowInput": true
+        }"#;
+
+        let field: CustomFieldType =
+            serde_json::from_str(json).expect("should deserialize MultipleList custom field");
+
+        if let CustomFieldSettings::MultipleList(settings) = &field.settings {
+            assert_eq!(settings.items.len(), 2);
+            assert_eq!(settings.allow_input, Some(true));
+            assert_eq!(settings.allow_add_item, None);
+        } else {
+            panic!("Expected MultipleList settings");
+        }
+    }
+
+    #[test]
+    fn test_custom_field_type_deserialize_checkbox() {
+        let json = r#"{
+            "id": 7,
+            "projectId": 100,
+            "typeId": 7,
+            "name": "Features",
+            "description": "Check applicable features",
+            "required": false,
+            "applicableIssueTypes": null,
+            "displayOrder": 6,
+            "items": [
+                {"id": 20, "name": "Feature A", "displayOrder": 0},
+                {"id": 21, "name": "Feature B", "displayOrder": 1}
+            ]
+        }"#;
+
+        let field: CustomFieldType =
+            serde_json::from_str(json).expect("should deserialize Checkbox custom field");
+
+        if let CustomFieldSettings::Checkbox(settings) = &field.settings {
+            assert_eq!(settings.items.len(), 2);
+        } else {
+            panic!("Expected Checkbox settings");
+        }
+    }
+
+    #[test]
+    fn test_custom_field_type_deserialize_radio() {
+        let json = r#"{
+            "id": 8,
+            "projectId": 100,
+            "typeId": 8,
+            "name": "Environment",
+            "description": "Select environment",
+            "required": true,
+            "applicableIssueTypes": null,
+            "displayOrder": 7,
+            "items": [
+                {"id": 30, "name": "Development", "displayOrder": 0},
+                {"id": 31, "name": "Staging", "displayOrder": 1},
+                {"id": 32, "name": "Production", "displayOrder": 2}
+            ]
+        }"#;
+
+        let field: CustomFieldType =
+            serde_json::from_str(json).expect("should deserialize Radio custom field");
+
+        assert!(field.required);
+
+        if let CustomFieldSettings::Radio(settings) = &field.settings {
+            assert_eq!(settings.items.len(), 3);
+            assert_eq!(settings.items[2].name, "Production");
+        } else {
+            panic!("Expected Radio settings");
+        }
+    }
+
+    #[test]
+    fn test_custom_field_type_deserialize_invalid_type_id() {
+        let json = r#"{
+            "id": 99,
+            "projectId": 100,
+            "typeId": 99,
+            "name": "Invalid",
+            "description": "",
+            "required": false,
+            "applicableIssueTypes": null,
+            "displayOrder": 0
+        }"#;
+
+        let result = serde_json::from_str::<CustomFieldType>(json);
+        assert!(result.is_err(), "typeId 99 should be invalid");
+    }
+
+    #[test]
+    fn test_custom_field_type_deserialize_date_with_invalid_date_format() {
+        let json = r#"{
+            "id": 4,
+            "projectId": 100,
+            "typeId": 4,
+            "name": "Bad Date",
+            "description": "",
+            "required": false,
+            "applicableIssueTypes": null,
+            "displayOrder": 0,
+            "min": "not-a-date"
+        }"#;
+
+        let result = serde_json::from_str::<CustomFieldType>(json);
+        assert!(result.is_err(), "invalid date format should fail");
+    }
 }
