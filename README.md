@@ -1,5 +1,7 @@
 # Backlog MCP Server (`mcp-backlog-server`)
 
+[![codecov](https://codecov.io/gh/safx/backlog-mcp-server-rust/graph/badge.svg?token=0S1XJTJY6I)](https://codecov.io/gh/safx/backlog-mcp-server-rust)
+
 `mcp-backlog-server` is a Model Context Protocol (MCP) server for interacting with the Backlog API.
 This server allows MCP-compatible clients (such as AI assistants) to utilize Backlog functionalities.
 
