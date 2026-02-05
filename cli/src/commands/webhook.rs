@@ -493,3 +493,29 @@ async fn delete_webhook(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_escape_csv_no_special_chars() {
+        let input = "simple text";
+        let result = escape_csv(input);
+        assert_eq!(result, "simple text");
+    }
+
+    #[test]
+    fn test_escape_csv_with_comma() {
+        let input = "hello, world";
+        let result = escape_csv(input);
+        assert_eq!(result, "\"hello, world\"");
+    }
+
+    #[test]
+    fn test_escape_csv_with_quotes() {
+        let input = "say \"hello\"";
+        let result = escape_csv(input);
+        assert_eq!(result, "\"say \"\"hello\"\"\"");
+    }
+}

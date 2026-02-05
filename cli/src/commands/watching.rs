@@ -182,3 +182,34 @@ fn parse_issue_id_or_key(input: &str) -> anyhow::Result<IssueIdOrKey> {
         Ok(IssueIdOrKey::Key(IssueKey::from_str(input)?))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use backlog_core::identifier::Identifier;
+
+    #[test]
+    fn test_parse_issue_id_or_key_numeric_id() {
+        let result = parse_issue_id_or_key("123").unwrap();
+        match result {
+            IssueIdOrKey::Id(id) => assert_eq!(id.value(), 123),
+            IssueIdOrKey::Key(_) => panic!("Expected Id variant"),
+        }
+    }
+
+    #[test]
+    fn test_parse_issue_id_or_key_string_key() {
+        let result = parse_issue_id_or_key("PROJECT-456").unwrap();
+        match result {
+            IssueIdOrKey::Key(key) => assert_eq!(key.to_string(), "PROJECT-456"),
+            IssueIdOrKey::Id(_) => panic!("Expected Key variant"),
+        }
+    }
+
+    #[test]
+    fn test_parse_issue_id_or_key_invalid_format() {
+        // Invalid key format (no hyphen with number)
+        let result = parse_issue_id_or_key("invalid");
+        assert!(result.is_err());
+    }
+}
