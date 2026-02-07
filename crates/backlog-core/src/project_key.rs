@@ -28,9 +28,11 @@ impl ProjectKey {
     pub(crate) fn from_str_unchecked(key: &str) -> Self {
         ProjectKey(key.to_string())
     }
+}
 
-    pub fn as_str(&self) -> &str {
-        self.0.as_str()
+impl AsRef<str> for ProjectKey {
+    fn as_ref(&self) -> &str {
+        &self.0
     }
 }
 

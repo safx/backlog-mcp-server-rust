@@ -49,6 +49,12 @@ impl FromStr for DocumentId {
     }
 }
 
+impl AsRef<str> for DocumentId {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
 impl std::fmt::Display for DocumentId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)

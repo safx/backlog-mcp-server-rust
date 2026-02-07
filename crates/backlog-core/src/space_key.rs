@@ -34,10 +34,6 @@ impl SpaceKey {
     fn from_str_unchecked(key: &str) -> Self {
         SpaceKey(key.to_string())
     }
-
-    pub fn as_str(&self) -> &str {
-        self.0.as_str()
-    }
 }
 
 impl FromStr for SpaceKey {
@@ -64,6 +60,12 @@ impl FromStr for SpaceKey {
 impl From<SpaceKey> for String {
     fn from(key: SpaceKey) -> Self {
         key.0
+    }
+}
+
+impl AsRef<str> for SpaceKey {
+    fn as_ref(&self) -> &str {
+        &self.0
     }
 }
 

@@ -35,6 +35,12 @@ impl FromStr for RepositoryName {
     }
 }
 
+impl AsRef<str> for RepositoryName {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
 impl fmt::Display for RepositoryName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
