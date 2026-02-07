@@ -12,7 +12,7 @@ static PROJECT_KEY_REGEXP: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[_A-Z0-9]{1,25}$").expect("valid regex pattern"));
 
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize, Hash)]
-pub struct ProjectKey(pub(crate) String);
+pub struct ProjectKey(String);
 
 /// A type that identify the project, and is unique through the space.
 ///

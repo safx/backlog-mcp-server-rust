@@ -40,7 +40,7 @@ impl From<IssueKey> for String {
 
 impl std::fmt::Display for IssueKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}-{}", &self.project_key.0, self.key_id.get())
+        write!(f, "{}-{}", self.project_key.as_ref(), self.key_id.get())
     }
 }
 

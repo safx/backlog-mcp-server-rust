@@ -14,9 +14,9 @@ const DOCUMENT_ID_HEX_LENGTH: usize = 32;
 static DOCUMENT_ID_REGEXP: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[0-9a-f]{32}$").expect("valid regex pattern"));
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schemars", derive(JsonSchema))]
-pub struct DocumentId(pub String);
+pub struct DocumentId(String);
 
 impl DocumentId {
     pub fn unsafe_new(value: String) -> Self {
@@ -61,12 +61,6 @@ impl std::fmt::Display for DocumentId {
     }
 }
 
-impl std::hash::Hash for DocumentId {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.0.hash(state);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -75,7 +69,7 @@ mod tests {
     fn test_from_str_valid() {
         let valid_id = "a1b2c3d4e5f6789012345678901234ab";
         let result = DocumentId::from_str(valid_id).unwrap();
-        assert_eq!(result.0, valid_id);
+        assert_eq!(result.as_ref(), valid_id);
     }
 
     #[test]

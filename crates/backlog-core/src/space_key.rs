@@ -20,7 +20,7 @@ static SPACE_KEY_REGEXP: LazyLock<Regex> =
 ///
 /// SpaceKey must be between 3 and 10 characters and should contain
 /// only alphanumerical and hyphen characters.
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash, Serialize, Deserialize)]
 pub struct SpaceKey(String);
 
 impl SpaceKey {
