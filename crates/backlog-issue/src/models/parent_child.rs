@@ -5,7 +5,7 @@ use std::fmt;
 ///
 /// Defines conditions used in Backlog API's `parentChild` parameter.
 #[repr(u8)]
-#[derive(Eq, PartialEq, Debug, Clone, Copy, Serialize_repr, Deserialize_repr, Default)]
+#[derive(Eq, PartialEq, Debug, Clone, Copy, Hash, Serialize_repr, Deserialize_repr, Default)]
 pub enum ParentChildCondition {
     /// All issues (no filtering by parent/child status)
     #[default]

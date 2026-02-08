@@ -8,7 +8,7 @@ use schemars::JsonSchema;
 
 const SER_FORMAT: &str = "%Y-%m-%dT00:00:00Z";
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "schemars", derive(JsonSchema))]
 pub struct Date(NaiveDate);
 

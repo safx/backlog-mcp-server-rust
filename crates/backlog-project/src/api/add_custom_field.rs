@@ -339,13 +339,7 @@ impl IntoRequest for AddCustomFieldParams {
     fn to_form(&self) -> impl serde::Serialize {
         let mut form_params = Vec::<(String, String)>::from(self);
         // Manually add typeId as numeric value
-        form_params.insert(
-            0,
-            (
-                "typeId".to_string(),
-                (self.type_id.clone() as i8).to_string(),
-            ),
-        );
+        form_params.insert(0, ("typeId".to_string(), (self.type_id as i8).to_string()));
         form_params
     }
 }

@@ -5,7 +5,7 @@ use std::fmt;
 use schemars::JsonSchema;
 
 #[repr(i8)]
-#[derive(Eq, PartialEq, Debug, Clone, Serialize_repr, Deserialize_repr)]
+#[derive(Eq, PartialEq, Debug, Clone, Copy, Hash, Serialize_repr, Deserialize_repr)]
 #[cfg_attr(feature = "schemars", derive(JsonSchema))]
 pub enum CustomFieldTypeId {
     Text = 1,
