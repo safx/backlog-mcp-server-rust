@@ -3,7 +3,7 @@ mod writable_tests {
 
     use backlog_api_core::Error as ApiError;
     use backlog_core::{
-        ProjectKey, Role, User,
+        ProjectKey, Role, TextFormattingRule, User,
         identifier::{CategoryId, IssueTypeId, MilestoneId, ProjectId, StatusId, UserId},
     };
     use backlog_project::api::{
@@ -11,8 +11,8 @@ mod writable_tests {
         AddProjectParams, AddProjectUserParams, AddStatusParams, DeleteCategoryParams,
         DeleteIssueTypeParams, DeleteProjectAdministratorParams, DeleteProjectParams,
         DeleteProjectUserParams, DeleteStatusParams, DeleteVersionParams, ProjectApi,
-        TextFormattingRule, UpdateCategoryParams, UpdateIssueTypeParams, UpdateProjectParams,
-        UpdateStatusOrderParams, UpdateStatusParams, UpdateVersionParams,
+        UpdateCategoryParams, UpdateIssueTypeParams, UpdateProjectParams, UpdateStatusOrderParams,
+        UpdateStatusParams, UpdateVersionParams,
     };
     use backlog_project::{Category, IssueType, Milestone, Status};
     use chrono::TimeZone;

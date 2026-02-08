@@ -5,7 +5,7 @@ use backlog_domain_models::Project;
 pub type GetProjectDetailResponse = Project;
 
 // GET /api/v2/projects/:projectIdOrKey
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct GetProjectDetailParams {
     pub project_id_or_key: ProjectIdOrKey,
 }

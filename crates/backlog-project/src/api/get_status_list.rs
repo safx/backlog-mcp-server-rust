@@ -4,7 +4,7 @@ use backlog_core::ProjectIdOrKey;
 pub type GetStatusListResponse = Vec<backlog_domain_models::Status>;
 
 // GET /api/v2/projects/:projectIdOrKey/statuses
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct GetStatusListParams {
     pub project_id_or_key: ProjectIdOrKey,
 }

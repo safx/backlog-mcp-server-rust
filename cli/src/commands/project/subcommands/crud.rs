@@ -167,8 +167,8 @@ pub async fn update(
     }
     if let Some(text_formatting_rule) = text_formatting_rule {
         params.text_formatting_rule = Some(match text_formatting_rule.as_str() {
-            "backlog" => backlog_project::api::TextFormattingRule::Backlog,
-            "markdown" => backlog_project::api::TextFormattingRule::Markdown,
+            "backlog" => backlog_core::TextFormattingRule::Backlog,
+            "markdown" => backlog_core::TextFormattingRule::Markdown,
             _ => anyhow::bail!(
                 "Invalid text formatting rule: {text_formatting_rule}. Use 'backlog' or 'markdown'"
             ),

@@ -192,7 +192,7 @@ pub use delete_project_administrator::{
 };
 
 #[cfg(feature = "writable")]
-pub use update_project::{TextFormattingRule, UpdateProjectParams, UpdateProjectResponse};
+pub use update_project::{UpdateProjectParams, UpdateProjectResponse};
 
 #[cfg(feature = "writable")]
 pub use add_project::{AddProjectParams, AddProjectResponse};

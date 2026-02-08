@@ -4,7 +4,7 @@ use backlog_core::ProjectIdOrKey;
 pub type GetCategoryListResponse = Vec<backlog_domain_models::Category>;
 
 // GET /api/v2/projects/:projectIdOrKey/categories
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct GetCategoryListParams {
     pub project_id_or_key: ProjectIdOrKey,
 }

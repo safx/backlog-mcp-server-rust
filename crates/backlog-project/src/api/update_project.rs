@@ -1,7 +1,7 @@
 #[cfg(feature = "writable")]
 use backlog_api_core::{HttpMethod, IntoRequest};
 #[cfg(feature = "writable")]
-use backlog_core::ProjectIdOrKey;
+use backlog_core::{ProjectIdOrKey, TextFormattingRule};
 #[cfg(feature = "writable")]
 use backlog_domain_models::Project;
 #[cfg(feature = "writable")]
@@ -29,13 +29,6 @@ pub struct UpdateProjectParams {
     pub text_formatting_rule: Option<TextFormattingRule>,
     pub archived: Option<bool>,
     pub use_dev_attributes: Option<bool>,
-}
-
-#[cfg(feature = "writable")]
-#[derive(Debug, Clone)]
-pub enum TextFormattingRule {
-    Backlog,
-    Markdown,
 }
 
 #[cfg(feature = "writable")]
@@ -197,11 +190,7 @@ impl From<&UpdateProjectParams> for Vec<(String, String)> {
         }
 
         if let Some(rule) = &params.text_formatting_rule {
-            let rule_str = match rule {
-                TextFormattingRule::Backlog => "backlog",
-                TextFormattingRule::Markdown => "markdown",
-            };
-            seq.push(("textFormattingRule".to_string(), rule_str.to_string()));
+            seq.push(("textFormattingRule".to_string(), rule.to_string()));
         }
 
         if let Some(archived) = params.archived {
