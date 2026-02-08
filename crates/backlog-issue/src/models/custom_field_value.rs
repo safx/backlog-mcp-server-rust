@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
 
 /// Represents a value for a custom field list item.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schemars", derive(JsonSchema))]
 pub struct CustomFieldListItem {
     /// The ID of the list item.
@@ -18,6 +18,7 @@ pub struct CustomFieldListItem {
 /// Represents different types of custom field values with strong typing.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "schemars", derive(JsonSchema))]
+#[non_exhaustive]
 pub enum CustomFieldValue {
     /// Text field value (TypeId: 1)
     Text(String),
@@ -84,6 +85,7 @@ impl CustomFieldValue {
 /// This is used for form serialization where we only need IDs, not full objects.
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "schemars", derive(JsonSchema))]
+#[non_exhaustive]
 pub enum CustomFieldInput {
     /// Text field input (TypeId: 1)
     Text(String),

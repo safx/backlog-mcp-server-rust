@@ -457,11 +457,10 @@ pub async fn execute(client: &BacklogApiClient, args: ProjectArgs) -> CliResult<
         // Fallback for disabled write features
         #[cfg(not(feature = "project_writable"))]
         _ => {
-            return Err(
+            anyhow::bail!(
                 "This command requires write access to projects and is not available. \
                 Please build with the 'project_writable' feature flag:\n\
                 cargo build --package blg --features project_writable"
-                    .into(),
             );
         }
     }

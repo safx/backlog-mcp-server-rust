@@ -11,9 +11,9 @@ pub trait Identifier {
 macro_rules! impl_identifier {
     ($(($type_name:ident,$ty:ty)),*) => {
         $(
-            #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+            #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
             #[cfg_attr(feature = "schemars", derive(JsonSchema))]
-            pub struct $type_name(pub $ty);
+            pub struct $type_name($ty);
 
             impl $type_name {
                 pub fn new(value: $ty) -> Self {
@@ -56,11 +56,6 @@ macro_rules! impl_identifier {
                 }
             }
 
-            impl std::hash::Hash for $type_name {
-                fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-                    self.0.hash(state);
-                }
-            }
         )*
     };
 }
@@ -109,3 +104,6 @@ pub use document_id::DocumentId;
 
 #[cfg(test)]
 mod activity_id_test;
+
+#[cfg(test)]
+mod u64_identifier_test;

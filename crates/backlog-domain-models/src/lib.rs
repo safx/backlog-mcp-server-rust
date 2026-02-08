@@ -2,6 +2,7 @@ pub mod category;
 pub mod comment;
 pub mod custom_field;
 pub mod error;
+pub mod file_content;
 pub mod issue_type;
 pub mod milestone;
 pub mod priority;
@@ -19,6 +20,7 @@ pub use custom_field::{
     NumericSettings,
 };
 pub use error::ParseColorError;
+pub use file_content::FileContent;
 pub use issue_type::{IssueType, IssueTypeColor};
 pub use milestone::Milestone;
 pub use priority::Priority;

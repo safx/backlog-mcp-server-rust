@@ -1,7 +1,9 @@
 //! Project list and detail viewing commands
 
-use crate::commands::common::{CliResult, parse_project_id_or_key};
+use crate::commands::common::CliResult;
+use anyhow::Context;
 use backlog_api_client::client::BacklogApiClient;
+use backlog_core::ProjectIdOrKey;
 use backlog_project::{
     GetProjectDetailParams, GetProjectListParams, GetRecentlyViewedProjectsParamsBuilder,
 };
@@ -43,7 +45,9 @@ pub async fn list(client: &BacklogApiClient) -> CliResult<()> {
 pub async fn show(client: &BacklogApiClient, project_id_or_key: &str) -> CliResult<()> {
     println!("Showing project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .with_context(|| format!("Invalid project: {project_id_or_key}"))?;
     let params = GetProjectDetailParams::new(proj_id_or_key);
     match client.project().get_project(params).await {
         Ok(project) => {

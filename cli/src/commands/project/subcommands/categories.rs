@@ -1,8 +1,9 @@
 //! Project category management commands
 
-use crate::commands::common::{CliResult, parse_project_id_or_key};
+use crate::commands::common::CliResult;
+use anyhow::Context;
 use backlog_api_client::client::BacklogApiClient;
-use backlog_core::identifier::CategoryId;
+use backlog_core::{ProjectIdOrKey, identifier::CategoryId};
 use backlog_project::GetCategoryListParams;
 
 #[cfg(feature = "project_writable")]
@@ -12,7 +13,9 @@ use backlog_project::api::{AddCategoryParams, DeleteCategoryParams, UpdateCatego
 pub async fn list(client: &BacklogApiClient, project_id_or_key: &str) -> CliResult<()> {
     println!("Listing categories for project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .with_context(|| format!("Invalid project: {project_id_or_key}"))?;
     let params = GetCategoryListParams::new(proj_id_or_key);
     match client.project().get_category_list(params).await {
         Ok(categories) => {
@@ -39,7 +42,9 @@ pub async fn list(client: &BacklogApiClient, project_id_or_key: &str) -> CliResu
 pub async fn add(client: &BacklogApiClient, project_id_or_key: &str, name: &str) -> CliResult<()> {
     println!("Adding category '{name}' to project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .with_context(|| format!("Invalid project: {project_id_or_key}"))?;
     let params = AddCategoryParams::new(proj_id_or_key, name.to_string());
 
     match client.project().add_category(params).await {
@@ -67,7 +72,9 @@ pub async fn update(
 ) -> CliResult<()> {
     println!("Updating category {category_id} in project {project_id_or_key} to name '{name}'");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .with_context(|| format!("Invalid project: {project_id_or_key}"))?;
     let cat_id = CategoryId::new(category_id);
     let params = UpdateCategoryParams::new(proj_id_or_key, cat_id, name.to_string());
 
@@ -95,7 +102,9 @@ pub async fn delete(
 ) -> CliResult<()> {
     println!("Deleting category {category_id} from project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .with_context(|| format!("Invalid project: {project_id_or_key}"))?;
     let cat_id = CategoryId::new(category_id);
 
     match client

@@ -28,7 +28,7 @@ async fn test_get_shared_files_list_success() {
 
     let expected_files = vec![SharedFile {
         id: SharedFileId::new(1),
-        project_id: ProjectId(123),
+        project_id: ProjectId::new(123),
         dir: "/documents".to_string(),
         name: "test.txt".to_string(),
         created_user: user.clone(),
@@ -252,7 +252,7 @@ async fn test_get_shared_files_list_with_directory() {
     // ディレクトリのレスポンス（sizeフィールドなし）
     let expected_files = vec![SharedFile {
         id: SharedFileId::new(1),
-        project_id: ProjectId(123),
+        project_id: ProjectId::new(123),
         dir: "/".to_string(),
         name: "subdir".to_string(),
         created_user: user.clone(),

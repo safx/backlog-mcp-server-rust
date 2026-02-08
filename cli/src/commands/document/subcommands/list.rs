@@ -1,4 +1,5 @@
 use crate::commands::common::CliResult;
+use anyhow::Context;
 use backlog_api_client::client::BacklogApiClient;
 use backlog_core::ProjectIdOrKey;
 use backlog_core::identifier::{DocumentAttachmentId, DocumentId, Identifier, ProjectId};
@@ -51,11 +52,16 @@ pub(crate) async fn list(client: &BacklogApiClient, options: ListOptions) -> Cli
     let mut params_builder = ListDocumentsParamsBuilder::default();
 
     // Parse project_id
-    let project_id_or_key = project_id.parse::<ProjectIdOrKey>()?;
+    let project_id_or_key: ProjectIdOrKey = project_id
+        .parse()
+        .with_context(|| format!("Invalid project: '{project_id}'"))?;
     let project_id_value: backlog_core::identifier::ProjectId = match project_id_or_key {
         ProjectIdOrKey::Id(id) => id,
         ProjectIdOrKey::Key(key) => {
-            return Err(format!("Project key '{}' is not supported for list command. Please use numeric project ID.", key).into());
+            anyhow::bail!(
+                "Project key '{}' is not supported for list command. Please use numeric project ID.",
+                key
+            );
         }
         ProjectIdOrKey::EitherIdOrKey(id, _) => id,
     };
@@ -70,11 +76,10 @@ pub(crate) async fn list(client: &BacklogApiClient, options: ListOptions) -> Cli
             "created" => DocumentSortKey::Created,
             "updated" => DocumentSortKey::Updated,
             _ => {
-                return Err(format!(
+                anyhow::bail!(
                     "Invalid sort key: {}. Valid options are: created, updated",
                     sort_str
-                )
-                .into());
+                );
             }
         };
         params_builder.sort(sort_key);
@@ -84,7 +89,7 @@ pub(crate) async fn list(client: &BacklogApiClient, options: ListOptions) -> Cli
         let order_val = match order_str.as_str() {
             "asc" => DocumentOrder::Asc,
             "desc" => DocumentOrder::Desc,
-            _ => return Err(format!("Invalid order: {}", order_str).into()),
+            _ => anyhow::bail!("Invalid order: {}", order_str),
         };
         params_builder.order(order_val);
     }
@@ -183,7 +188,9 @@ pub(crate) async fn tree(
         println!("Getting document tree for project: {project_id}");
     }
 
-    let project_id_or_key = project_id.parse::<ProjectIdOrKey>()?;
+    let project_id_or_key: ProjectIdOrKey = project_id
+        .parse()
+        .with_context(|| format!("Invalid project: '{project_id}'"))?;
     let params = GetDocumentTreeParamsBuilder::default()
         .project_id_or_key(project_id_or_key)
         .build()?;

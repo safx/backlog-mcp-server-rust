@@ -6,6 +6,7 @@ use super::{Change, Comment, GroupProjectActivity};
 /// Unified content type that merges both content variants
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(untagged)]
+#[non_exhaustive]
 pub enum Content {
     /// Standard content with comment and changes
     Standard {

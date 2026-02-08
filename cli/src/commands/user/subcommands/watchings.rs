@@ -24,7 +24,7 @@ pub(crate) async fn watchings(
         let order_enum = match order_str.to_lowercase().as_str() {
             "asc" => WatchingOrder::Asc,
             "desc" => WatchingOrder::Desc,
-            _ => return Err(format!("Invalid order: {order_str}. Use 'asc' or 'desc'").into()),
+            _ => anyhow::bail!("Invalid order: {order_str}. Use 'asc' or 'desc'"),
         };
         params = params.order(order_enum);
     }
@@ -35,10 +35,9 @@ pub(crate) async fn watchings(
             "updated" => WatchingSort::Updated,
             "issueupdated" => WatchingSort::IssueUpdated,
             _ => {
-                return Err(format!(
+                anyhow::bail!(
                     "Invalid sort: {sort_str}. Use 'created', 'updated', or 'issueUpdated'"
-                )
-                .into());
+                );
             }
         };
         params = params.sort(sort_enum);

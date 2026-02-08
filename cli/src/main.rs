@@ -104,9 +104,13 @@ struct WatchingArgs {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let base_url = env::var("BACKLOG_BASE_URL")?;
-    let api_key = env::var("BACKLOG_API_KEY")?;
+async fn main() -> anyhow::Result<()> {
+    use anyhow::Context;
+
+    let base_url =
+        env::var("BACKLOG_BASE_URL").context("BACKLOG_BASE_URL environment variable not set")?;
+    let api_key =
+        env::var("BACKLOG_API_KEY").context("BACKLOG_API_KEY environment variable not set")?;
 
     let client = BacklogApiClient::new(&base_url)?.with_api_key(api_key);
 

@@ -7,6 +7,7 @@ license.workspace = true
 [dependencies]
 client = { path = "../client" }
 backlog-core = { path = "../backlog-core" }
+backlog-domain-models = { path = "../backlog-domain-models" }
 backlog-api-core = { path = "../backlog-api-core" }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
@@ -21,4 +22,4 @@ tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 [features]
 default = []
-schemars = ["dep:schemars", "backlog-core/schemars"]
+schemars = ["dep:schemars", "backlog-core/schemars", "backlog-domain-models/schemars"]

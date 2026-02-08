@@ -57,7 +57,7 @@ pub(crate) async fn notifications(
         let notification_order = match order_str.to_lowercase().as_str() {
             "asc" => NotificationOrder::Asc,
             "desc" => NotificationOrder::Desc,
-            _ => return Err("Invalid order. Use 'asc' or 'desc'".into()),
+            _ => anyhow::bail!("Invalid order. Use 'asc' or 'desc'"),
         };
         params = params.with_order(notification_order);
     }

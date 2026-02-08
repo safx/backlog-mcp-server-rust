@@ -1,10 +1,10 @@
 use crate::commands::common::CliResult;
+use anyhow::Context;
 use backlog_api_client::{
     ProjectIdOrKey, PullRequestCommentId, PullRequestNumber, RepositoryIdOrName,
     client::BacklogApiClient,
 };
 use backlog_core::identifier::Identifier;
-use std::str::FromStr;
 
 pub(crate) async fn comment_count(
     client: &BacklogApiClient,
@@ -14,10 +14,12 @@ pub(crate) async fn comment_count(
 ) -> CliResult<()> {
     println!("Getting comment count for PR #{pr_number} in repo {repo_id} (project {project_id})");
 
-    let parsed_project_id = ProjectIdOrKey::from_str(&project_id)
-        .map_err(|e| format!("Failed to parse project_id '{project_id}': {e}"))?;
-    let parsed_repo_id = RepositoryIdOrName::from_str(&repo_id)
-        .map_err(|e| format!("Failed to parse repo_id '{repo_id}': {e}"))?;
+    let parsed_project_id: ProjectIdOrKey = project_id
+        .parse()
+        .with_context(|| format!("Failed to parse project_id '{project_id}'"))?;
+    let parsed_repo_id: RepositoryIdOrName = repo_id
+        .parse()
+        .with_context(|| format!("Failed to parse repo_id '{repo_id}'"))?;
     let parsed_pr_number = PullRequestNumber::from(pr_number);
 
     let params = backlog_api_client::GetPullRequestCommentCountParams::new(
@@ -44,10 +46,12 @@ pub(crate) async fn comment_update(
         "Updating comment {comment_id} for PR #{pr_number} in repo {repo_id} (project {project_id})"
     );
 
-    let parsed_project_id = ProjectIdOrKey::from_str(&project_id)
-        .map_err(|e| format!("Failed to parse project_id '{project_id}': {e}"))?;
-    let parsed_repo_id = RepositoryIdOrName::from_str(&repo_id)
-        .map_err(|e| format!("Failed to parse repo_id '{repo_id}': {e}"))?;
+    let parsed_project_id: ProjectIdOrKey = project_id
+        .parse()
+        .with_context(|| format!("Failed to parse project_id '{project_id}'"))?;
+    let parsed_repo_id: RepositoryIdOrName = repo_id
+        .parse()
+        .with_context(|| format!("Failed to parse repo_id '{repo_id}'"))?;
     let parsed_pr_number = PullRequestNumber::from(pr_number);
     let parsed_comment_id = PullRequestCommentId::new(comment_id);
 

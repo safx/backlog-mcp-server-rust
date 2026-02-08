@@ -1,7 +1,9 @@
 //! Project CRUD (Create, Update, Delete) operations
 
-use crate::commands::common::{CliResult, parse_project_id_or_key};
+use crate::commands::common::CliResult;
+use anyhow::Context;
 use backlog_api_client::client::BacklogApiClient;
+use backlog_core::ProjectIdOrKey;
 
 #[cfg(feature = "project_writable")]
 use backlog_project::api::{AddProjectParams, DeleteProjectParams, UpdateProjectParams};
@@ -121,7 +123,9 @@ pub async fn update(
 ) -> CliResult<()> {
     println!("Updating project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .with_context(|| format!("Invalid project: {project_id_or_key}"))?;
     let mut params = UpdateProjectParams::new(proj_id_or_key);
 
     if let Some(name) = name {
@@ -163,12 +167,11 @@ pub async fn update(
     }
     if let Some(text_formatting_rule) = text_formatting_rule {
         params.text_formatting_rule = Some(match text_formatting_rule.as_str() {
-            "backlog" => backlog_project::api::TextFormattingRule::Backlog,
-            "markdown" => backlog_project::api::TextFormattingRule::Markdown,
-            _ => return Err(format!(
+            "backlog" => backlog_core::TextFormattingRule::Backlog,
+            "markdown" => backlog_core::TextFormattingRule::Markdown,
+            _ => anyhow::bail!(
                 "Invalid text formatting rule: {text_formatting_rule}. Use 'backlog' or 'markdown'"
-            )
-            .into()),
+            ),
         });
     }
     if let Some(archived) = archived {
@@ -218,14 +221,16 @@ pub async fn delete(client: &BacklogApiClient, project_id_or_key: &str) -> CliRe
     let mut confirmation = String::new();
     std::io::stdin()
         .read_line(&mut confirmation)
-        .map_err(|e| format!("Failed to read confirmation: {}", e))?;
+        .context("Failed to read confirmation")?;
 
     if confirmation.trim() != "yes" {
         println!("Project deletion cancelled.");
         return Ok(());
     }
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .with_context(|| format!("Invalid project: {project_id_or_key}"))?;
     let params = DeleteProjectParams::new(proj_id_or_key);
 
     match client.project().delete_project(params).await {

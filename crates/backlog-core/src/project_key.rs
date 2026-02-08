@@ -4,11 +4,15 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::sync::LazyLock;
 
+/// Maximum length for project keys (1-25 characters)
+const MAX_PROJECT_KEY_LENGTH: usize = 25;
+
+// NOTE: Regex uses {1,25} which must match MAX_PROJECT_KEY_LENGTH
 static PROJECT_KEY_REGEXP: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[_A-Z0-9]{1,25}$").expect("valid regex pattern"));
 
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize, Hash)]
-pub struct ProjectKey(pub(crate) String);
+pub struct ProjectKey(String);
 
 /// A type that identify the project, and is unique through the space.
 ///
@@ -24,9 +28,11 @@ impl ProjectKey {
     pub(crate) fn from_str_unchecked(key: &str) -> Self {
         ProjectKey(key.to_string())
     }
+}
 
-    pub fn as_str(&self) -> &str {
-        self.0.as_str()
+impl AsRef<str> for ProjectKey {
+    fn as_ref(&self) -> &str {
+        &self.0
     }
 }
 
@@ -40,11 +46,12 @@ impl FromStr for ProjectKey {
     /// Will return [`Err`] if it's not possible to parse this string slice into
     /// the ProjectKey.
     fn from_str(key: &str) -> Result<Self, Self::Err> {
-        if PROJECT_KEY_REGEXP.is_match(key) {
-            Ok(ProjectKey(key.to_string()))
-        } else {
-            Err(Error::InvalidProjectKey(key.to_string()))
+        // Length check is redundant with regex {1,25}, but uses constant for consistency
+        if key.is_empty() || key.len() > MAX_PROJECT_KEY_LENGTH || !PROJECT_KEY_REGEXP.is_match(key)
+        {
+            return Err(Error::InvalidProjectKey(key.to_string()));
         }
+        Ok(ProjectKey(key.to_string()))
     }
 }
 

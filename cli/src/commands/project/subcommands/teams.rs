@@ -1,8 +1,9 @@
 //! Project team management commands
 
-use crate::commands::common::{CliResult, parse_project_id_or_key};
+use crate::commands::common::CliResult;
+use anyhow::Context;
 use backlog_api_client::client::BacklogApiClient;
-use backlog_core::identifier::TeamId;
+use backlog_core::{ProjectIdOrKey, identifier::TeamId};
 use backlog_project::GetProjectTeamListParams;
 
 #[cfg(feature = "project_writable")]
@@ -12,7 +13,9 @@ use backlog_project::api::{AddProjectTeamParams, DeleteProjectTeamParams};
 pub async fn list(client: &BacklogApiClient, project_id_or_key: &str) -> CliResult<()> {
     println!("Listing teams for project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .with_context(|| "Invalid project")?;
     let params = GetProjectTeamListParams {
         project_id_or_key: proj_id_or_key,
     };
@@ -55,7 +58,9 @@ pub async fn add(
 ) -> CliResult<()> {
     println!("Adding team {team_id} to project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .with_context(|| "Invalid project")?;
     let params = AddProjectTeamParams {
         project_id_or_key: proj_id_or_key,
         team_id: TeamId::new(team_id),
@@ -78,7 +83,9 @@ pub async fn delete(
 ) -> CliResult<()> {
     println!("Removing team {team_id} from project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .with_context(|| "Invalid project")?;
     let params = DeleteProjectTeamParams {
         project_id_or_key: proj_id_or_key,
         team_id: TeamId::new(team_id),

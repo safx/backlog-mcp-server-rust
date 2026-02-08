@@ -1,8 +1,12 @@
 //! Project custom field management commands
 
-use crate::commands::common::{CliResult, parse_project_id_or_key};
+use crate::commands::common::CliResult;
+use anyhow::Context;
 use backlog_api_client::client::BacklogApiClient;
-use backlog_core::identifier::{CustomFieldId, CustomFieldItemId, IssueTypeId};
+use backlog_core::{
+    ProjectIdOrKey,
+    identifier::{CustomFieldId, CustomFieldItemId, IssueTypeId},
+};
 use backlog_project::GetCustomFieldListParams;
 
 #[cfg(feature = "project_writable")]
@@ -16,7 +20,9 @@ use backlog_project::api::{
 pub async fn list(client: &BacklogApiClient, project_id_or_key: &str) -> CliResult<()> {
     println!("Listing custom fields for project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .with_context(|| format!("Invalid project: {project_id_or_key}"))?;
     let params = GetCustomFieldListParams::new(proj_id_or_key);
     match client.project().get_custom_field_list(params).await {
         Ok(custom_fields) => {
@@ -84,7 +90,9 @@ pub async fn add(
 ) -> CliResult<()> {
     println!("Adding custom field '{name}' to project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .with_context(|| format!("Invalid project: {project_id_or_key}"))?;
 
     // Create params based on field type
     let mut params = match field_type {
@@ -93,17 +101,17 @@ pub async fn add(
         "numeric" => AddCustomFieldParams::numeric(proj_id_or_key, name.to_string()),
         "date" => AddCustomFieldParams::date(proj_id_or_key, name.to_string()),
         "single-list" => {
-            let items_str = items
-                .as_ref()
-                .ok_or("--items is required for single-list field type")?;
+            let Some(items_str) = items.as_ref() else {
+                anyhow::bail!("--items is required for single-list field type");
+            };
             let items_vec: Vec<String> =
                 items_str.split(',').map(|s| s.trim().to_string()).collect();
             AddCustomFieldParams::single_list(proj_id_or_key, name.to_string(), items_vec)
         }
         "multiple-list" => {
-            let items_str = items
-                .as_ref()
-                .ok_or("--items is required for multiple-list field type")?;
+            let Some(items_str) = items.as_ref() else {
+                anyhow::bail!("--items is required for multiple-list field type");
+            };
             let items_vec: Vec<String> =
                 items_str.split(',').map(|s| s.trim().to_string()).collect();
             AddCustomFieldParams::multiple_list(proj_id_or_key, name.to_string(), items_vec)
@@ -111,10 +119,9 @@ pub async fn add(
         "checkbox" => AddCustomFieldParams::checkbox(proj_id_or_key, name.to_string()),
         "radio" => AddCustomFieldParams::radio(proj_id_or_key, name.to_string()),
         _ => {
-            return Err(format!(
+            anyhow::bail!(
                 "Invalid field type '{field_type}'. Valid types: text, textarea, numeric, date, single-list, multiple-list, checkbox, radio"
-            )
-            .into());
+            );
         }
     };
 
@@ -217,7 +224,9 @@ pub async fn update(
 ) -> CliResult<()> {
     println!("Updating custom field {custom_field_id} in project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .with_context(|| format!("Invalid project: {project_id_or_key}"))?;
     let field_id = CustomFieldId::new(custom_field_id);
     let mut params = UpdateCustomFieldParams::new(proj_id_or_key, field_id);
 
@@ -299,7 +308,9 @@ pub async fn delete(
 ) -> CliResult<()> {
     println!("Deleting custom field {custom_field_id} from project: {project_id_or_key}");
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .with_context(|| format!("Invalid project: {project_id_or_key}"))?;
     let field_id = CustomFieldId::new(custom_field_id);
     let params = DeleteCustomFieldParams::new(proj_id_or_key, field_id);
 
@@ -335,7 +346,9 @@ pub async fn add_item(
         "Adding list item '{name}' to custom field {custom_field_id} in project: {project_id_or_key}"
     );
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .with_context(|| format!("Invalid project: {project_id_or_key}"))?;
     let field_id = CustomFieldId::new(custom_field_id);
     let params = AddListItemToCustomFieldParams::new(proj_id_or_key, field_id, name.to_string());
 
@@ -397,7 +410,9 @@ pub async fn update_item(
         "Updating list item {item_id} in custom field {custom_field_id} in project: {project_id_or_key}"
     );
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .with_context(|| format!("Invalid project: {project_id_or_key}"))?;
     let field_id = CustomFieldId::new(custom_field_id);
     let params =
         UpdateListItemToCustomFieldParams::new(proj_id_or_key, field_id, item_id, name.to_string());
@@ -473,7 +488,9 @@ pub async fn delete_item(
         "Deleting list item {item_id} from custom field {custom_field_id} in project: {project_id_or_key}"
     );
 
-    let proj_id_or_key = parse_project_id_or_key(project_id_or_key)?;
+    let proj_id_or_key = project_id_or_key
+        .parse::<ProjectIdOrKey>()
+        .with_context(|| format!("Invalid project: {project_id_or_key}"))?;
     let field_id = CustomFieldId::new(custom_field_id);
     let item_id_val = CustomFieldItemId::new(item_id);
     let params = DeleteListItemFromCustomFieldParams::new(proj_id_or_key, field_id, item_id_val);

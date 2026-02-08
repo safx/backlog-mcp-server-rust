@@ -310,7 +310,7 @@ mod tests {
         assert!(result.is_ok());
         let project = result.unwrap();
         assert_eq!(project.id, project_id);
-        assert_eq!(project.project_key.as_str(), "API_PROJ");
+        assert_eq!(project.project_key.as_ref(), "API_PROJ");
 
         let cached = cache.get_from_cache_by_id(&project_id).await;
         assert!(cached.is_some());
@@ -386,7 +386,7 @@ mod tests {
         let id_or_key = ProjectIdOrKey::Key(ProjectKey::from_str("RESOLVE_PROJ").unwrap());
         let result = cache.resolve(&id_or_key, &client).await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().project_key.as_str(), "RESOLVE_PROJ");
+        assert_eq!(result.unwrap().project_key.as_ref(), "RESOLVE_PROJ");
 
         let id_or_key = ProjectIdOrKey::EitherIdOrKey(
             ProjectId::new(5555),

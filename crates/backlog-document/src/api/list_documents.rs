@@ -82,7 +82,6 @@ impl IntoRequest for ListDocumentsParams {
     }
 
     fn to_query(&self) -> impl Serialize {
-        let params: Vec<(String, String)> = self.into();
-        params
+        <Vec<(String, String)>>::from(self)
     }
 }

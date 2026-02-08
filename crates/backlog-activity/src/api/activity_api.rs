@@ -7,7 +7,7 @@ use super::get_activity::{GetActivityParams, GetActivityResponse};
 /// API client for Backlog Activity endpoints.
 ///
 /// Provides methods to interact with the Backlog Activity API.
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone)]
 pub struct ActivityApi(Client);
 
 impl ActivityApi {

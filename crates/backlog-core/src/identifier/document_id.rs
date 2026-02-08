@@ -7,16 +7,24 @@ use std::{str::FromStr, sync::LazyLock};
 #[cfg(feature = "schemars")]
 use schemars::JsonSchema;
 
+/// Length of document ID hex string (32 lowercase hex characters)
+const DOCUMENT_ID_HEX_LENGTH: usize = 32;
+
+// NOTE: Regex uses {32} which must match DOCUMENT_ID_HEX_LENGTH
 static DOCUMENT_ID_REGEXP: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[0-9a-f]{32}$").expect("valid regex pattern"));
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schemars", derive(JsonSchema))]
-pub struct DocumentId(pub String);
+pub struct DocumentId(String);
 
 impl DocumentId {
     pub fn unsafe_new(value: String) -> Self {
         Self(value)
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
     }
 }
 
@@ -27,34 +35,27 @@ impl Identifier for DocumentId {
     }
 }
 
-impl From<String> for DocumentId {
-    fn from(value: String) -> Self {
-        DocumentId(value)
-    }
-}
-
 impl FromStr for DocumentId {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let cap = DOCUMENT_ID_REGEXP.captures(s);
-        if cap.is_some() {
-            Ok(DocumentId(s.to_string()))
-        } else {
-            Err(Error::InvalidDocumentId(s.to_string()))
+        // Length check is redundant with regex {32}, but uses constant for consistency
+        if s.len() != DOCUMENT_ID_HEX_LENGTH || !DOCUMENT_ID_REGEXP.is_match(s) {
+            return Err(Error::InvalidDocumentId(s.to_string()));
         }
+        Ok(DocumentId(s.to_string()))
+    }
+}
+
+impl AsRef<str> for DocumentId {
+    fn as_ref(&self) -> &str {
+        &self.0
     }
 }
 
 impl std::fmt::Display for DocumentId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
-    }
-}
-
-impl std::hash::Hash for DocumentId {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.0.hash(state);
     }
 }
 
@@ -66,7 +67,7 @@ mod tests {
     fn test_from_str_valid() {
         let valid_id = "a1b2c3d4e5f6789012345678901234ab";
         let result = DocumentId::from_str(valid_id).unwrap();
-        assert_eq!(result.0, valid_id);
+        assert_eq!(result.as_ref(), valid_id);
     }
 
     #[test]

@@ -8,7 +8,7 @@ pub type GetActivityResponse = Activity;
 /// Parameters for fetching a single activity by ID.
 ///
 /// Corresponds to `GET /api/v2/activities/:activityId`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct GetActivityParams {
     pub activity_id: ActivityId,
 }

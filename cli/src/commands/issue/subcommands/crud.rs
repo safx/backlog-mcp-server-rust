@@ -27,9 +27,7 @@ pub async fn create(
     let project_id = match project_id_or_key {
         ProjectIdOrKey::Id(id) => id,
         ProjectIdOrKey::Key(_) => {
-            return Err(
-                "Project key not supported for issue creation. Please use project ID.".into(),
-            );
+            anyhow::bail!("Project key not supported for issue creation. Please use project ID.");
         }
         ProjectIdOrKey::EitherIdOrKey(id, _) => id,
     };
@@ -78,18 +76,18 @@ pub async fn create(
     let custom_fields_map = if let Some(json_path) = &args.custom_fields_json {
         let path_str = json_path
             .to_str()
-            .ok_or_else(|| format!("Invalid UTF-8 in file path: {:?}", json_path))?;
+            .ok_or_else(|| anyhow::anyhow!("Invalid UTF-8 in file path: {:?}", json_path))?;
         match custom_fields::parse_custom_fields_json(path_str) {
             Ok(fields) => Some(fields),
             Err(e) => {
-                return Err(format!("Error parsing custom fields JSON: {e}").into());
+                anyhow::bail!("Error parsing custom fields JSON: {e}");
             }
         }
     } else if !args.custom_fields.is_empty() {
         match custom_fields::parse_custom_field_args(&args.custom_fields) {
             Ok(fields) => Some(fields),
             Err(e) => {
-                return Err(format!("Error parsing custom fields: {e}").into());
+                anyhow::bail!("Error parsing custom fields: {e}");
             }
         }
     } else {
@@ -164,18 +162,18 @@ pub async fn update(
     let custom_fields_map = if let Some(json_path) = &args.custom_fields_json {
         let path_str = json_path
             .to_str()
-            .ok_or_else(|| format!("Invalid UTF-8 in file path: {:?}", json_path))?;
+            .ok_or_else(|| anyhow::anyhow!("Invalid UTF-8 in file path: {:?}", json_path))?;
         match custom_fields::parse_custom_fields_json(path_str) {
             Ok(fields) => Some(fields),
             Err(e) => {
-                return Err(format!("Error parsing custom fields JSON: {e}").into());
+                anyhow::bail!("Error parsing custom fields JSON: {e}");
             }
         }
     } else if !args.custom_fields.is_empty() {
         match custom_fields::parse_custom_field_args(&args.custom_fields) {
             Ok(fields) => Some(fields),
             Err(e) => {
-                return Err(format!("Error parsing custom fields: {e}").into());
+                anyhow::bail!("Error parsing custom fields: {e}");
             }
         }
     } else {
