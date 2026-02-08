@@ -13,7 +13,7 @@ macro_rules! impl_identifier {
         $(
             #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
             #[cfg_attr(feature = "schemars", derive(JsonSchema))]
-            pub struct $type_name(pub $ty);
+            pub struct $type_name($ty);
 
             impl $type_name {
                 pub fn new(value: $ty) -> Self {

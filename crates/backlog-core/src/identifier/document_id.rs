@@ -22,18 +22,16 @@ impl DocumentId {
     pub fn unsafe_new(value: String) -> Self {
         Self(value)
     }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 impl Identifier for DocumentId {
     type Id = String;
     fn value(&self) -> Self::Id {
         self.0.clone()
-    }
-}
-
-impl From<String> for DocumentId {
-    fn from(value: String) -> Self {
-        DocumentId(value)
     }
 }
 

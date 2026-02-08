@@ -1,6 +1,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq)]
+#[non_exhaustive]
 pub enum Error {
     #[error("Invalid space key: {0}")]
     InvalidSpaceKey(String),

@@ -3,7 +3,7 @@ mod common;
 #[cfg(feature = "writable")]
 mod writable_tests {
     use super::common::setup_document_api;
-    use backlog_core::identifier::{Identifier, ProjectId};
+    use backlog_core::identifier::{DocumentId, Identifier, ProjectId};
     use backlog_document::api::{AddDocumentParams, DeleteDocumentParams};
     use wiremock::matchers::{body_string_contains, header, method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -117,7 +117,7 @@ mod writable_tests {
 
         let params = AddDocumentParams::new(ProjectId::new(1))
             .title("Child Document")
-            .parent_id(parent_id_str.to_string());
+            .parent_id(DocumentId::unsafe_new(parent_id_str.to_string()));
 
         let result = doc_api.add_document(params).await;
         let detail = result.expect("add_document with parent_id should succeed");
@@ -163,7 +163,7 @@ mod writable_tests {
             .mount(&mock_server)
             .await;
 
-        let params = DeleteDocumentParams::new(document_id_str.to_string());
+        let params = DeleteDocumentParams::new(DocumentId::unsafe_new(document_id_str.to_string()));
 
         let result = doc_api.delete_document(params).await;
         let detail = result.expect("delete_document should succeed");
@@ -189,7 +189,7 @@ mod writable_tests {
             .mount(&mock_server)
             .await;
 
-        let params = DeleteDocumentParams::new(document_id_str.to_string());
+        let params = DeleteDocumentParams::new(DocumentId::unsafe_new(document_id_str.to_string()));
 
         let result = doc_api.delete_document(params).await;
         assert!(result.is_err());
