@@ -266,6 +266,7 @@ version = "0.1.0"
 dependencies = [
  "backlog-api-core",
  "backlog-core",
+ "backlog-domain-models",
  "chrono",
  "client",
  "derive_builder",
