@@ -45,7 +45,7 @@ Model Context Protocol server that exposes Backlog API functionalities as tools 
 - **`backlog-api-macros`**: Procedural macros for API parameter serialization
 
 #### API Domain Modules
-- **`backlog-document`**: Document API endpoints (9 endpoints) - list/count, details and trees, attachment downloads, document creation/deletion, and tag addition/removal.
+- **`backlog-document`**: Document API endpoints (11 endpoints) - list/count, details and trees, comments, attachment downloads, document create/update/delete, content updates, and tag addition/removal.
 - **`backlog-file`**: Shared File API endpoints (2 endpoints) - project file management with type-safe directory/file distinction.
 - **`backlog-git`**: Git repository and Pull Request API endpoints (16 endpoints) - Git workflow including PR management.
 - **`backlog-issue`**: Issue management API endpoints (14 endpoints) - issue lifecycle and shared file linking.

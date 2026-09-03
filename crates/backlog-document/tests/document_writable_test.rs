@@ -4,8 +4,10 @@ mod common;
 mod writable_tests {
     use super::common::setup_document_api;
     use backlog_core::identifier::{DocumentId, Identifier, ProjectId};
-    use backlog_document::api::{AddDocumentParams, DeleteDocumentParams};
-    use wiremock::matchers::{body_string_contains, header, method, path};
+    use backlog_document::api::{
+        AddDocumentParams, DeleteDocumentParams, UpdateDocumentContentParams, UpdateDocumentParams,
+    };
+    use wiremock::matchers::{body_string, body_string_contains, header, method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     /// Creates mock JSON for DocumentResponse (used by add_document and delete_document)
@@ -193,5 +195,214 @@ mod writable_tests {
 
         let result = doc_api.delete_document(params).await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_update_document_title_and_emoji() {
+        let mock_server = MockServer::start().await;
+        let doc_api = setup_document_api(&mock_server).await;
+
+        let document_id_str = "00112233445566778899aabbccddeeff";
+        let response_body = create_mock_document_response_json(document_id_str, 1, "Updated Title");
+
+        Mock::given(method("PATCH"))
+            .and(path(format!("/api/v2/documents/{}", document_id_str)))
+            .and(header("Content-Type", "application/x-www-form-urlencoded"))
+            .and(body_string("title=Updated+Title&emoji=%F0%9F%93%9D"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&response_body))
+            .mount(&mock_server)
+            .await;
+
+        let params = UpdateDocumentParams::new(DocumentId::unsafe_new(document_id_str.to_string()))
+            .title("Updated Title")
+            .emoji("📝");
+
+        let result = doc_api.update_document(params).await;
+        let detail = result.expect("update_document should succeed");
+        assert_eq!(detail.title, "Updated Title");
+    }
+
+    #[tokio::test]
+    async fn test_update_document_empty_emoji_sends_key() {
+        let mock_server = MockServer::start().await;
+        let doc_api = setup_document_api(&mock_server).await;
+
+        let document_id_str = "00112233445566778899aabbccddeeff";
+        let mut response_body = create_mock_document_response_json(document_id_str, 1, "No Emoji");
+        response_body["emoji"] = serde_json::Value::Null;
+
+        Mock::given(method("PATCH"))
+            .and(path(format!("/api/v2/documents/{}", document_id_str)))
+            .and(body_string("emoji="))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&response_body))
+            .mount(&mock_server)
+            .await;
+
+        let params = UpdateDocumentParams::new(DocumentId::unsafe_new(document_id_str.to_string()))
+            .emoji("");
+
+        let result = doc_api.update_document(params).await;
+        let detail = result.expect("empty emoji should be sent as emoji=");
+        assert!(detail.emoji.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_update_document_without_fields_returns_error() {
+        let mock_server = MockServer::start().await;
+        let doc_api = setup_document_api(&mock_server).await;
+
+        let document_id_str = "00112233445566778899aabbccddeeff";
+
+        Mock::given(method("PATCH"))
+            .and(path(format!("/api/v2/documents/{}", document_id_str)))
+            .and(body_string(""))
+            .respond_with(ResponseTemplate::new(400).set_body_json(serde_json::json!({
+                "errors": [{
+                    "message": "Specify title or emoji.",
+                    "code": 7,
+                    "moreInfo": ""
+                }]
+            })))
+            .mount(&mock_server)
+            .await;
+
+        let params = UpdateDocumentParams::new(DocumentId::unsafe_new(document_id_str.to_string()));
+
+        let result = doc_api.update_document(params).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_update_document_accepts_null_user_ids() {
+        let mock_server = MockServer::start().await;
+        let doc_api = setup_document_api(&mock_server).await;
+
+        let document_id_str = "00112233445566778899aabbccddeeff";
+        let mut response_body = create_mock_document_response_json(document_id_str, 1, "Title");
+        response_body["createdUserId"] = serde_json::Value::Null;
+        response_body["updatedUserId"] = serde_json::Value::Null;
+
+        Mock::given(method("PATCH"))
+            .and(path(format!("/api/v2/documents/{}", document_id_str)))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&response_body))
+            .mount(&mock_server)
+            .await;
+
+        let params = UpdateDocumentParams::new(DocumentId::unsafe_new(document_id_str.to_string()))
+            .title("Title");
+
+        let result = doc_api.update_document(params).await;
+        let detail = result.expect("null user ids should deserialize");
+        assert!(detail.created_user_id.is_none());
+        assert!(detail.updated_user_id.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_update_document_content_success() {
+        let mock_server = MockServer::start().await;
+        let doc_api = setup_document_api(&mock_server).await;
+
+        let document_id_str = "00112233445566778899aabbccddeeff";
+        let markdown = "# Heading\n\nUpdated document content.";
+        let mut response_body = create_mock_document_response_json(document_id_str, 1, "Doc");
+        // Update responses omit tags
+        response_body.as_object_mut().unwrap().remove("tags");
+        response_body["plain"] = serde_json::json!(markdown);
+        response_body["code"] = serde_json::Value::Null;
+        response_body["markdownIsFallback"] = serde_json::json!(false);
+
+        Mock::given(method("PATCH"))
+            .and(path(format!(
+                "/api/v2/documents/{}/content",
+                document_id_str
+            )))
+            .and(header("Content-Type", "application/x-www-form-urlencoded"))
+            .and(body_string(
+                "content=%23+Heading%0A%0AUpdated+document+content.",
+            ))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&response_body))
+            .mount(&mock_server)
+            .await;
+
+        let params = UpdateDocumentContentParams::new(
+            DocumentId::unsafe_new(document_id_str.to_string()),
+            markdown,
+        );
+
+        let result = doc_api.update_document_content(params).await;
+        let updated = result.expect("update_document_content should succeed");
+        assert_eq!(updated.document.title, "Doc");
+        assert_eq!(updated.document.plain.as_deref(), Some(markdown));
+        assert!(updated.code.is_none());
+        assert!(!updated.markdown_is_fallback);
+    }
+
+    #[tokio::test]
+    async fn test_update_document_content_no_change() {
+        let mock_server = MockServer::start().await;
+        let doc_api = setup_document_api(&mock_server).await;
+
+        let document_id_str = "00112233445566778899aabbccddeeff";
+        let mut response_body = create_mock_document_response_json(document_id_str, 1, "Doc");
+        response_body["code"] = serde_json::json!("NO_CHANGE");
+        response_body["markdownIsFallback"] = serde_json::json!(false);
+
+        Mock::given(method("PATCH"))
+            .and(path(format!(
+                "/api/v2/documents/{}/content",
+                document_id_str
+            )))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&response_body))
+            .mount(&mock_server)
+            .await;
+
+        let params = UpdateDocumentContentParams::new(
+            DocumentId::unsafe_new(document_id_str.to_string()),
+            "Plain text content",
+        );
+
+        let result = doc_api.update_document_content(params).await;
+        let updated = result.expect("NO_CHANGE is a successful response");
+        assert_eq!(updated.code.as_deref(), Some("NO_CHANGE"));
+    }
+
+    #[tokio::test]
+    async fn test_update_document_content_conflict() {
+        let mock_server = MockServer::start().await;
+        let doc_api = setup_document_api(&mock_server).await;
+
+        let document_id_str = "00112233445566778899aabbccddeeff";
+
+        Mock::given(method("PATCH"))
+            .and(path(format!(
+                "/api/v2/documents/{}/content",
+                document_id_str
+            )))
+            .respond_with(ResponseTemplate::new(409).set_body_json(serde_json::json!({
+                "errors": [{
+                    "message": "Document has been changed",
+                    "code": 7,
+                    "moreInfo": "DOCUMENT_CHANGED"
+                }]
+            })))
+            .mount(&mock_server)
+            .await;
+
+        let params = UpdateDocumentContentParams::new(
+            DocumentId::unsafe_new(document_id_str.to_string()),
+            "# New content",
+        );
+
+        let err = doc_api
+            .update_document_content(params)
+            .await
+            .expect_err("409 should be an error");
+        match err {
+            backlog_api_core::Error::HttpStatus { status, errors, .. } => {
+                assert_eq!(status, 409);
+                assert_eq!(errors[0].more_info.as_deref(), Some("DOCUMENT_CHANGED"));
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
     }
 }

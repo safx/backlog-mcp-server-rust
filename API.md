@@ -1,8 +1,8 @@
 # Backlog API Implementation Status
 
 ## Summary
-- Total APIs listed: 159
-- Implemented: 152 (96%)
+- Total APIs listed: 161
+- Implemented: 154 (96%)
 - Not implemented: 7 (4%)
 
 ### Spaces
@@ -201,6 +201,8 @@
 - ✅ GetDocument: Returns information about document page: GET /api/v2/documents/:documentId
 - ✅ DownloadDocumentAttachment: Downloads document attachments: GET /api/v2/documents/:documentId/attachments/:attachmentId
 - ✅ GetDocumentComments: Returns list of comments on document page: GET /api/v2/documents/:documentId/comments
+- ✅ UpdateDocument: Updates document title and emoji: PATCH /api/v2/documents/:documentId
+- ✅ UpdateDocumentContent: Replaces document content with Markdown: PATCH /api/v2/documents/:documentId/content
 
 ### Users
 - ✅ GetOwnUser: Returns own information about user: GET /api/v2/users/myself

@@ -4,7 +4,9 @@ use backlog_api_client::client::BacklogApiClient;
 use backlog_core::ProjectIdOrKey;
 use backlog_core::identifier::{DocumentAttachmentId, DocumentId, Identifier, ProjectId};
 #[cfg(feature = "document_writable")]
-use backlog_document::{AddDocumentParams, DeleteDocumentParams};
+use backlog_document::{
+    AddDocumentParams, DeleteDocumentParams, UpdateDocumentContentParams, UpdateDocumentParams,
+};
 use backlog_document::{
     DocumentOrder, DocumentSortKey, DownloadAttachmentParams, GetDocumentCommentsParams,
     GetDocumentParams, GetDocumentTreeParamsBuilder, ListDocumentsParamsBuilder,
@@ -329,7 +331,9 @@ pub(crate) async fn add(client: &BacklogApiClient, options: AddOptions) -> CliRe
         println!("   Project ID: {}", doc.project_id.value());
         println!(
             "   Created by user ID: {} at {}",
-            doc.created_user_id,
+            doc.created_user_id
+                .map(|id| id.to_string())
+                .unwrap_or_default(),
             doc.created.format("%Y-%m-%d %H:%M:%S")
         );
     }
@@ -362,9 +366,82 @@ pub(crate) async fn delete(
         println!("   {} {}... \"{}\"", emoji_str, id_short, doc.title);
         println!(
             "   Created by user ID: {} at {}",
-            doc.created_user_id,
+            doc.created_user_id
+                .map(|id| id.to_string())
+                .unwrap_or_default(),
             doc.created.format("%Y-%m-%d %H:%M:%S")
         );
+    }
+
+    Ok(())
+}
+
+/// Update document title or emoji
+#[cfg(feature = "document_writable")]
+pub(crate) async fn update(
+    client: &BacklogApiClient,
+    document_id: String,
+    title: Option<String>,
+    emoji: Option<String>,
+    json: bool,
+) -> CliResult<()> {
+    if !json {
+        println!("Updating document: {document_id}");
+    }
+
+    let mut params = UpdateDocumentParams::new(DocumentId::from_str(&document_id)?);
+    if let Some(title) = title {
+        params = params.title(title);
+    }
+    if let Some(emoji) = emoji {
+        params = params.emoji(emoji);
+    }
+
+    let doc = client.document().update_document(params).await?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&doc)?);
+    } else {
+        let emoji_str = doc.emoji.as_deref().unwrap_or("📄");
+        let id_short = &doc.id.to_string()[..8];
+        println!("✅ Document updated successfully");
+        println!("   {} {}... \"{}\"", emoji_str, id_short, doc.title);
+        println!("   Updated at {}", doc.updated.format("%Y-%m-%d %H:%M:%S"));
+    }
+
+    Ok(())
+}
+
+/// Replace document content
+#[cfg(feature = "document_writable")]
+pub(crate) async fn update_content(
+    client: &BacklogApiClient,
+    document_id: String,
+    content: String,
+    json: bool,
+) -> CliResult<()> {
+    if !json {
+        println!("Updating document content: {document_id}");
+    }
+
+    let params = UpdateDocumentContentParams::new(DocumentId::from_str(&document_id)?, content);
+    let updated = client.document().update_document_content(params).await?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&updated)?);
+    } else {
+        let doc = &updated.document;
+        let emoji_str = doc.emoji.as_deref().unwrap_or("📄");
+        let id_short = &doc.id.to_string()[..8];
+        match updated.code.as_deref() {
+            Some(code) => println!("⚠️  Content not updated: {code}"),
+            None => println!("✅ Document content updated successfully"),
+        }
+        println!("   {} {}... \"{}\"", emoji_str, id_short, doc.title);
+        println!("   Updated at {}", doc.updated.format("%Y-%m-%d %H:%M:%S"));
+        if updated.markdown_is_fallback {
+            println!("   Warning: plain is not Markdown, refetch before editing");
+        }
     }
 
     Ok(())

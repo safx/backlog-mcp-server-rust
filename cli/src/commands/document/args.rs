@@ -138,4 +138,34 @@ pub enum DocumentCommands {
         #[clap(long)]
         json: bool,
     },
+    #[cfg(feature = "document_writable")]
+    /// Update document title or emoji
+    #[command(group(clap::ArgGroup::new("metadata").required(true).multiple(true)))]
+    Update {
+        /// Document ID (32-char hex)
+        #[clap(name = "DOCUMENT_ID")]
+        document_id: String,
+        /// New title (empty string clears it)
+        #[clap(short, long, group = "metadata")]
+        title: Option<String>,
+        /// New emoji (empty string removes it)
+        #[clap(short, long, group = "metadata")]
+        emoji: Option<String>,
+        /// Output in JSON format
+        #[clap(long)]
+        json: bool,
+    },
+    #[cfg(feature = "document_writable")]
+    /// Replace document content with Markdown
+    UpdateContent {
+        /// Document ID (32-char hex)
+        #[clap(name = "DOCUMENT_ID")]
+        document_id: String,
+        /// Full Markdown content
+        #[clap(short, long)]
+        content: String,
+        /// Output in JSON format
+        #[clap(long)]
+        json: bool,
+    },
 }

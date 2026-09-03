@@ -8,7 +8,8 @@ use super::{
 use super::{
     AddDocumentParams, AddDocumentResponse, AddDocumentTagParams, AddDocumentTagResponse,
     DeleteDocumentParams, DeleteDocumentResponse, RemoveDocumentTagParams,
-    RemoveDocumentTagResponse,
+    RemoveDocumentTagResponse, UpdateDocumentContentParams, UpdateDocumentContentResponse,
+    UpdateDocumentParams, UpdateDocumentResponse,
 };
 use crate::models::DocumentDetail;
 use backlog_api_core::Result;
@@ -114,6 +115,28 @@ impl DocumentApi {
         &self,
         params: DeleteDocumentParams,
     ) -> Result<DeleteDocumentResponse> {
+        self.0.execute(params).await
+    }
+
+    /// Update document title or emoji
+    ///
+    /// Corresponds to `PATCH /api/v2/documents/:documentId`.
+    #[cfg(feature = "writable")]
+    pub async fn update_document(
+        &self,
+        params: UpdateDocumentParams,
+    ) -> Result<UpdateDocumentResponse> {
+        self.0.execute(params).await
+    }
+
+    /// Replace document content with Markdown
+    ///
+    /// Corresponds to `PATCH /api/v2/documents/:documentId/content`.
+    #[cfg(feature = "writable")]
+    pub async fn update_document_content(
+        &self,
+        params: UpdateDocumentContentParams,
+    ) -> Result<UpdateDocumentContentResponse> {
         self.0.execute(params).await
     }
 }

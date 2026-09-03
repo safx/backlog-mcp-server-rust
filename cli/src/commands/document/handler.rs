@@ -91,6 +91,19 @@ pub async fn execute(client: &BacklogApiClient, args: DocumentArgs) -> CliResult
         DocumentCommands::Delete { document_id, json } => {
             subcommands::list::delete(client, document_id, json).await?
         }
+        #[cfg(feature = "document_writable")]
+        DocumentCommands::Update {
+            document_id,
+            title,
+            emoji,
+            json,
+        } => subcommands::list::update(client, document_id, title, emoji, json).await?,
+        #[cfg(feature = "document_writable")]
+        DocumentCommands::UpdateContent {
+            document_id,
+            content,
+            json,
+        } => subcommands::list::update_content(client, document_id, content, json).await?,
     }
     Ok(())
 }

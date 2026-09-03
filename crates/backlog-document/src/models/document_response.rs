@@ -5,10 +5,10 @@ use serde_json::Value as JsonValue;
 
 use crate::models::tag::DocumentTag;
 
-/// Response type for add_document and delete_document APIs
+/// Response type for add, delete, and update document APIs
 ///
 /// Unlike DocumentDetail, this type uses userId fields instead of full User objects.
-/// Note: json and plain fields may be null in delete_document responses.
+/// Note: json, plain, and user id fields may be null.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[serde(rename_all = "camelCase")]
@@ -23,9 +23,11 @@ pub struct DocumentResponse {
     pub status_id: i32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub emoji: Option<String>,
-    pub created_user_id: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_user_id: Option<u32>,
     pub created: DateTime<Utc>,
-    pub updated_user_id: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updated_user_id: Option<u32>,
     pub updated: DateTime<Utc>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tags: Vec<DocumentTag>,

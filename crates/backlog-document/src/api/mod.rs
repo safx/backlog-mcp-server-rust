@@ -19,6 +19,10 @@ mod add_document_tag;
 mod delete_document;
 #[cfg(feature = "writable")]
 mod remove_document_tag;
+#[cfg(feature = "writable")]
+mod update_document;
+#[cfg(feature = "writable")]
+mod update_document_content;
 
 // Re-export parameter types and response types
 pub use download_attachment::DownloadAttachmentParams;
@@ -41,6 +45,10 @@ pub use add_document_tag::{AddDocumentTagParams, AddDocumentTagResponse};
 pub use delete_document::{DeleteDocumentParams, DeleteDocumentResponse};
 #[cfg(feature = "writable")]
 pub use remove_document_tag::{RemoveDocumentTagParams, RemoveDocumentTagResponse};
+#[cfg(feature = "writable")]
+pub use update_document::{UpdateDocumentParams, UpdateDocumentResponse};
+#[cfg(feature = "writable")]
+pub use update_document_content::{UpdateDocumentContentParams, UpdateDocumentContentResponse};
 
 #[cfg(feature = "writable")]
 fn validate_tag_names(names: &[String]) -> backlog_core::Result<()> {
