@@ -1,4 +1,6 @@
 use clap::{Args, Parser};
+#[cfg(feature = "document_writable")]
+use std::path::PathBuf;
 
 #[cfg(feature = "document")]
 #[derive(Args)]
@@ -157,13 +159,17 @@ pub enum DocumentCommands {
     },
     #[cfg(feature = "document_writable")]
     /// Replace document content with Markdown
+    #[command(group(clap::ArgGroup::new("body").required(true)))]
     UpdateContent {
         /// Document ID (32-char hex)
         #[clap(name = "DOCUMENT_ID")]
         document_id: String,
         /// Full Markdown content
-        #[clap(short, long)]
-        content: String,
+        #[clap(short, long, group = "body")]
+        content: Option<String>,
+        /// Read Markdown content from file ("-" for stdin)
+        #[clap(short, long, group = "body")]
+        file: Option<PathBuf>,
         /// Output in JSON format
         #[clap(long)]
         json: bool,

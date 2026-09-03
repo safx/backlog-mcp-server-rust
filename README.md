@@ -116,9 +116,9 @@ The following tools are grouped by their respective modules:
 
 ### Tool Summary
 
-With the default configuration, you have access to **43 tools** for Backlog automation:
+With the default configuration, you have access to **45 tools** for Backlog automation:
 
-- **Documents** (9 tools): List and count documents, view trees and details, download attachments, create/delete documents, add/remove tags
+- **Documents** (11 tools): List and count documents, view trees and details, download attachments, create/update/delete documents, update content, add/remove tags
 - **Git/Pull Requests** (8 tools): Manage repositories, PRs, comments, and attachments
 - **Issues** (15 tools): View, create, update issues, manage comments, attachments, shared files, related issues, and priorities
 - **Projects** (3 tools): Get project status, issue types, and custom field definitions
@@ -141,6 +141,8 @@ The server includes both **read operations** for information gathering and **wri
 -   **`document_tree_get`**: Get the document tree for a specified project
 -   **`document_add`**: Add a new document to a Backlog project
 -   **`document_delete`**: Delete a document from Backlog
+-   **`document_update`**: Update a document's title or emoji
+-   **`document_content_update`**: Replace a document's body with Markdown
 
 Names above are shown without `BACKLOG_PREFIX` (default `backlog_`). When `project_ids` is omitted,
 the list tool searches participating projects within `BACKLOG_PROJECTS`. If a project restriction is
@@ -248,8 +250,8 @@ The MCP server supports multiple feature flags to enable different write operati
     -   Allows AI agents to update wiki page content, names, and notification settings
 
 -   **`document_writable`** (enabled by default)
-    -   Enables: `document_add`, `document_delete`, `document_tag_add`, and `document_tag_remove`
-    -   Allows AI agents to create/delete documents and add/remove tags; list/count remain available when disabled
+    -   Enables: `document_add`, `document_delete`, `document_update`, `document_content_update`, `document_tag_add`, and `document_tag_remove`
+    -   Allows AI agents to create/update/delete documents and add/remove tags; list/count remain available when disabled
 
 ### Build Configuration
 

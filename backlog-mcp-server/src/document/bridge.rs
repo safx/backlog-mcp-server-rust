@@ -17,7 +17,10 @@ use backlog_core::{
 };
 
 #[cfg(feature = "document_writable")]
-use super::request::{AddDocumentRequest, DeleteDocumentRequest, DocumentTagsRequest};
+use super::request::{
+    AddDocumentRequest, DeleteDocumentRequest, DocumentTagsRequest, UpdateDocumentContentRequest,
+    UpdateDocumentRequest,
+};
 use super::request::{
     DownloadDocumentAttachmentRequest, GetDocumentCommentsRequest, GetDocumentCountRequest,
     GetDocumentDetailsRequest, GetDocumentTreeRequest, ListDocumentsRequest,
@@ -30,6 +33,8 @@ use crate::error::{Error, Result};
 use backlog_api_client::{
     AddDocumentParams, AddDocumentResponse, AddDocumentTagParams, AddDocumentTagResponse,
     DeleteDocumentParams, DeleteDocumentResponse, RemoveDocumentTagParams,
+    UpdateDocumentContentParams, UpdateDocumentContentResponse, UpdateDocumentParams,
+    UpdateDocumentResponse,
 };
 
 fn parameter_error(error: impl std::fmt::Display) -> Error {
@@ -304,6 +309,53 @@ pub(crate) async fn delete_document_bridge(
     client_guard
         .document()
         .delete_document(params)
+        .await
+        .map_err(crate::error::Error::from)
+}
+
+#[cfg(feature = "document_writable")]
+pub(crate) async fn update_document_bridge(
+    client: Arc<Mutex<BacklogApiClient>>,
+    req: UpdateDocumentRequest,
+    access_control: &AccessControl,
+) -> Result<UpdateDocumentResponse> {
+    if req.title.is_none() && req.emoji.is_none() {
+        return Err(crate::error::Error::Parameter(
+            "Nothing to update. Provide title and/or emoji.".to_string(),
+        ));
+    }
+    let client_guard = client.lock().await;
+    let document_id = DocumentId::from_str(req.document_id.trim())?;
+    check_document_access(&client_guard, &document_id, access_control).await?;
+
+    let mut params = UpdateDocumentParams::new(document_id);
+    if let Some(title) = req.title {
+        params = params.title(title);
+    }
+    if let Some(emoji) = req.emoji {
+        params = params.emoji(emoji);
+    }
+    client_guard
+        .document()
+        .update_document(params)
+        .await
+        .map_err(crate::error::Error::from)
+}
+
+#[cfg(feature = "document_writable")]
+pub(crate) async fn update_document_content_bridge(
+    client: Arc<Mutex<BacklogApiClient>>,
+    req: UpdateDocumentContentRequest,
+    access_control: &AccessControl,
+) -> Result<UpdateDocumentContentResponse> {
+    let client_guard = client.lock().await;
+    let document_id = DocumentId::from_str(req.document_id.trim())?;
+    check_document_access(&client_guard, &document_id, access_control).await?;
+
+    let params = UpdateDocumentContentParams::new(document_id, req.content);
+    client_guard
+        .document()
+        .update_document_content(params)
         .await
         .map_err(crate::error::Error::from)
 }

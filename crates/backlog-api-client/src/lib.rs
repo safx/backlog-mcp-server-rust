@@ -1,5 +1,6 @@
 pub mod client;
 pub use ::client::DownloadedFile; // Re-export DownloadedFile from the client crate
+pub use backlog_api_core::BacklogApiErrorEntry;
 pub use backlog_api_core::Error as ApiError;
 pub use backlog_api_core::bytes; // Re-export bytes
 
@@ -38,7 +39,8 @@ pub use backlog_document::{
 pub use backlog_document::{
     AddDocumentParams, AddDocumentResponse, AddDocumentTagParams, AddDocumentTagResponse,
     DeleteDocumentParams, DeleteDocumentResponse, RemoveDocumentTagParams,
-    RemoveDocumentTagResponse,
+    RemoveDocumentTagResponse, UpdateDocumentContentParams, UpdateDocumentContentResponse,
+    UpdateDocumentParams, UpdateDocumentResponse,
 };
 
 // File module (from backlog_file)

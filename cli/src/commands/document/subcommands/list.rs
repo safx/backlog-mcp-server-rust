@@ -11,6 +11,10 @@ use backlog_document::{
     DocumentOrder, DocumentSortKey, DownloadAttachmentParams, GetDocumentCommentsParams,
     GetDocumentParams, GetDocumentTreeParamsBuilder, ListDocumentsParamsBuilder,
 };
+#[cfg(feature = "document_writable")]
+use std::io::Read;
+#[cfg(feature = "document_writable")]
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 /// Parameters for list command
@@ -417,9 +421,15 @@ pub(crate) async fn update(
 pub(crate) async fn update_content(
     client: &BacklogApiClient,
     document_id: String,
-    content: String,
+    content: Option<String>,
+    file: Option<PathBuf>,
     json: bool,
 ) -> CliResult<()> {
+    let content = match (content, file) {
+        (Some(content), _) => content,
+        (None, Some(path)) => read_content(&path)?,
+        (None, None) => anyhow::bail!("--content or --file is required"),
+    };
     if !json {
         println!("Updating document content: {document_id}");
     }
@@ -445,4 +455,35 @@ pub(crate) async fn update_content(
     }
 
     Ok(())
+}
+
+/// Read Markdown from file or stdin
+#[cfg(feature = "document_writable")]
+fn read_content(path: &Path) -> CliResult<String> {
+    if path == Path::new("-") {
+        let mut buf = String::new();
+        std::io::stdin()
+            .read_to_string(&mut buf)
+            .context("Failed to read stdin")?;
+        return Ok(buf);
+    }
+    std::fs::read_to_string(path).with_context(|| format!("Failed to read {}", path.display()))
+}
+
+#[cfg(all(test, feature = "document_writable"))]
+mod tests {
+    use super::read_content;
+
+    #[test]
+    fn read_content_from_file() {
+        let path = std::env::temp_dir().join("blg_read_content_test.md");
+        std::fs::write(&path, "# Title\n").unwrap();
+        assert_eq!(read_content(&path).unwrap(), "# Title\n");
+        std::fs::remove_file(&path).unwrap();
+    }
+
+    #[test]
+    fn read_content_missing_file() {
+        assert!(read_content(std::path::Path::new("/nonexistent/blg.md")).is_err());
+    }
 }

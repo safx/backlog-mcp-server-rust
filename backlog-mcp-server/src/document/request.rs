@@ -104,3 +104,31 @@ pub(crate) struct DeleteDocumentRequest {
     )]
     pub document_id: String,
 }
+
+#[cfg(feature = "document_writable")]
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub(crate) struct UpdateDocumentRequest {
+    #[schemars(description = "The document ID to update (32-digit hexadecimal string).")]
+    pub document_id: String,
+    #[schemars(
+        description = "New title. Omit to keep the current title; pass an empty string to clear it."
+    )]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[schemars(
+        description = "New emoji icon. Omit to keep the current emoji; pass an empty string to remove it."
+    )]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub emoji: Option<String>,
+}
+
+#[cfg(feature = "document_writable")]
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub(crate) struct UpdateDocumentContentRequest {
+    #[schemars(description = "The document ID to update (32-digit hexadecimal string).")]
+    pub document_id: String,
+    #[schemars(
+        description = "Full replacement body in Markdown. Read the current body with document_details_get ('plain'), edit it, and send the whole document."
+    )]
+    pub content: String,
+}

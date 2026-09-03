@@ -59,7 +59,10 @@ use crate::{
 use crate::wiki::request::UpdateWikiRequest;
 
 #[cfg(feature = "document_writable")]
-use crate::document::request::{AddDocumentRequest, DeleteDocumentRequest, DocumentTagsRequest};
+use crate::document::request::{
+    AddDocumentRequest, DeleteDocumentRequest, DocumentTagsRequest, UpdateDocumentContentRequest,
+    UpdateDocumentRequest,
+};
 
 use crate::access_control::AccessControl;
 #[cfg(feature = "git_writable")]
@@ -854,6 +857,37 @@ impl Server {
         Ok(CallToolResult::success(vec![ContentBlock::json(
             deleted_document,
         )?]))
+    }
+
+    #[cfg(feature = "document_writable")]
+    #[tool(
+        description = "Update a document's title and/or emoji. Requires document_id (32-digit hex string) and at least one of title or emoji. Omit a field to keep it; pass an empty string (not null) to clear it. The body is not changed; use document_content_update for that."
+    )]
+    async fn document_update(&self, request: Parameters<UpdateDocumentRequest>) -> McpResult {
+        let document = document::bridge::update_document_bridge(
+            self.client.clone(),
+            request.0,
+            &self.access_control,
+        )
+        .await?;
+        Ok(CallToolResult::success(vec![ContentBlock::json(document)?]))
+    }
+
+    #[cfg(feature = "document_writable")]
+    #[tool(
+        description = "Replace a document's whole body with Markdown. Requires document_id (32-digit hex string) and content (the full new body). Read the current body with document_details_get ('plain'), edit it, and send the whole document. In the response, code \"NO_CHANGE\" means the body was identical, and markdownIsFallback=true means 'plain' is not Markdown, so do not edit and resend it. HTTP 409 (DOCUMENT_CHANGED) means the document changed concurrently: re-read and retry. Needs the space feature use-document-content-update-api; otherwise HTTP 404."
+    )]
+    async fn document_content_update(
+        &self,
+        request: Parameters<UpdateDocumentContentRequest>,
+    ) -> McpResult {
+        let updated = document::bridge::update_document_content_bridge(
+            self.client.clone(),
+            request.0,
+            &self.access_control,
+        )
+        .await?;
+        Ok(CallToolResult::success(vec![ContentBlock::json(updated)?]))
     }
 }
 

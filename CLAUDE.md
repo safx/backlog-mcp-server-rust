@@ -365,7 +365,7 @@ pub use get_issues::{GetIssuesParams, GetIssuesParamsBuilder};
 - Project access control via `BACKLOG_PROJECTS` environment variable
 - Unified file handling with intelligent format detection
 - Available tools follow `category_resource_action` naming pattern (e.g., `issue_details_get`, `wiki_update`)
-- 39 tools available covering read and write operations across all domains
+- 41 tools available covering read and write operations across all domains
 
 ## Release Process
 

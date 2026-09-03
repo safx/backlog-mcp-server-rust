@@ -107,6 +107,8 @@ struct WatchingArgs {
 async fn main() -> anyhow::Result<()> {
     use anyhow::Context;
 
+    let cli = Cli::parse();
+
     let base_url =
         env::var("BACKLOG_BASE_URL").context("BACKLOG_BASE_URL environment variable not set")?;
     let api_key =
@@ -114,7 +116,6 @@ async fn main() -> anyhow::Result<()> {
 
     let client = BacklogApiClient::new(&base_url)?.with_api_key(api_key);
 
-    let cli = Cli::parse();
     match cli.command {
         #[cfg(feature = "git")]
         Commands::Repo(repo_args) => {

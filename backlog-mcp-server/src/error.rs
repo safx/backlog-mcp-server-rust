@@ -69,12 +69,22 @@ impl From<Error> for McpError {
                 match api_error {
                     ApiError::HttpStatus {
                         status,
+                        errors,
                         errors_summary,
-                        ..
                     } => {
-                        // errors_summary already contains a good summary from ApiError's Display
+                        // Append moreInfo codes such as DOCUMENT_CHANGED
+                        let codes: Vec<&str> = errors
+                            .iter()
+                            .filter_map(|e| e.more_info.as_deref())
+                            .filter(|s| !s.is_empty())
+                            .collect();
+                        let detail = if codes.is_empty() {
+                            errors_summary
+                        } else {
+                            format!("{errors_summary} [{}]", codes.join(", "))
+                        };
                         McpError::invalid_request(
-                            format!("Backlog API Error (HTTP {status}): {errors_summary}"),
+                            format!("Backlog API Error (HTTP {status}): {detail}"),
                             None,
                         )
                     }
@@ -153,5 +163,29 @@ impl From<std::string::FromUtf8Error> for Error {
 impl From<serde_json::Error> for Error {
     fn from(err: serde_json::Error) -> Self {
         Error::Server(format!("JSON serialization/deserialization error: {err}"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use backlog_api_client::BacklogApiErrorEntry;
+
+    #[test]
+    fn more_info_in_message() {
+        let err = Error::Api(ApiError::HttpStatus {
+            status: 409,
+            errors: vec![BacklogApiErrorEntry {
+                message: "Document changed".to_string(),
+                code: 1,
+                more_info: Some("DOCUMENT_CHANGED".to_string()),
+            }],
+            errors_summary: "Document changed".to_string(),
+        });
+        let mcp: McpError = err.into();
+        assert_eq!(
+            mcp.message,
+            "Backlog API Error (HTTP 409): Document changed [DOCUMENT_CHANGED]"
+        );
     }
 }

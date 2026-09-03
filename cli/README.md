@@ -142,6 +142,33 @@ blg wiki update 12345 --name "Updated Title" --content "Updated content" --mail-
 blg wiki update 12345 --content "Silent update" --mail-notify false
 ```
 
+**Document Management:**
+```bash
+# List documents in a project
+blg document list --project-id MYPROJECT
+
+# Show document details
+blg document get 0195faa11fcb7aaab4c4005a7ada4b6f
+
+# Show the document tree of a project
+blg document tree --project-id MYPROJECT
+
+# Download a document attachment
+blg document download 0195faa11fcb7aaab4c4005a7ada4b6f 12345 --output image.png
+
+# Create a document (requires document_writable feature)
+blg document add --project-id 123 --title "Design Notes" --content "# Notes"
+
+# Update title or emoji; an empty string clears the field (requires document_writable feature)
+blg document update 0195faa11fcb7aaab4c4005a7ada4b6f --title "New Title" --emoji ""
+
+# Replace the whole body with Markdown from a file, or "-" for stdin (requires document_writable feature)
+blg document update-content 0195faa11fcb7aaab4c4005a7ada4b6f --file body.md
+
+# Delete a document (requires document_writable feature)
+blg document delete 0195faa11fcb7aaab4c4005a7ada4b6f
+```
+
 **Issue Management:**
 ```bash
 # List issues for a project

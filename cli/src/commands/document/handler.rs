@@ -102,8 +102,9 @@ pub async fn execute(client: &BacklogApiClient, args: DocumentArgs) -> CliResult
         DocumentCommands::UpdateContent {
             document_id,
             content,
+            file,
             json,
-        } => subcommands::list::update_content(client, document_id, content, json).await?,
+        } => subcommands::list::update_content(client, document_id, content, file, json).await?,
     }
     Ok(())
 }
