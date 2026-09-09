@@ -126,7 +126,7 @@ pub(crate) async fn disk_usage(client: &BacklogApiClient, format: String) -> Cli
                             (detail.project_id.value(), total)
                         })
                         .collect();
-                    project_usages.sort_by(|a, b| b.1.cmp(&a.1));
+                    project_usages.sort_by_key(|usage| std::cmp::Reverse(usage.1));
 
                     for (i, (project_id, usage)) in project_usages.iter().take(10).enumerate() {
                         println!(
