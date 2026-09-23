@@ -3,7 +3,7 @@ mod common;
 #[cfg(feature = "writable")]
 mod tests {
     use crate::common::*;
-    use backlog_star::AddStarParams;
+    use backlog_star::{AddStarParams, DeleteStarParams};
     use wiremock::{matchers::*, MockServer};
 
     #[tokio::test]
@@ -269,5 +269,49 @@ mod tests {
             err,
             backlog_api_core::Error::HttpStatus { status: 500, .. }
         ));
+    }
+
+    #[tokio::test]
+    async fn test_delete_star_success() {
+        let mock_server = MockServer::start().await;
+        let api = setup_star_api(&mock_server).await;
+
+        Mock::given(method("DELETE"))
+            .and(path("/api/v2/stars/42"))
+            .respond_with(ResponseTemplate::new(204))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        api.delete_star(DeleteStarParams::new(42u32))
+            .await
+            .expect("delete_star should succeed");
+    }
+
+    #[tokio::test]
+    async fn test_delete_star_error_statuses() {
+        for status in [401u16, 403, 404, 500] {
+            let mock_server = MockServer::start().await;
+            let api = setup_star_api(&mock_server).await;
+
+            Mock::given(method("DELETE"))
+                .and(path("/api/v2/stars/42"))
+                .respond_with(
+                    ResponseTemplate::new(status).set_body_string(
+                        r#"{"errors":[{"message":"error","code":6,"moreInfo":""}]}"#,
+                    ),
+                )
+                .mount(&mock_server)
+                .await;
+
+            let err = api
+                .delete_star(DeleteStarParams::new(42u32))
+                .await
+                .expect_err("should fail");
+            assert!(
+                matches!(err, backlog_api_core::Error::HttpStatus { status: s, .. } if s == status),
+                "unexpected error for {status}: {err:?}"
+            );
+        }
     }
 }

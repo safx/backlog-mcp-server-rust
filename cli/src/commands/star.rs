@@ -1,7 +1,7 @@
-#[cfg(all(feature = "star", feature = "star_writable"))]
-use backlog_api_client::AddStarParams;
 #[cfg(feature = "star")]
 use backlog_api_client::StarApi;
+#[cfg(all(feature = "star", feature = "star_writable"))]
+use backlog_api_client::{AddStarParams, DeleteStarParams};
 use clap::{Args, Subcommand};
 
 #[derive(Args)]
@@ -17,6 +17,12 @@ pub enum StarCommands {
     Add {
         #[clap(subcommand)]
         target: StarTarget,
+    },
+    #[cfg(feature = "star_writable")]
+    /// Delete a star
+    Delete {
+        /// Star ID
+        star_id: u32,
     },
 }
 
@@ -57,6 +63,12 @@ pub async fn handle_star_command(api: &StarApi, command: &StarCommands) -> anyho
     match command {
         #[cfg(feature = "star_writable")]
         StarCommands::Add { target } => handle_add_star(api, target).await,
+        #[cfg(feature = "star_writable")]
+        StarCommands::Delete { star_id } => {
+            api.delete_star(DeleteStarParams::new(*star_id)).await?;
+            println!("Star deleted successfully");
+            Ok(())
+        }
     }
 }
 

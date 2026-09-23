@@ -38,4 +38,13 @@ impl StarApi {
     pub async fn add_star(&self, params: super::AddStarParams) -> Result<()> {
         self.0.execute_no_content(params).await
     }
+
+    /// Removes a star.
+    /// Corresponds to `DELETE /api/v2/stars/:starId`.
+    ///
+    /// Returns `Ok(())` on success (204 No Content).
+    #[cfg(feature = "writable")]
+    pub async fn delete_star(&self, params: super::DeleteStarParams) -> Result<()> {
+        self.0.execute_no_content(params).await
+    }
 }

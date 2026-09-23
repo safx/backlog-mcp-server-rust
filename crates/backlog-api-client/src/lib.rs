@@ -141,7 +141,7 @@ pub use backlog_team::{
 pub use backlog_star::StarApi;
 
 #[cfg(all(feature = "star", feature = "star_writable"))]
-pub use backlog_star::AddStarParams;
+pub use backlog_star::{AddStarParams, DeleteStarParams};
 
 // Rate Limit module (from backlog_rate_limit)
 #[cfg(feature = "rate-limit")]
