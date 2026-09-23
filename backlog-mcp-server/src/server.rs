@@ -14,8 +14,8 @@ use crate::{
     document::{
         self,
         request::{
-            DownloadDocumentAttachmentRequest, GetDocumentCountRequest, GetDocumentDetailsRequest,
-            GetDocumentTreeRequest, ListDocumentsRequest,
+            DownloadDocumentAttachmentRequest, GetDocumentCommentsRequest, GetDocumentCountRequest,
+            GetDocumentDetailsRequest, GetDocumentTreeRequest, ListDocumentsRequest,
         },
     },
     file::{
@@ -245,6 +245,23 @@ impl Server {
         .await?;
 
         Ok(CallToolResult::success(vec![ContentBlock::json(document)?]))
+    }
+
+    #[tool(
+        description = "Get the comments on a Backlog document, including replies. Requires document_id (32-digit hex string). Each comment has its text in 'plain' and ProseMirror JSON (as a string) in 'content'."
+    )]
+    async fn document_comment_list_get(
+        &self,
+        request: Parameters<GetDocumentCommentsRequest>,
+    ) -> McpResult {
+        let comments = document::bridge::get_document_comments_bridge(
+            self.client.clone(),
+            request.0,
+            &self.access_control,
+        )
+        .await?;
+
+        Ok(CallToolResult::success(vec![ContentBlock::json(comments)?]))
     }
 
     #[tool(

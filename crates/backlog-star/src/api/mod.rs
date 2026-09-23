@@ -5,3 +5,8 @@ pub use star_api::StarApi;
 mod add_star;
 #[cfg(feature = "writable")]
 pub use add_star::{AddStarParams, StarTarget};
+
+#[cfg(feature = "writable")]
+mod delete_star;
+#[cfg(feature = "writable")]
+pub use delete_star::DeleteStarParams;

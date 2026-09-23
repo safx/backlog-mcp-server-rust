@@ -27,8 +27,9 @@ pub use backlog_domain_models::Star as UserStar;
 // Document module (from backlog_document)
 #[cfg(feature = "document")]
 pub use backlog_document::{
-    Document, DocumentApi, DocumentCount, DocumentDetail, DocumentOrder, DocumentSortKey,
-    DocumentTag, DocumentTreeRootNode, DownloadAttachmentParams, GetDocumentCountParams,
+    Document, DocumentApi, DocumentComment, DocumentCount, DocumentDetail, DocumentOrder,
+    DocumentSortKey, DocumentTag, DocumentTreeRootNode, DownloadAttachmentParams,
+    GetDocumentCommentsParams, GetDocumentCommentsResponse, GetDocumentCountParams,
     GetDocumentCountResponse, GetDocumentParams, GetDocumentTreeParams, GetDocumentTreeResponse,
     ListDocumentsParams, ListDocumentsParamsBuilder, ListDocumentsResponse,
 };
@@ -145,7 +146,7 @@ pub use backlog_team::{
 pub use backlog_star::StarApi;
 
 #[cfg(all(feature = "star", feature = "star_writable"))]
-pub use backlog_star::AddStarParams;
+pub use backlog_star::{AddStarParams, DeleteStarParams};
 
 // Rate Limit module (from backlog_rate_limit)
 #[cfg(feature = "rate-limit")]

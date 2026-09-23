@@ -6,9 +6,10 @@ use tokio::sync::Mutex;
 
 use backlog_api_client::client::BacklogApiClient;
 use backlog_api_client::{
-    DocumentDetail, DownloadAttachmentParams, DownloadedFile, GetDocumentCountParams,
-    GetDocumentCountResponse, GetDocumentParams, GetDocumentTreeParams, GetDocumentTreeResponse,
-    ListDocumentsParamsBuilder, ListDocumentsResponse,
+    DocumentDetail, DownloadAttachmentParams, DownloadedFile, GetDocumentCommentsParams,
+    GetDocumentCommentsResponse, GetDocumentCountParams, GetDocumentCountResponse,
+    GetDocumentParams, GetDocumentTreeParams, GetDocumentTreeResponse, ListDocumentsParamsBuilder,
+    ListDocumentsResponse,
 };
 use backlog_core::{
     ProjectIdOrKey,
@@ -18,8 +19,8 @@ use backlog_core::{
 #[cfg(feature = "document_writable")]
 use super::request::{AddDocumentRequest, DeleteDocumentRequest, DocumentTagsRequest};
 use super::request::{
-    DownloadDocumentAttachmentRequest, GetDocumentCountRequest, GetDocumentDetailsRequest,
-    GetDocumentTreeRequest, ListDocumentsRequest,
+    DownloadDocumentAttachmentRequest, GetDocumentCommentsRequest, GetDocumentCountRequest,
+    GetDocumentDetailsRequest, GetDocumentTreeRequest, ListDocumentsRequest,
 };
 
 use crate::access_control::AccessControl;
@@ -158,6 +159,31 @@ pub(crate) async fn get_document_details(
         .await?;
 
     Ok(document)
+}
+
+pub(crate) async fn get_document_comments_bridge(
+    client: Arc<Mutex<BacklogApiClient>>,
+    req: GetDocumentCommentsRequest,
+    access_control: &AccessControl,
+) -> Result<GetDocumentCommentsResponse> {
+    let client_guard = client.lock().await;
+    let document_id = DocumentId::from_str(req.document_id.trim())?;
+
+    // Comments carry no project id, so resolve it via the document first
+    let document = client_guard
+        .document()
+        .get_document(GetDocumentParams::new(document_id.clone()))
+        .await?;
+
+    access_control
+        .check_project_access_by_id_async(&document.project_id, &client_guard)
+        .await?;
+
+    client_guard
+        .document()
+        .get_document_comments(GetDocumentCommentsParams::new(document_id))
+        .await
+        .map_err(crate::error::Error::from)
 }
 
 pub(crate) async fn download_document_attachment_bridge(

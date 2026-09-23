@@ -5,6 +5,7 @@ pub use document_api::DocumentApi;
 // Read-only API modules
 mod download_attachment;
 mod get_document;
+mod get_document_comments;
 mod get_document_count;
 mod get_document_tree;
 mod list_documents;
@@ -22,6 +23,7 @@ mod remove_document_tag;
 // Re-export parameter types and response types
 pub use download_attachment::DownloadAttachmentParams;
 pub use get_document::{GetDocumentParams, GetDocumentResponse};
+pub use get_document_comments::{GetDocumentCommentsParams, GetDocumentCommentsResponse};
 pub use get_document_count::{GetDocumentCountParams, GetDocumentCountResponse};
 pub use get_document_tree::{
     GetDocumentTreeParams, GetDocumentTreeParamsBuilder, GetDocumentTreeResponse,

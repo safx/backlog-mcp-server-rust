@@ -1,6 +1,7 @@
 use super::{
-    DownloadAttachmentParams, GetDocumentCountParams, GetDocumentCountResponse, GetDocumentParams,
-    GetDocumentTreeParams, GetDocumentTreeResponse, ListDocumentsParams, ListDocumentsResponse,
+    DownloadAttachmentParams, GetDocumentCommentsParams, GetDocumentCommentsResponse,
+    GetDocumentCountParams, GetDocumentCountResponse, GetDocumentParams, GetDocumentTreeParams,
+    GetDocumentTreeResponse, ListDocumentsParams, ListDocumentsResponse,
 };
 
 #[cfg(feature = "writable")]
@@ -74,6 +75,16 @@ impl DocumentApi {
     ///
     /// Corresponds to `GET /api/v2/documents/:documentId`.
     pub async fn get_document(&self, params: GetDocumentParams) -> Result<DocumentDetail> {
+        self.0.execute(params).await
+    }
+
+    /// Get document comments
+    ///
+    /// Corresponds to `GET /api/v2/documents/:documentId/comments`.
+    pub async fn get_document_comments(
+        &self,
+        params: GetDocumentCommentsParams,
+    ) -> Result<GetDocumentCommentsResponse> {
         self.0.execute(params).await
     }
 

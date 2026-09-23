@@ -6,8 +6,9 @@ use backlog_core::identifier::{DocumentAttachmentId, DocumentId, Identifier, Pro
 #[cfg(feature = "document_writable")]
 use backlog_document::{AddDocumentParams, DeleteDocumentParams};
 use backlog_document::{
-    DocumentOrder, DocumentSortKey, DownloadAttachmentParams, GetDocumentParams,
-    GetDocumentTreeParamsBuilder, ListDocumentsParamsBuilder,
+    DocumentComment, DocumentOrder, DocumentSortKey, DownloadAttachmentParams,
+    GetDocumentCommentsParams, GetDocumentParams, GetDocumentTreeParamsBuilder,
+    ListDocumentsParamsBuilder,
 };
 use std::str::FromStr;
 
@@ -116,6 +117,40 @@ pub(crate) async fn list(client: &BacklogApiClient, options: ListOptions) -> Cli
 }
 
 /// Get document details
+pub(crate) async fn comments(
+    client: &BacklogApiClient,
+    document_id: String,
+    json: bool,
+) -> CliResult<()> {
+    let doc_id = DocumentId::from_str(&document_id)?;
+    let comments = client
+        .document()
+        .get_document_comments(GetDocumentCommentsParams::new(doc_id))
+        .await?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&comments)?);
+    } else if comments.is_empty() {
+        println!("No comments");
+    } else {
+        fn print(c: &DocumentComment, depth: usize) {
+            let indent = "  ".repeat(depth);
+            println!(
+                "{indent}[{}] {} ({}):",
+                c.id,
+                c.created_user.name,
+                c.created.format("%Y-%m-%d %H:%M:%S")
+            );
+            for line in c.plain.lines() {
+                println!("{indent}  {line}");
+            }
+            c.replies.iter().for_each(|r| print(r, depth + 1));
+        }
+        comments.iter().for_each(|c| print(c, 0));
+    }
+    Ok(())
+}
+
 pub(crate) async fn get(
     client: &BacklogApiClient,
     document_id: String,
