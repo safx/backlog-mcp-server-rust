@@ -1,9 +1,9 @@
 # Backlog API Implementation Status
 
 ## Summary
-- Total APIs: 154
-- Implemented: 147 (95%)
-- Not implemented: 7 (5%)
+- Total APIs listed: 159
+- Implemented: 152 (96%)
+- Not implemented: 7 (4%)
 
 ### Spaces
 - ✅ GetSpace: Returns information about your space: GET /api/v2/space
@@ -192,6 +192,11 @@
 
 ### Document
 - ✅ GetDocumentList: Returns list of document pages: GET /api/v2/documents
+- ✅ GetDocumentCount: Counts documents in one project: GET /api/v2/documents/count
+- ✅ AddDocument: Creates a document: POST /api/v2/documents
+- ✅ DeleteDocument: Deletes a document: DELETE /api/v2/documents/:documentId
+- ✅ AddDocumentTag: Adds named tags to a document: POST /api/v2/documents/:documentId/tags
+- ✅ RemoveDocumentTag: Removes named tags from a document (204 No Content): DELETE /api/v2/documents/:documentId/tags
 - ✅ GetDocumentTree: Retrieves the document tree: GET /api/v2/documents/tree
 - ✅ GetDocument: Returns information about document page: GET /api/v2/documents/:documentId
 - ✅ DownloadDocumentAttachment: Downloads document attachments: GET /api/v2/documents/:documentId/attachments/:attachmentId

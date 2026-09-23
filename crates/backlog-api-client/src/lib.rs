@@ -27,14 +27,18 @@ pub use backlog_domain_models::Star as UserStar;
 // Document module (from backlog_document)
 #[cfg(feature = "document")]
 pub use backlog_document::{
-    DocumentApi, DocumentComment, DocumentDetail, DocumentTreeRootNode, DownloadAttachmentParams,
-    GetDocumentCommentsParams, GetDocumentCommentsResponse, GetDocumentParams,
-    GetDocumentTreeParams, GetDocumentTreeResponse,
+    Document, DocumentApi, DocumentComment, DocumentCount, DocumentDetail, DocumentOrder,
+    DocumentSortKey, DocumentTag, DocumentTreeRootNode, DownloadAttachmentParams,
+    GetDocumentCommentsParams, GetDocumentCommentsResponse, GetDocumentCountParams,
+    GetDocumentCountResponse, GetDocumentParams, GetDocumentTreeParams, GetDocumentTreeResponse,
+    ListDocumentsParams, ListDocumentsParamsBuilder, ListDocumentsResponse,
 };
 
 #[cfg(all(feature = "document", feature = "document_writable"))]
 pub use backlog_document::{
-    AddDocumentParams, AddDocumentResponse, DeleteDocumentParams, DeleteDocumentResponse,
+    AddDocumentParams, AddDocumentResponse, AddDocumentTagParams, AddDocumentTagResponse,
+    DeleteDocumentParams, DeleteDocumentResponse, RemoveDocumentTagParams,
+    RemoveDocumentTagResponse,
 };
 
 // File module (from backlog_file)

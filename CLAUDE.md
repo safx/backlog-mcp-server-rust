@@ -320,7 +320,7 @@ pub use get_issues::{GetIssuesParams, GetIssuesParamsBuilder};
   - `--all-features` (development)
 - All available feature flags:
   - Domain modules: `git`, `issue`, `project`, `space`, `user`, `document`, `file`, `wiki`, `activity`, `team`, `star`, `rate-limit`, `watching`, `webhook`
-  - Write features: `issue_writable`, `project_writable`, `space_writable`, `git_writable`, `wiki_writable`, `team_writable`, `star_writable`, `user_writable`, `watching_writable`, `webhook_writable`
+  - Write features: `issue_writable`, `project_writable`, `space_writable`, `git_writable`, `wiki_writable`, `document_writable`, `team_writable`, `star_writable`, `user_writable`, `watching_writable`, `webhook_writable`
   - Bundles: `all` (all read operations), `all_writable` (all write operations)
 
 ### Error Handling
@@ -341,6 +341,8 @@ pub use get_issues::{GetIssuesParams, GetIssuesParamsBuilder};
 - Update API.md counts after adding endpoints
 
 ## Recent Updates
+- **Document APIs**: List/count and add/remove tags are available in CLI and MCP. List accepts numeric project IDs, count accepts ID or key. Tag operations require `document_writable`; DELETE tags uses `execute_no_content()`.
+- **Document MCP routing**: Writable document tools live in a separate feature-gated tool router because the router macro collects methods before method-level cfg attributes are removed. List scopes queries to `BACKLOG_PROJECTS` before pagination; tag mutations check document ownership first.
 - **OAuth Support**: Added OAuth 2.0 authentication flow and webhook management APIs  
 - **New Domain Modules**: Added support for Team, Star, Rate Limit, Watching, and Webhook APIs
 - **Layered Architecture Refactoring**: Completed migration to clean dependency structure (see LAYERED_ARCHITECTURE_REFACTORING_PLAN.md)

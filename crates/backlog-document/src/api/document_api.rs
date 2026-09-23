@@ -1,11 +1,15 @@
 use super::{
     DownloadAttachmentParams, GetDocumentCommentsParams, GetDocumentCommentsResponse,
-    GetDocumentParams, GetDocumentTreeParams, GetDocumentTreeResponse, ListDocumentsParams,
-    ListDocumentsResponse,
+    GetDocumentCountParams, GetDocumentCountResponse, GetDocumentParams, GetDocumentTreeParams,
+    GetDocumentTreeResponse, ListDocumentsParams, ListDocumentsResponse,
 };
 
 #[cfg(feature = "writable")]
-use super::{AddDocumentParams, AddDocumentResponse, DeleteDocumentParams, DeleteDocumentResponse};
+use super::{
+    AddDocumentParams, AddDocumentResponse, AddDocumentTagParams, AddDocumentTagResponse,
+    DeleteDocumentParams, DeleteDocumentResponse, RemoveDocumentTagParams,
+    RemoveDocumentTagResponse,
+};
 use crate::models::DocumentDetail;
 use backlog_api_core::Result;
 use client::{Client, DownloadedFile};
@@ -22,9 +26,39 @@ impl DocumentApi {
     /// Corresponds to `GET /api/v2/documents`.
     pub async fn list_documents(
         &self,
-        params: ListDocumentsParams,
+        mut params: ListDocumentsParams,
     ) -> Result<ListDocumentsResponse> {
+        params.validate()?;
+        params.offset.get_or_insert(0);
         self.0.execute(params).await
+    }
+
+    /// Corresponds to `GET /api/v2/documents/count`.
+    pub async fn get_document_count(
+        &self,
+        params: GetDocumentCountParams,
+    ) -> Result<GetDocumentCountResponse> {
+        self.0.execute(params).await
+    }
+
+    /// Corresponds to `POST /api/v2/documents/:documentId/tags`.
+    #[cfg(feature = "writable")]
+    pub async fn add_document_tag(
+        &self,
+        params: AddDocumentTagParams,
+    ) -> Result<AddDocumentTagResponse> {
+        params.validate()?;
+        self.0.execute(params).await
+    }
+
+    /// Corresponds to `DELETE /api/v2/documents/:documentId/tags` (204 No Content).
+    #[cfg(feature = "writable")]
+    pub async fn remove_document_tag(
+        &self,
+        params: RemoveDocumentTagParams,
+    ) -> Result<RemoveDocumentTagResponse> {
+        params.validate()?;
+        self.0.execute_no_content(params).await
     }
 
     /// Get document tree

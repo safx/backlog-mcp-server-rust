@@ -10,27 +10,57 @@ pub struct DocumentArgs {
 #[cfg(feature = "document")]
 #[derive(Parser)]
 pub enum DocumentCommands {
-    /// List documents in a project
+    /// List documents in selected projects, or all participating projects when omitted
     List {
-        /// Project ID or Key (required)
+        /// Numeric project ID (repeat for multiple projects; keys are not supported)
         #[clap(short, long)]
-        project_id: String,
+        project_id: Vec<u32>,
         /// Search keyword
         #[clap(short, long)]
         keyword: Option<String>,
-        /// Sort key (created, updated, title)
-        #[clap(short, long)]
+        /// Sort key
+        #[clap(short, long, value_parser = ["created", "updated"])]
         sort: Option<String>,
         /// Sort order (asc or desc)
-        #[clap(short, long)]
+        #[clap(short, long, value_parser = ["asc", "desc"])]
         order: Option<String>,
         /// Pagination offset
         #[clap(long)]
         offset: Option<u32>,
         /// Number of items to retrieve (default: 20, max: 100)
-        #[clap(short, long)]
+        #[clap(short, long, value_parser = clap::value_parser!(u32).range(1..=100))]
         count: Option<u32>,
         /// Output in JSON format
+        #[clap(long)]
+        json: bool,
+    },
+    /// Count documents in one project (without keyword filtering)
+    Count {
+        /// Project ID or key (required)
+        #[clap(short, long)]
+        project_id: String,
+        #[clap(long)]
+        json: bool,
+    },
+    #[cfg(feature = "document_writable")]
+    /// Add tags to a document
+    TagAdd {
+        #[clap(name = "DOCUMENT_ID")]
+        document_id: String,
+        /// Tag name (repeat to add multiple tags; commas are preserved)
+        #[clap(long = "tag-name", required = true)]
+        tag_names: Vec<String>,
+        #[clap(long)]
+        json: bool,
+    },
+    #[cfg(feature = "document_writable")]
+    /// Remove tags from a document
+    TagRemove {
+        #[clap(name = "DOCUMENT_ID")]
+        document_id: String,
+        /// Tag name (repeat to remove multiple tags; commas are preserved)
+        #[clap(long = "tag-name", required = true)]
+        tag_names: Vec<String>,
         #[clap(long)]
         json: bool,
     },

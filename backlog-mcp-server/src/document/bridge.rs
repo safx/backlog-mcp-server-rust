@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -6,7 +7,9 @@ use tokio::sync::Mutex;
 use backlog_api_client::client::BacklogApiClient;
 use backlog_api_client::{
     DocumentDetail, DownloadAttachmentParams, DownloadedFile, GetDocumentCommentsParams,
-    GetDocumentCommentsResponse, GetDocumentParams, GetDocumentTreeParams, GetDocumentTreeResponse,
+    GetDocumentCommentsResponse, GetDocumentCountParams, GetDocumentCountResponse,
+    GetDocumentParams, GetDocumentTreeParams, GetDocumentTreeResponse, ListDocumentsParamsBuilder,
+    ListDocumentsResponse,
 };
 use backlog_core::{
     ProjectIdOrKey,
@@ -14,19 +17,131 @@ use backlog_core::{
 };
 
 #[cfg(feature = "document_writable")]
-use super::request::{AddDocumentRequest, DeleteDocumentRequest};
+use super::request::{AddDocumentRequest, DeleteDocumentRequest, DocumentTagsRequest};
 use super::request::{
-    DownloadDocumentAttachmentRequest, GetDocumentCommentsRequest, GetDocumentDetailsRequest,
-    GetDocumentTreeRequest,
+    DownloadDocumentAttachmentRequest, GetDocumentCommentsRequest, GetDocumentCountRequest,
+    GetDocumentDetailsRequest, GetDocumentTreeRequest, ListDocumentsRequest,
 };
 
 use crate::access_control::AccessControl;
-use crate::error::Result;
+use crate::error::{Error, Result};
 
 #[cfg(feature = "document_writable")]
 use backlog_api_client::{
-    AddDocumentParams, AddDocumentResponse, DeleteDocumentParams, DeleteDocumentResponse,
+    AddDocumentParams, AddDocumentResponse, AddDocumentTagParams, AddDocumentTagResponse,
+    DeleteDocumentParams, DeleteDocumentResponse, RemoveDocumentTagParams,
 };
+
+fn parameter_error(error: impl std::fmt::Display) -> Error {
+    Error::Parameter(error.to_string())
+}
+
+pub(crate) async fn list_documents_bridge(
+    client: Arc<Mutex<BacklogApiClient>>,
+    req: ListDocumentsRequest,
+    access_control: &AccessControl,
+) -> Result<ListDocumentsResponse> {
+    let mut builder = ListDocumentsParamsBuilder::default();
+    if let Some(ids) = req.project_ids {
+        builder.project_ids(ids.into_iter().map(ProjectId::new).collect::<Vec<_>>());
+    }
+    if let Some(keyword) = req.keyword {
+        builder.keyword(keyword);
+    }
+    if let Some(sort) = req.sort {
+        builder.sort(sort);
+    }
+    if let Some(order) = req.order {
+        builder.order(order);
+    }
+    if let Some(offset) = req.offset {
+        builder.offset(offset);
+    }
+    if let Some(count) = req.count {
+        builder.count(count);
+    }
+    let mut params = builder.build().map_err(parameter_error)?;
+    params.validate().map_err(parameter_error)?;
+    let client = client.lock().await;
+    params.project_ids = access_control
+        .scope_document_projects(params.project_ids, &client)
+        .await?;
+    let documents = client.document().list_documents(params).await?;
+    if access_control.is_enabled() {
+        let mut checked_projects = HashSet::new();
+        for document in &documents {
+            if checked_projects.insert(document.project_id) {
+                access_control
+                    .check_project_access_by_id_async(&document.project_id, &client)
+                    .await?;
+            }
+        }
+    }
+    Ok(documents)
+}
+
+pub(crate) async fn get_document_count_bridge(
+    client: Arc<Mutex<BacklogApiClient>>,
+    req: GetDocumentCountRequest,
+    access_control: &AccessControl,
+) -> Result<GetDocumentCountResponse> {
+    let project =
+        ProjectIdOrKey::from_str(req.project_id_or_key.trim()).map_err(parameter_error)?;
+    let client = client.lock().await;
+    access_control
+        .check_project_access_id_or_key_async(&project, &client)
+        .await?;
+    Ok(client
+        .document()
+        .get_document_count(GetDocumentCountParams::new(project))
+        .await?)
+}
+
+#[cfg(feature = "document_writable")]
+async fn check_document_access(
+    client: &BacklogApiClient,
+    document_id: &DocumentId,
+    access_control: &AccessControl,
+) -> Result<()> {
+    if !access_control.is_enabled() {
+        return Ok(());
+    }
+    let document = client
+        .document()
+        .get_document(GetDocumentParams::new(document_id.clone()))
+        .await?;
+    access_control
+        .check_project_access_by_id_async(&document.project_id, client)
+        .await
+}
+
+#[cfg(feature = "document_writable")]
+pub(crate) async fn add_document_tag_bridge(
+    client: Arc<Mutex<BacklogApiClient>>,
+    req: DocumentTagsRequest,
+    access_control: &AccessControl,
+) -> Result<AddDocumentTagResponse> {
+    let document_id = DocumentId::from_str(req.document_id.trim()).map_err(parameter_error)?;
+    let params = AddDocumentTagParams::new(document_id, req.tag_names);
+    params.validate().map_err(parameter_error)?;
+    let client = client.lock().await;
+    check_document_access(&client, &params.document_id, access_control).await?;
+    Ok(client.document().add_document_tag(params).await?)
+}
+
+#[cfg(feature = "document_writable")]
+pub(crate) async fn remove_document_tag_bridge(
+    client: Arc<Mutex<BacklogApiClient>>,
+    req: DocumentTagsRequest,
+    access_control: &AccessControl,
+) -> Result<()> {
+    let document_id = DocumentId::from_str(req.document_id.trim()).map_err(parameter_error)?;
+    let params = RemoveDocumentTagParams::new(document_id, req.tag_names);
+    params.validate().map_err(parameter_error)?;
+    let client = client.lock().await;
+    check_document_access(&client, &params.document_id, access_control).await?;
+    Ok(client.document().remove_document_tag(params).await?)
+}
 
 pub(crate) async fn get_document_details(
     client: Arc<Mutex<BacklogApiClient>>,

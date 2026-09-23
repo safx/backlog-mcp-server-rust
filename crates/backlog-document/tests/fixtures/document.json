@@ -1,0 +1,15 @@
+{
+  "id": "01939983409c79d5a06a49859789e38f",
+  "projectId": 1,
+  "title": "設計",
+  "plain": "Document text",
+  "json": "{\"type\":\"doc\"}",
+  "statusId": 1,
+  "emoji": null,
+  "attachments": [],
+  "tags": [{"id": 11, "name": "要確認"}],
+  "createdUser": {"id": 1, "userId": "test", "name": "Test", "roleType": 1, "lang": "ja", "mailAddress": "test@example.com", "nulabAccount": null, "keyword": null, "lastLoginTime": null},
+  "updatedUser": {"id": 1, "userId": "test", "name": "Test", "roleType": 1, "lang": "ja", "mailAddress": "test@example.com", "nulabAccount": null, "keyword": null, "lastLoginTime": null},
+  "created": "2026-01-01T00:00:00Z",
+  "updated": "2026-01-01T00:00:00Z"
+}
