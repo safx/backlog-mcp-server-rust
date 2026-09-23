@@ -1,8 +1,8 @@
 # Backlog API Implementation Status
 
 ## Summary
-- Total APIs: 152
-- Implemented: 145 (95%)
+- Total APIs: 154
+- Implemented: 147 (95%)
 - Not implemented: 7 (5%)
 
 ### Spaces
@@ -185,6 +185,7 @@
 
 ### Star
 - ✅ AddStar: Adds star: POST /api/v2/stars
+- ✅ RemoveStar: Removes star: DELETE /api/v2/stars/:starId
 - ✅ GetWikiPageStar: Returns list of stars received on the Wiki page: GET /api/v2/wikis/:wikiId/stars
 - ✅ CountUserReceivedStars: Returns number of stars that user received: GET /api/v2/users/:userId/stars/count
 - ✅ GetReceivedStarList: Returns the list of stars that user received: GET /api/v2/users/:userId/stars
@@ -194,6 +195,7 @@
 - ✅ GetDocumentTree: Retrieves the document tree: GET /api/v2/documents/tree
 - ✅ GetDocument: Returns information about document page: GET /api/v2/documents/:documentId
 - ✅ DownloadDocumentAttachment: Downloads document attachments: GET /api/v2/documents/:documentId/attachments/:attachmentId
+- ✅ GetDocumentComments: Returns list of comments on document page: GET /api/v2/documents/:documentId/comments
 
 ### Users
 - ✅ GetOwnUser: Returns own information about user: GET /api/v2/users/myself

@@ -37,6 +37,9 @@ pub async fn execute(client: &BacklogApiClient, args: DocumentArgs) -> CliResult
         DocumentCommands::Get { document_id, json } => {
             subcommands::list::get(client, document_id, json).await?
         }
+        DocumentCommands::Comments { document_id, json } => {
+            subcommands::list::comments(client, document_id, json).await?
+        }
         DocumentCommands::Tree { project_id, json } => {
             subcommands::list::tree(client, project_id, json).await?
         }

@@ -43,6 +43,15 @@ pub enum DocumentCommands {
         #[clap(long)]
         json: bool,
     },
+    /// Get comments on a document
+    Comments {
+        /// Document ID (32-character hex string)
+        #[clap(name = "DOCUMENT_ID")]
+        document_id: String,
+        /// Output in JSON format
+        #[clap(long)]
+        json: bool,
+    },
     /// Get document tree structure
     Tree {
         /// Project ID or Key (required)

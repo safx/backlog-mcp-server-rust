@@ -133,6 +133,7 @@ The server includes both **read operations** for information gathering and **wri
 ### Document Tools
 -   **`document_details_get`**: Retrieves details for a specific Backlog document
 -   **`document_attachment_download`**: Download a document attachment
+-   **`document_comment_list_get`**: Get the comments (with replies) on a document
 -   **`document_tree_get`**: Get the document tree for a specified project
 -   **`document_add`**: Add a new document to a Backlog project
 -   **`document_delete`**: Delete a document from Backlog

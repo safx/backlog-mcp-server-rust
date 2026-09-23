@@ -10,6 +10,12 @@ pub(crate) struct GetDocumentDetailsRequest {
 }
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub(crate) struct GetDocumentCommentsRequest {
+    #[schemars(description = "The document ID (a 32-digit hexadecimal string).")]
+    pub document_id: String,
+}
+
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub(crate) struct DownloadDocumentAttachmentRequest {
     #[schemars(description = "The document ID (a 32-digit hexadecimal string).")]
     pub document_id: String,
