@@ -13,7 +13,7 @@ use std::str::FromStr;
 
 /// Parameters for list command
 pub(crate) struct ListOptions {
-    pub project_id: String,
+    pub project_id: Vec<u32>,
     pub keyword: Option<String>,
     pub sort: Option<String>,
     pub order: Option<String>,
@@ -45,27 +45,15 @@ pub(crate) async fn list(client: &BacklogApiClient, options: ListOptions) -> Cli
         count,
         json,
     } = options;
-    if !json {
-        println!("Listing documents in project: {project_id}");
-    }
-
     let mut params_builder = ListDocumentsParamsBuilder::default();
-
-    // Parse project_id
-    let project_id_or_key: ProjectIdOrKey = project_id
-        .parse()
-        .with_context(|| format!("Invalid project: '{project_id}'"))?;
-    let project_id_value: backlog_core::identifier::ProjectId = match project_id_or_key {
-        ProjectIdOrKey::Id(id) => id,
-        ProjectIdOrKey::Key(key) => {
-            anyhow::bail!(
-                "Project key '{}' is not supported for list command. Please use numeric project ID.",
-                key
-            );
-        }
-        ProjectIdOrKey::EitherIdOrKey(id, _) => id,
-    };
-    params_builder.project_ids(vec![project_id_value]);
+    if !project_id.is_empty() {
+        params_builder.project_ids(
+            project_id
+                .into_iter()
+                .map(ProjectId::new)
+                .collect::<Vec<_>>(),
+        );
+    }
 
     if let Some(keyword) = keyword {
         params_builder.keyword(keyword);
@@ -110,11 +98,11 @@ pub(crate) async fn list(client: &BacklogApiClient, options: ListOptions) -> Cli
     } else if documents.is_empty() {
         println!("No documents found");
     } else {
-        println!("\nDocuments ({} total):", documents.len());
+        println!("\nDocuments ({} on this page):", documents.len());
         for doc in documents {
             let emoji = doc.emoji.as_deref().unwrap_or("📄");
-            let id_short = &doc.id.to_string()[..8];
-            println!("\n{} {}... \"{}\"", emoji, id_short, doc.title);
+            println!("\n{} {} \"{}\"", emoji, doc.id, doc.title);
+            println!("  Project ID: {}", doc.project_id);
             println!("  Updated: {}", doc.updated.format("%Y-%m-%d %H:%M:%S"));
             println!("  Updated by: {}", doc.updated_user.name);
             if !doc.tags.is_empty() {

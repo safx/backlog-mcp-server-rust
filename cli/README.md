@@ -380,6 +380,36 @@ The `blg` CLI currently supports the following commands:
 - `user mark-notification-read <NOTIFICATION_ID>` - Mark a notification as read (requires `user_writable` feature)
 - `user reset-notifications` - Reset all unread notifications by marking them as read (requires `user_writable` feature)
 
+### Document Commands
+
+Document commands are included in the default build. A build with only document read commands uses
+`cargo build -p blg --no-default-features --features document`; add `document_writable` for tag changes
+and document creation/deletion.
+
+```sh
+# One project (numeric ID), multiple projects, or all participating projects
+blg document list -p 123 --json
+blg document list -p 123 -p 456 --keyword 設計 --sort updated --order desc --offset 0 --count 20 --json
+blg document list --keyword 設計 --json
+
+# Counts one project; both ID and key are supported here
+blg document count --project-id MYPROJECT --json
+
+# Repeat --tag-name; commas are part of a name, not separators
+blg document tag-add 01939983409c79d5a06a49859789e38f --tag-name '設計,仕様' --tag-name 要確認 --json
+blg document tag-remove 01939983409c79d5a06a49859789e38f --tag-name 要確認 --json
+```
+
+- `document list` accepts numeric IDs only. Omitting `--project-id` searches all participating projects.
+  `--offset` defaults to 0, `--count` accepts 1–100 (default 20), and `--sort` accepts `created` or `updated`.
+  Results are one page, and the normal display includes complete document IDs and project IDs.
+- `document count` requires `--project-id <ID_OR_KEY>` and returns a project count without keyword filtering.
+- `document tag-add` and `document tag-remove` require `document_writable`, a document ID and at least one
+  `--tag-name`. Empty or whitespace-only names are rejected; other names are sent without normalization.
+- With `--json`, stdout contains only JSON: a document array, `{"count":N}`, the API's tag array, or
+  `{"success":true}` for removal. List JSON now includes `json` and `attachments`; `json` preserves the API representation.
+- Existing `document get`, `tree`, `download`, `add`, and `delete` commands remain available with their existing features.
+
 ### Wiki Commands
 - `wiki list-attachments <WIKI_ID>` - List attachments for a specific wiki page
 - `wiki download-attachment <WIKI_ID> <ATTACHMENT_ID> [--output <FILE_PATH>]` - Download an attachment from a wiki page

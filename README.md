@@ -116,9 +116,9 @@ The following tools are grouped by their respective modules:
 
 ### Tool Summary
 
-With the default configuration, you have access to **39 tools** for Backlog automation:
+With the default configuration, you have access to **43 tools** for Backlog automation:
 
-- **Documents** (5 tools): View document trees, get details, download attachments, add documents, delete documents
+- **Documents** (9 tools): List and count documents, view trees and details, download attachments, create/delete documents, add/remove tags
 - **Git/Pull Requests** (8 tools): Manage repositories, PRs, comments, and attachments
 - **Issues** (15 tools): View, create, update issues, manage comments, attachments, shared files, related issues, and priorities
 - **Projects** (3 tools): Get project status, issue types, and custom field definitions
@@ -131,11 +131,30 @@ The server includes both **read operations** for information gathering and **wri
 **Note**: Tool names follow a `category_resource_action` pattern (e.g., `issue_details_get`, `wiki_update`) to enable category-based filtering with `--allowedTools` (e.g., `claude --allowedTools "mcp__backlog__issue_*"`).
 
 ### Document Tools
+-   **`document_list_get`**: List documents with optional numeric `project_ids`, `keyword`, `sort` (`created`/`updated`), `order` (`asc`/`desc`), `offset` (default 0), and `count` (1–100, default 20)
+-   **`document_count_get`**: Count documents in one project using required `project_id_or_key`; keyword and tag filters are not supported
+-   **`document_tag_add`**: Add one or more `tag_names` to a `document_id`; returns the API's tag array
+-   **`document_tag_remove`**: Remove named tags from a `document_id`; returns `{"success":true}` after a successful empty API response
 -   **`document_details_get`**: Retrieves details for a specific Backlog document
 -   **`document_attachment_download`**: Download a document attachment
 -   **`document_tree_get`**: Get the document tree for a specified project
 -   **`document_add`**: Add a new document to a Backlog project
 -   **`document_delete`**: Delete a document from Backlog
+
+Names above are shown without `BACKLOG_PREFIX` (default `backlog_`). When `project_ids` is omitted,
+the list tool searches participating projects within `BACKLOG_PROJECTS`. If a project restriction is
+configured, the server resolves allowed keys to IDs before querying; resolution failures do not broaden
+the search. Explicit empty ID arrays and requests containing disallowed projects are rejected.
+When project restrictions are enabled, tag operations fetch document details and check project access
+before changing tags. Without restrictions, they call the tag API directly.
+The client requires at least one nonblank tag name and preserves names, including spaces and commas.
+
+List responses include `json` and `attachments` alongside metadata and tags. `json` retains the API's
+representation (including a JSON-encoded string). List results are one page; `document_count_get`
+returns a project count, not a keyword-search total.
+
+For Rust library users, `Document` now has `json` and `attachments` fields. Older JSON without those
+fields still deserializes, but code constructing `Document` with a struct literal must supply the new fields.
 
 ### Git Tools
 -   **`git_repository_list_get`**: Get a list of Git repositories for a specified project
@@ -228,20 +247,27 @@ The MCP server supports multiple feature flags to enable different write operati
     -   Allows AI agents to update wiki page content, names, and notification settings
 
 -   **`document_writable`** (enabled by default)
-    -   Enables: `document_add` and `document_delete` tools
-    -   Allows AI agents to create and delete documents
+    -   Enables: `document_add`, `document_delete`, `document_tag_add`, and `document_tag_remove`
+    -   Allows AI agents to create/delete documents and add/remove tags; list/count remain available when disabled
 
 ### Build Configuration
 
 ```bash
-# Read-only mode (no write operations)
+# Intended full read-only mode (see the existing build limitation below)
 cargo build --package mcp-backlog-server --no-default-features
+
+# Disable document writes while retaining the other writable tools
+cargo build --package mcp-backlog-server --no-default-features --features "issue_writable,git_writable,wiki_writable"
 
 # Selective features
 cargo build --package mcp-backlog-server --features issue_writable
 cargo build --package mcp-backlog-server --features "issue_writable,git_writable"
 cargo build --package mcp-backlog-server --features "issue_writable,git_writable,wiki_writable,document_writable"
 ```
+
+The full `--no-default-features` build currently has existing errors in issue writable imports
+and non-document tool registration. The document-write-disabled configuration above is tested;
+it still enables write operations for issues, Git, and wikis.
 
 ## Configuration
 
