@@ -14,7 +14,8 @@ use crate::{
     document::{
         self,
         request::{
-            DownloadDocumentAttachmentRequest, GetDocumentDetailsRequest, GetDocumentTreeRequest,
+            DownloadDocumentAttachmentRequest, GetDocumentCountRequest, GetDocumentDetailsRequest,
+            GetDocumentTreeRequest, ListDocumentsRequest,
         },
     },
     file::{
@@ -58,7 +59,7 @@ use crate::{
 use crate::wiki::request::UpdateWikiRequest;
 
 #[cfg(feature = "document_writable")]
-use crate::document::request::{AddDocumentRequest, DeleteDocumentRequest};
+use crate::document::request::{AddDocumentRequest, DeleteDocumentRequest, DocumentTagsRequest};
 
 use crate::access_control::AccessControl;
 #[cfg(feature = "git_writable")]
@@ -107,6 +108,10 @@ impl Server {
 
     fn create_tool_router(prefix: &str) -> ToolRouter<Self> {
         let mut tool_router = Self::tool_router();
+        #[cfg(feature = "document_writable")]
+        {
+            tool_router += Self::document_writable_tool_router();
+        }
 
         if prefix.is_empty() {
             return tool_router;
@@ -195,6 +200,34 @@ impl Server {
         Ok(CallToolResult::success(vec![ContentBlock::json(
             issue_response,
         )?]))
+    }
+
+    #[tool(
+        description = "List Backlog documents with optional numeric project_ids, keyword, sort (created/updated), order (asc/desc), offset (default 0), and count (1-100, default 20). Omitted projects search participating projects allowed by BACKLOG_PROJECTS. Returns one page, not a total count."
+    )]
+    async fn document_list_get(&self, request: Parameters<ListDocumentsRequest>) -> McpResult {
+        let documents = document::bridge::list_documents_bridge(
+            self.client.clone(),
+            request.0,
+            &self.access_control,
+        )
+        .await?;
+        Ok(CallToolResult::success(vec![ContentBlock::json(
+            documents,
+        )?]))
+    }
+
+    #[tool(
+        description = "Count documents in one project. Requires project_id_or_key. Returns {count: N}. This endpoint does not support keyword or tag filters and is not a keyword search total."
+    )]
+    async fn document_count_get(&self, request: Parameters<GetDocumentCountRequest>) -> McpResult {
+        let count = document::bridge::get_document_count_bridge(
+            self.client.clone(),
+            request.0,
+            &self.access_control,
+        )
+        .await?;
+        Ok(CallToolResult::success(vec![ContentBlock::json(count)?]))
     }
 
     #[tool(
@@ -744,8 +777,40 @@ impl Server {
         .await?;
         Ok(CallToolResult::success(vec![ContentBlock::json(comment)?]))
     }
+}
 
-    #[cfg(feature = "document_writable")]
+// Gate the entire router: rmcp's tool_router macro collects methods before their cfg attributes.
+#[cfg(feature = "document_writable")]
+#[tool_router(router = document_writable_tool_router)]
+impl Server {
+    #[tool(
+        description = "Add tags to a document. Requires document_id and a nonempty tag_names array of nonblank names. Returns the API's tag array. Project access is checked before modifying the document."
+    )]
+    async fn document_tag_add(&self, request: Parameters<DocumentTagsRequest>) -> McpResult {
+        let tags = document::bridge::add_document_tag_bridge(
+            self.client.clone(),
+            request.0,
+            &self.access_control,
+        )
+        .await?;
+        Ok(CallToolResult::success(vec![ContentBlock::json(tags)?]))
+    }
+
+    #[tool(
+        description = "Remove named tags from a document. Requires document_id and a nonempty tag_names array of nonblank names. Returns {success: true} after the API's 204 response. Project access is checked before modifying the document."
+    )]
+    async fn document_tag_remove(&self, request: Parameters<DocumentTagsRequest>) -> McpResult {
+        document::bridge::remove_document_tag_bridge(
+            self.client.clone(),
+            request.0,
+            &self.access_control,
+        )
+        .await?;
+        Ok(CallToolResult::success(vec![ContentBlock::json(
+            serde_json::json!({"success": true}),
+        )?]))
+    }
+
     #[tool(
         description = "Add a new document to a Backlog project. Requires project_id (numeric). Optional: title, content (markdown), emoji, parent_id (for hierarchy), add_last (placement order)."
     )]
@@ -759,7 +824,6 @@ impl Server {
         Ok(CallToolResult::success(vec![ContentBlock::json(document)?]))
     }
 
-    #[cfg(feature = "document_writable")]
     #[tool(
         description = "Delete a document from Backlog. Requires document_id (32-digit hex string). Returns the deleted document information."
     )]

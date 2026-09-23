@@ -1,4 +1,36 @@
+use backlog_api_client::{DocumentOrder, DocumentSortKey};
 use rmcp::schemars;
+
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub(crate) struct ListDocumentsRequest {
+    /// Numeric project IDs. Omit to search participating projects within BACKLOG_PROJECTS.
+    #[schemars(length(min = 1))]
+    pub project_ids: Option<Vec<u32>>,
+    pub keyword: Option<String>,
+    pub sort: Option<DocumentSortKey>,
+    pub order: Option<DocumentOrder>,
+    /// Start position; defaults to 0.
+    pub offset: Option<u32>,
+    /// Page size; defaults to 20. This is not the total matching count.
+    #[schemars(range(min = 1, max = 100))]
+    pub count: Option<u32>,
+}
+
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub(crate) struct GetDocumentCountRequest {
+    /// Project ID or key. Counts one project without keyword filtering.
+    pub project_id_or_key: String,
+}
+
+#[cfg(feature = "document_writable")]
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub(crate) struct DocumentTagsRequest {
+    /// Document ID (32 lowercase hexadecimal characters).
+    pub document_id: String,
+    /// Names to add or remove. At least one nonblank name is required; names are not normalized.
+    #[schemars(length(min = 1))]
+    pub tag_names: Vec<String>,
+}
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub(crate) struct GetDocumentDetailsRequest {

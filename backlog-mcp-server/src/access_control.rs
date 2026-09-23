@@ -3,10 +3,14 @@ use crate::project_cache::{CacheConfig, ProjectCacheManager};
 use backlog_api_client::client::BacklogApiClient;
 use backlog_core::identifier::ProjectId;
 use backlog_core::{ProjectIdOrKey, ProjectKey};
+use futures_util::{StreamExt, TryStreamExt, stream};
+use std::collections::HashSet;
 use std::env;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
+
+const PROJECT_RESOLUTION_CONCURRENCY: usize = 8;
 
 #[derive(Debug, Clone)]
 pub struct AccessControl {
@@ -125,6 +129,61 @@ impl AccessControl {
 
     pub fn is_enabled(&self) -> bool {
         self.allowed_projects.is_some()
+    }
+
+    /// Resolve the document search scope before paging through the API.
+    /// An empty or unresolvable allowlist must never become an unrestricted query.
+    pub(crate) async fn scope_document_projects(
+        &self,
+        requested: Option<Vec<ProjectId>>,
+        client: &BacklogApiClient,
+    ) -> Result<Option<Vec<ProjectId>>, Error> {
+        if let Some(ids) = requested {
+            if ids.is_empty() {
+                return Err(Error::Parameter("project_ids must not be empty".into()));
+            }
+            for id in &ids {
+                self.check_project_access_by_id_async(id, client).await?;
+            }
+            return Ok(Some(ids));
+        }
+        let Some(keys) = &self.allowed_projects else {
+            return Ok(None);
+        };
+        let mut seen_keys = HashSet::new();
+        let unique_keys: Vec<_> = keys
+            .iter()
+            .filter(|key| seen_keys.insert(*key))
+            .cloned()
+            .collect();
+        // Keep allowlist order while limiting concurrent cold-cache requests.
+        // Any resolution failure aborts the query, including partial success.
+        let mut ids: Vec<_> = stream::iter(unique_keys)
+            .map(|key| async move {
+                self.project_cache
+                    .get_by_key(&key, client)
+                    .await
+                    .map(|project| project.id)
+            })
+            .buffered(PROJECT_RESOLUTION_CONCURRENCY)
+            .try_collect()
+            .await?;
+        let mut seen_ids = HashSet::new();
+        ids.retain(|id| seen_ids.insert(*id));
+        if ids.is_empty() {
+            return Err(Error::Parameter(
+                "No allowed projects could be resolved".into(),
+            ));
+        }
+        Ok(Some(ids))
+    }
+
+    #[cfg(test)]
+    pub(crate) fn for_test(allowed_projects: Option<Vec<ProjectKey>>) -> Self {
+        Self {
+            allowed_projects,
+            project_cache: Arc::new(ProjectCacheManager::new()),
+        }
     }
 
     pub fn project_cache(&self) -> &Arc<ProjectCacheManager> {

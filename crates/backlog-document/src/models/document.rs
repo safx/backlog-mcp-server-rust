@@ -14,6 +14,11 @@ pub struct Document {
     pub project_id: ProjectId,
     pub title: String,
     pub plain: String,
+    /// Preserved as returned by the API, including JSON encoded as a string.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub json: Option<serde_json::Value>,
+    #[serde(default)]
+    pub attachments: Vec<super::DocumentAttachment>,
     pub status_id: i32, // Assuming status_id is an integer, adjust if it's a different type
     #[serde(skip_serializing_if = "Option::is_none")]
     pub emoji: Option<String>,
@@ -22,5 +27,5 @@ pub struct Document {
     pub updated_user: User,
     pub updated: DateTime<Utc>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub tags: Vec<DocumentTag>, // Or Vec<Tag> if a Tag struct is defined
+    pub tags: Vec<DocumentTag>,
 }

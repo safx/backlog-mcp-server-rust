@@ -497,6 +497,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.18",
  "tokio",
+ "wiremock",
 ]
 
 [[package]]
@@ -1610,6 +1611,7 @@ dependencies = [
  "backlog-wiki",
  "base64 0.22.1",
  "dashmap",
+ "futures-util",
  "rmcp",
  "schemars",
  "serde",

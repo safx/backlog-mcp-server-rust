@@ -11,6 +11,21 @@ use super::subcommands;
 /// Execute a document command
 pub async fn execute(client: &BacklogApiClient, args: DocumentArgs) -> CliResult<()> {
     match args.command {
+        DocumentCommands::Count { project_id, json } => {
+            subcommands::count::count(client, project_id, json).await?
+        }
+        #[cfg(feature = "document_writable")]
+        DocumentCommands::TagAdd {
+            document_id,
+            tag_names,
+            json,
+        } => subcommands::tags::add(client, document_id, tag_names, json).await?,
+        #[cfg(feature = "document_writable")]
+        DocumentCommands::TagRemove {
+            document_id,
+            tag_names,
+            json,
+        } => subcommands::tags::remove(client, document_id, tag_names, json).await?,
         DocumentCommands::List {
             project_id,
             keyword,
