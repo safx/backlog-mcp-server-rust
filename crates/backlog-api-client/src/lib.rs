@@ -45,7 +45,10 @@ pub use backlog_document::{
 #[cfg(feature = "file")]
 pub use backlog_file::models::FileContent;
 #[cfg(feature = "file")]
-pub use backlog_file::{FileApi, GetSharedFilesListParams, GetSharedFilesListResponse, SharedFile};
+pub use backlog_file::{
+    FileApi, GetSharedFilesListParams, GetSharedFilesListParamsBuilder, GetSharedFilesListResponse,
+    SharedFile,
+};
 
 // Issue module (from backlog_issue)
 #[cfg(feature = "issue")]
@@ -111,9 +114,10 @@ pub use backlog_space::{UpdateSpaceNotificationParams, UploadAttachmentParams};
 // User module (from backlog_user)
 #[cfg(feature = "user")]
 pub use backlog_user::{
-    GetUserStarCountParams, GetUserStarCountResponse, GetUserStarsParams, GetUserStarsResponse,
-    GetWatchingCountParams, GetWatchingListParams, GetWatchingListParamsBuilder,
-    Order as WatchingOrder, StarCount, StarOrder, UserApi, WatchingSort,
+    GetUserStarCountParams, GetUserStarCountParamsBuilder, GetUserStarCountResponse,
+    GetUserStarsParams, GetUserStarsResponse, GetWatchingCountParams, GetWatchingListParams,
+    GetWatchingListParamsBuilder, Order as WatchingOrder, StarCount, StarOrder, UserApi,
+    WatchingSort,
 };
 
 // Activity module (from backlog_activity)

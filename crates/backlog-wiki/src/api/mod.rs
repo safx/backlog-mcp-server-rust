@@ -54,7 +54,9 @@ pub use delete_wiki::{DeleteWikiParams, DeleteWikiResponse};
 #[cfg(feature = "writable")]
 pub use delete_wiki_attachment::{DeleteWikiAttachmentParams, DeleteWikiAttachmentResponse};
 #[cfg(feature = "writable")]
-pub use link_shared_files_to_wiki::{LinkSharedFilesToWikiParams, LinkSharedFilesToWikiResponse};
+pub use link_shared_files_to_wiki::{
+    LinkSharedFilesToWikiParams, LinkSharedFilesToWikiParamsBuilder, LinkSharedFilesToWikiResponse,
+};
 #[cfg(feature = "writable")]
 pub use unlink_shared_file_from_wiki::{
     UnlinkSharedFileFromWikiParams, UnlinkSharedFileFromWikiResponse,

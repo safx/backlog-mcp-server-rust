@@ -7,5 +7,7 @@ mod get_file;
 mod get_shared_files_list;
 
 // Re-export parameter types and response types
-pub use get_file::GetFileParams;
-pub use get_shared_files_list::{GetSharedFilesListParams, GetSharedFilesListResponse};
+pub use get_file::{GetFileParams, GetFileParamsBuilder};
+pub use get_shared_files_list::{
+    GetSharedFilesListParams, GetSharedFilesListParamsBuilder, GetSharedFilesListResponse,
+};

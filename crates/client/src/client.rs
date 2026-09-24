@@ -3,8 +3,15 @@ use backlog_api_core::{
     IntoUploadRequest, Result, bytes,
 };
 use reqwest::header::{CONTENT_DISPOSITION, CONTENT_TYPE};
+use std::time::Duration;
 use tokio::fs;
 use url::Url;
+
+/// Timeout for establishing a TCP/TLS connection.
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+/// Idle read timeout: aborts if no bytes are read for this long, but does not
+/// cap total transfer time, so large attachment downloads are not affected.
+const READ_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// A trait for converting HTTP responses into different output types
 pub trait IntoResponse {
@@ -137,7 +144,10 @@ impl Client {
     pub fn new(base_url: &str) -> Result<Self> {
         Ok(Self {
             base_url: Url::parse(base_url)?,
-            client: reqwest::Client::new(),
+            client: reqwest::Client::builder()
+                .connect_timeout(CONNECT_TIMEOUT)
+                .read_timeout(READ_TIMEOUT)
+                .build()?,
             auth_token: None,
             api_key: None,
         })
