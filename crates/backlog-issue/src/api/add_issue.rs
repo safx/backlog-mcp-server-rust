@@ -69,7 +69,7 @@ pub struct AddIssueParams {
     #[form(name = "assigneeId")]
     pub assignee_id: Option<UserId>,
     #[builder(default, setter(into, strip_option))]
-    #[form(array, name = "notifyUserId")]
+    #[form(array, name = "notifiedUserId")]
     pub notify_user_id: Option<Vec<UserId>>,
     #[builder(default, setter(into, strip_option))]
     #[form(array, name = "attachmentId")]
@@ -155,6 +155,27 @@ mod tests {
         }
 
         form_params
+    }
+
+    #[test]
+    fn test_notify_user_id_form_key() {
+        let params = AddIssueParamsBuilder::default()
+            .project_id(ProjectId::new(1))
+            .summary("Test Issue".to_string())
+            .issue_type_id(IssueTypeId::new(1))
+            .priority_id(PriorityId::new(1))
+            .notify_user_id(vec![backlog_core::identifier::UserId::new(456)])
+            .build()
+            .unwrap();
+
+        let form_params: Vec<(String, String)> = (&params).into();
+
+        assert!(
+            form_params
+                .iter()
+                .any(|(key, value)| key == "notifiedUserId[]" && value == "456")
+        );
+        assert!(!form_params.iter().any(|(key, _)| key == "notifyUserId[]"));
     }
 
     #[test]

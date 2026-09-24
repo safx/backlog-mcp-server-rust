@@ -31,6 +31,7 @@ serde_json = "1.0"
 serde_repr = "0.1"
 thiserror = "2.0"
 url = "2.5"
+percent-encoding = "2"
 bytes = "1" # Added bytes
 regex = "1.11"
 chrono = { version = "0.4.41", features = ["serde"] }

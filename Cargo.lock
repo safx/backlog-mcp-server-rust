@@ -259,6 +259,7 @@ dependencies = [
  "chrono",
  "client",
  "derive_builder",
+ "percent-encoding",
  "schemars",
  "serde",
  "serde_json",
