@@ -170,8 +170,8 @@ jobs:
           class Blg < Formula
             desc "Command-line interface for Backlog API"
             homepage "https://github.com/${{ github.repository }}"
-            license "MIT"
             version "${VERSION}"
+            license "MIT"
           
             on_macos do
               if Hardware::CPU.arm?
@@ -209,8 +209,8 @@ jobs:
           class McpBacklogServer < Formula
             desc "Model Context Protocol server for Backlog API"
             homepage "https://github.com/${{ github.repository }}"
-            license "MIT"
             version "${VERSION}"
+            license "MIT"
           
             on_macos do
               if Hardware::CPU.arm?
@@ -241,14 +241,14 @@ jobs:
                 To use mcp-backlog-server, you need to set the following environment variables:
                   export BACKLOG_BASE_URL="https://your-space.backlog.com"
                   export BACKLOG_API_KEY="your-api-key"
-                
+          
                 For MCP client configuration, see:
                   https://github.com/${{ github.repository }}#mcp-server
               EOS
             end
           
             test do
-              assert_predicate bin/"mcp-backlog-server", :exist?
+              assert_path_exists bin/"mcp-backlog-server"
               assert_predicate bin/"mcp-backlog-server", :executable?
             end
           end
