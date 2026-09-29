@@ -40,26 +40,10 @@ pub struct Notification {
     pub created: Option<DateTime<Utc>>,
 }
 
-/// Empty notification for activity contexts
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct EmptyNotification {
-    // Empty as per API spec
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::identifier::Identifier;
-
-    #[test]
-    fn test_empty_notification() {
-        let notification = EmptyNotification {};
-        let json = serde_json::to_string(&notification).unwrap();
-        assert_eq!(json, "{}");
-
-        let deserialized: EmptyNotification = serde_json::from_str("{}").unwrap();
-        assert_eq!(notification, deserialized);
-    }
 
     #[test]
     fn test_minimal_notification() {

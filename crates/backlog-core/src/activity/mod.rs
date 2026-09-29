@@ -6,6 +6,6 @@ pub mod project;
 
 pub use activity_type::Activity;
 pub use change::{Change, Comment, GroupProjectActivity};
-pub use notification::{EmptyNotification, Notification};
+pub use notification::Notification;
 pub use notification_reason::NotificationReason;
 pub use project::{ActivityIssue, ActivityProject};

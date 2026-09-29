@@ -30,8 +30,9 @@ impl ActivityProject {
         value
             .get("id")
             .and_then(|v| v.as_u64())
+            .and_then(|id| u32::try_from(id).ok())
             .map(|id| ActivityProject {
-                id: ProjectId::from(id as u32),
+                id: ProjectId::from(id),
                 project_key: value
                     .get("projectKey")
                     .and_then(|v| v.as_str())
@@ -53,8 +54,9 @@ impl ActivityIssue {
         value
             .get("id")
             .and_then(|v| v.as_u64())
+            .and_then(|id| u32::try_from(id).ok())
             .map(|id| ActivityIssue {
-                id: IssueId::from(id as u32),
+                id: IssueId::from(id),
                 key_id: value.get("keyId").and_then(|v| v.as_i64()).unwrap_or(0),
                 summary: value
                     .get("summary")
