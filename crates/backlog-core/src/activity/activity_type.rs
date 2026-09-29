@@ -100,6 +100,11 @@ mod tests {
                 "reason": 2,
                 "user": {"id": 1, "userId": "admin", "name": "admin", "roleType": 1, "mailAddress": "admin@example.com"},
                 "resourceAlreadyRead": false
+            }, {
+                "id": 26,
+                "alreadyRead": true,
+                "reason": 2,
+                "user": {"id": 1, "userId": "admin", "name": "admin", "roleType": 1, "mailAddress": "admin@example.com"}
             }],
             "createdUser": {
                 "id": 2,
@@ -124,12 +129,15 @@ mod tests {
         assert_eq!(changes.len(), 1);
         assert_eq!(changes[0].new_value, "Closed");
         assert_eq!(changes[0].old_value, None);
-        assert_eq!(activity.notifications.len(), 1);
+        assert_eq!(activity.notifications.len(), 2);
         assert_eq!(
             activity.notifications[0].reason,
             NotificationReason::IssueCommented
         );
         assert!(activity.notifications[0].user.is_some());
+        assert_eq!(activity.notifications[0].resource_already_read, Some(false));
+        // The English API docs omit resourceAlreadyRead for activity notifications
+        assert_eq!(activity.notifications[1].resource_already_read, None);
     }
 
     #[test]
