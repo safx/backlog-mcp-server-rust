@@ -25,35 +25,22 @@ fn print_activity(activity: &Activity) {
         activity.created.format("%Y-%m-%d %H:%M:%S")
     );
 
-    // Display content based on type
-    match &activity.content {
-        backlog_core::activity::Content::Standard {
-            summary,
-            description,
-            ..
-        } => {
-            if let Some(summary) = summary {
-                println!("Summary: {summary}");
-            }
-            if let Some(description) = description {
-                let preview = truncate_text(description, 100);
-                println!("Description: {preview}");
-            }
+    // Content shape depends on the activity type; show the common fields when present
+    let content = &activity.content;
+    if let Some(summary) = content["summary"].as_str() {
+        println!("Summary: {summary}");
+    }
+    if let Some(description) = content["description"].as_str() {
+        let preview = truncate_text(description, 100);
+        println!("Description: {preview}");
+    }
+    if let Some(users) = content["users"].as_array() {
+        println!("Users involved: {}", users.len());
+        for name in users.iter().take(3).filter_map(|u| u["name"].as_str()) {
+            println!("  - {name}");
         }
-        backlog_core::activity::Content::UserManagement { users, .. } => {
-            if let Some(users) = users {
-                println!("Users involved: {}", users.len());
-                for user in users.iter().take(3) {
-                    println!("  - {}", user.name);
-                }
-                if users.len() > 3 {
-                    println!("  ... and {} more", users.len() - 3);
-                }
-            }
-        }
-        _ => {
-            // Other content types not yet implemented in CLI
-            println!("Activity type: {:?}", activity.type_id);
+        if users.len() > 3 {
+            println!("  ... and {} more", users.len() - 3);
         }
     }
 }

@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
 
+/// One entry of an activity's `content.changes`; the API uses snake_case keys here.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub struct Change {
     pub field: String,
     pub new_value: String,
-    pub old_value: String,
+    pub old_value: Option<String>,
     #[serde(rename = "type")]
     pub change_type: String,
 }
@@ -32,14 +32,14 @@ mod tests {
         let change = Change {
             field: "status".to_string(),
             new_value: "Closed".to_string(),
-            old_value: "Open".to_string(),
+            old_value: Some("Open".to_string()),
             change_type: "standard".to_string(),
         };
 
         let json = serde_json::to_string(&change).unwrap();
         assert!(json.contains("\"field\":\"status\""));
-        assert!(json.contains("\"newValue\":\"Closed\""));
-        assert!(json.contains("\"oldValue\":\"Open\""));
+        assert!(json.contains("\"new_value\":\"Closed\""));
+        assert!(json.contains("\"old_value\":\"Open\""));
         assert!(json.contains("\"type\":\"standard\""));
     }
 
@@ -47,15 +47,15 @@ mod tests {
     fn test_change_deserialization() {
         let json = r#"{
             "field": "priority",
-            "newValue": "High",
-            "oldValue": "Normal",
+            "new_value": "High",
+            "old_value": null,
             "type": "standard"
         }"#;
 
         let change: Change = serde_json::from_str(json).unwrap();
         assert_eq!(change.field, "priority");
         assert_eq!(change.new_value, "High");
-        assert_eq!(change.old_value, "Normal");
+        assert_eq!(change.old_value, None);
         assert_eq!(change.change_type, "standard");
     }
 
