@@ -12,7 +12,9 @@ pub struct Notification {
     pub id: NotificationId,
     pub already_read: bool,
     pub reason: NotificationReason,
-    pub resource_already_read: bool,
+    /// Omitted in some documented activity payloads.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resource_already_read: Option<bool>,
 
     // Optional fields depending on context
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -40,26 +42,10 @@ pub struct Notification {
     pub created: Option<DateTime<Utc>>,
 }
 
-/// Empty notification for activity contexts
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct EmptyNotification {
-    // Empty as per API spec
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::identifier::Identifier;
-
-    #[test]
-    fn test_empty_notification() {
-        let notification = EmptyNotification {};
-        let json = serde_json::to_string(&notification).unwrap();
-        assert_eq!(json, "{}");
-
-        let deserialized: EmptyNotification = serde_json::from_str("{}").unwrap();
-        assert_eq!(notification, deserialized);
-    }
 
     #[test]
     fn test_minimal_notification() {
@@ -74,7 +60,7 @@ mod tests {
         assert_eq!(notification.id.value(), 12345);
         assert!(!notification.already_read);
         assert_eq!(notification.reason, NotificationReason::IssueCommented);
-        assert!(!notification.resource_already_read);
+        assert_eq!(notification.resource_already_read, Some(false));
         assert!(notification.user.is_none());
         assert!(notification.project.is_none());
     }
@@ -122,7 +108,7 @@ mod tests {
             id: NotificationId::new(999),
             already_read: false,
             reason: NotificationReason::FileAdded,
-            resource_already_read: true,
+            resource_already_read: Some(true),
             user: None,
             project: None,
             issue: None,

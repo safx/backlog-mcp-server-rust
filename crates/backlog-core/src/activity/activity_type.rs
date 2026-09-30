@@ -3,15 +3,9 @@ use crate::identifier::ActivityId;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use super::EmptyNotification;
-
-#[cfg(feature = "typed-activity")]
-use super::project::ActivityProject;
-#[cfg(feature = "typed-activity")]
-use crate::identifier::Identifier;
+use super::Notification;
 
 /// Unified activity structure that supports all activity contexts
-#[cfg(not(feature = "typed-activity"))]
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Activity {
@@ -21,35 +15,19 @@ pub struct Activity {
     pub type_id: i32,
     /// Raw content; its shape depends on `type_id` (field names are snake_case on the wire).
     pub content: serde_json::Value,
-    pub notifications: Vec<EmptyNotification>,
+    /// Empty in recent-update lists; populated by `GET /api/v2/activities/:activityId`.
+    pub notifications: Vec<Notification>,
     pub created_user: User,
     pub created: DateTime<Utc>,
 }
 
-/// Unified activity structure with typed project
-#[cfg(feature = "typed-activity")]
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct Activity {
-    pub id: ActivityId,
-    pub project: ActivityProject, // Phase 2: Typed project
-    #[serde(rename = "type")]
-    pub type_id: i32,
-    /// Raw content; its shape depends on `type_id` (field names are snake_case on the wire).
-    pub content: serde_json::Value,
-    pub notifications: Vec<EmptyNotification>,
-    pub created_user: User,
-    pub created: DateTime<Utc>,
-}
-
-#[cfg(not(feature = "typed-activity"))]
 impl Activity {
     /// Helper method for migration: extract project info from JSON
     pub fn project_id(&self) -> Option<u32> {
         self.project
             .get("id")
             .and_then(|v| v.as_u64())
-            .map(|id| id as u32)
+            .and_then(|id| u32::try_from(id).ok())
     }
 
     pub fn project_name(&self) -> Option<&str> {
@@ -57,40 +35,15 @@ impl Activity {
     }
 }
 
-#[cfg(feature = "typed-activity")]
-impl Activity {
-    /// Helper method for typed access - returns Option for consistency
-    pub fn project_id(&self) -> Option<u32> {
-        Some(self.project.id.value())
-    }
-
-    pub fn project_name(&self) -> Option<&str> {
-        Some(&self.project.name)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::activity::Change;
+    use crate::activity::{Change, NotificationReason};
     use crate::identifier::Identifier;
 
     #[test]
     fn test_activity_serialization() {
-        #[cfg(not(feature = "typed-activity"))]
         let project = serde_json::json!({"id": 1, "name": "Test Project"});
-
-        #[cfg(feature = "typed-activity")]
-        let project = {
-            use crate::activity::ActivityProject;
-            use crate::identifier::ProjectId;
-            ActivityProject {
-                id: ProjectId::new(1),
-                project_key: "TEST".to_string(),
-                name: "Test Project".to_string(),
-                archived: None,
-            }
-        };
 
         let activity = Activity {
             id: ActivityId::new(12345),
@@ -121,7 +74,6 @@ mod tests {
 
     #[test]
     fn test_activity_deserialization() {
-        #[cfg(not(feature = "typed-activity"))]
         let json = r#"{
             "id": 67890,
             "project": {"id": 2, "name": "Another Project"},
@@ -142,39 +94,18 @@ mod tests {
                     "type": "standard"
                 }]
             },
-            "notifications": [],
-            "createdUser": {
-                "id": 2,
-                "userId": "admin",
-                "name": "Administrator",
-                "roleType": 1,
-                "mailAddress": "admin@example.com"
-            },
-            "created": "2024-01-02T15:30:00Z"
-        }"#;
-
-        #[cfg(feature = "typed-activity")]
-        let json = r#"{
-            "id": 67890,
-            "project": {"id": 2, "projectKey": "PROJ", "name": "Another Project"},
-            "type": 2,
-            "content": {
-                "id": 300,
-                "key_id": 400,
-                "summary": "Issue Updated",
-                "description": "Description updated",
-                "comment": {
-                    "id": 500,
-                    "content": "Update comment"
-                },
-                "changes": [{
-                    "field": "status",
-                    "new_value": "Closed",
-                    "old_value": null,
-                    "type": "standard"
-                }]
-            },
-            "notifications": [],
+            "notifications": [{
+                "id": 25,
+                "alreadyRead": false,
+                "reason": 2,
+                "user": {"id": 1, "userId": "admin", "name": "admin", "roleType": 1, "mailAddress": "admin@example.com"},
+                "resourceAlreadyRead": false
+            }, {
+                "id": 26,
+                "alreadyRead": true,
+                "reason": 2,
+                "user": {"id": 1, "userId": "admin", "name": "admin", "roleType": 1, "mailAddress": "admin@example.com"}
+            }],
             "createdUser": {
                 "id": 2,
                 "userId": "admin",
@@ -198,34 +129,37 @@ mod tests {
         assert_eq!(changes.len(), 1);
         assert_eq!(changes[0].new_value, "Closed");
         assert_eq!(changes[0].old_value, None);
+        assert_eq!(activity.notifications.len(), 2);
+        assert_eq!(
+            activity.notifications[0].reason,
+            NotificationReason::IssueCommented
+        );
+        assert!(activity.notifications[0].user.is_some());
+        assert_eq!(activity.notifications[0].resource_already_read, Some(false));
+        // The English API docs omit resourceAlreadyRead for activity notifications
+        assert_eq!(activity.notifications[1].resource_already_read, None);
+    }
+
+    #[test]
+    fn test_project_id_out_of_range() {
+        let json = r#"{
+            "id": 1,
+            "project": {"id": 4294967296, "name": "Overflow"},
+            "type": 1,
+            "content": {},
+            "notifications": [],
+            "createdUser": {"id": 1, "name": "Admin", "roleType": 1, "mailAddress": "admin@example.com"},
+            "created": "2024-01-03T12:00:00Z"
+        }"#;
+        let activity: Activity = serde_json::from_str(json).unwrap();
+        assert_eq!(activity.project_id(), None);
     }
 
     #[test]
     fn test_activity_with_user_management_content() {
-        #[cfg(not(feature = "typed-activity"))]
         let json = r#"{
             "id": 11111,
             "project": {"id": 3},
-            "type": 6,
-            "content": {
-                "users": [{"id": 10, "userId": "newuser", "name": "New User", "roleType": 2, "mailAddress": "newuser@example.com"}],
-                "groupProjectActivities": [{"id": 20, "type": 5}],
-                "comment": "User added to project"
-            },
-            "notifications": [],
-            "createdUser": {
-                "id": 1,
-                "name": "Admin",
-                "roleType": 1,
-                "mailAddress": "admin@example.com"
-            },
-            "created": "2024-01-03T12:00:00Z"
-        }"#;
-
-        #[cfg(feature = "typed-activity")]
-        let json = r#"{
-            "id": 11111,
-            "project": {"id": 3, "projectKey": "USER", "name": "User Project"},
             "type": 6,
             "content": {
                 "users": [{"id": 10, "userId": "newuser", "name": "New User", "roleType": 2, "mailAddress": "newuser@example.com"}],
