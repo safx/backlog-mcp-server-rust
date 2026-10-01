@@ -5,7 +5,7 @@ mod update_custom_field_tests {
         Date, ProjectKey,
         identifier::{CustomFieldId, IssueTypeId, ProjectId},
     };
-    use backlog_domain_models::CustomFieldSettings;
+    use backlog_domain_models::{CustomFieldSettings, InitialDate};
     use backlog_project::api::{ProjectApi, UpdateCustomFieldParams};
     use chrono::NaiveDate;
     use client::test_utils::setup_client;
@@ -168,9 +168,61 @@ mod update_custom_field_tests {
                 settings.max,
                 Some(Date::from(NaiveDate::from_ymd_opt(2025, 12, 31).unwrap()))
             );
+            assert_eq!(settings.initial_value_type, Some(InitialDate::Today));
+            assert_eq!(settings.initial_shift, None);
+            assert_eq!(
+                settings.initial_date,
+                Some(Date::from(NaiveDate::from_ymd_opt(2025, 6, 15).unwrap()))
+            );
         } else {
             panic!("Expected date settings");
         }
+    }
+
+    #[tokio::test]
+    async fn test_update_custom_field_date_settings_shifted_initial_date() {
+        let mock_server = MockServer::start().await;
+        let client = setup_client(&mock_server).await;
+        let project_api = ProjectApi::new(client);
+
+        let expected_response = serde_json::json!({
+            "id": 12345,
+            "projectId": 123,
+            "typeId": 4,
+            "name": "Deadline Field",
+            "description": "",
+            "required": false,
+            "useIssueType": false,
+            "applicableIssueTypes": [],
+            "displayOrder": 3,
+            "min": null,
+            "max": null,
+            "initialDate": {
+                "id": 2,
+                "shift": 7,
+                "date": null
+            }
+        });
+
+        Mock::given(method("PATCH"))
+            .and(path("/api/v2/projects/123/customFields/12345"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&expected_response))
+            .mount(&mock_server)
+            .await;
+
+        let params = UpdateCustomFieldParams::new(ProjectId::new(123), CustomFieldId::new(12345))
+            .with_date_settings(None, None, Some(2), None, Some(7));
+
+        let custom_field = project_api
+            .update_custom_field(params)
+            .await
+            .expect("update_custom_field should succeed");
+        let CustomFieldSettings::Date(settings) = custom_field.settings else {
+            panic!("Expected date settings");
+        };
+        assert_eq!(settings.initial_value_type, Some(InitialDate::Shifted));
+        assert_eq!(settings.initial_shift, Some(7));
+        assert_eq!(settings.initial_date, None);
     }
 
     #[tokio::test]

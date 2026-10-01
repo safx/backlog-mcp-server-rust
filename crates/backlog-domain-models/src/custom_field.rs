@@ -2,7 +2,8 @@ use backlog_core::{
     Date,
     identifier::{CustomFieldId, IssueTypeId, ProjectId},
 };
-use serde::{Deserialize, Deserializer, Serialize, de::Error as _};
+use serde::{Deserialize, Deserializer, Serialize};
+use serde_json::Value;
 
 #[cfg(feature = "schemars")]
 use schemars::JsonSchema;
@@ -33,14 +34,6 @@ pub enum CustomFieldSettings {
     MultipleList(ListSettings),
     Checkbox(ListSettings),
     Radio(ListSettings),
-}
-
-// Raw types for deserializing typeId-based JSON
-#[derive(Debug, Deserialize)]
-#[serde(untagged)]
-enum RawCustomFieldType {
-    Tagged(RawTaggedCustomFieldType),
-    Untagged(RawUntaggedCustomFieldType),
 }
 
 // Custom Field Type IDs (Backlog API)
@@ -95,19 +88,80 @@ impl RawCustomFieldBase {
     }
 }
 
-/// Parse an optional date string with error context
-fn parse_optional_date<'de, D>(
-    date_str: Option<&str>,
-    field_name: &str,
-) -> Result<Option<Date>, D::Error>
+/// Deserialize an optional field from a borrowed JSON value.
+///
+/// Missing and `null` become `None`; a value of the wrong type is an error naming `field`.
+fn optional_field<'a, T, E>(value: Option<&'a Value>, field: &str) -> Result<Option<T>, E>
 where
-    D: Deserializer<'de>,
+    T: Deserialize<'a>,
+    E: serde::de::Error,
 {
-    use std::str::FromStr;
-    date_str
-        .map(Date::from_str)
+    value
+        .map(Option::<T>::deserialize)
         .transpose()
-        .map_err(|e| D::Error::custom(format!("Failed to parse {} date: {}", field_name, e)))
+        .map(Option::flatten)
+        .map_err(|e| E::custom(format!("invalid {field}: {e}")))
+}
+
+fn numeric_settings<E: serde::de::Error>(
+    min: Option<&Value>,
+    max: Option<&Value>,
+    initial_value: Option<f64>,
+    unit: Option<String>,
+) -> Result<NumericSettings, E> {
+    Ok(NumericSettings {
+        min: optional_field(min, "min")?,
+        max: optional_field(max, "max")?,
+        initial_value,
+        unit,
+    })
+}
+
+fn date_settings<E: serde::de::Error>(
+    min: Option<&Value>,
+    max: Option<&Value>,
+    initial_value_type: Option<InitialDate>,
+    initial_shift: Option<i32>,
+    initial_date: Option<&Value>,
+) -> Result<DateSettings, E> {
+    let (initial_value_type, initial_shift, initial_date) =
+        normalize_initial_date(initial_value_type, initial_shift, initial_date)?;
+    Ok(DateSettings {
+        min: optional_field(min, "min")?,
+        max: optional_field(max, "max")?,
+        initial_value_type,
+        initial_shift,
+        initial_date,
+    })
+}
+
+/// Initial value mode, shift days, and date of a date field.
+type InitialDateParts = (Option<InitialDate>, Option<i32>, Option<Date>);
+
+/// Normalize the initial value of a date field into its flat representation.
+///
+/// API responses carry it as an `initialDate` object `{id, shift, date}` (see backlog4j
+/// `DateValueSetting`). The flat `initialValueType` / `initialShift` plus a date-string
+/// `initialDate` is still accepted. When the object is present, all three values come
+/// from it and the top-level mode and shift are not used as fallbacks.
+fn normalize_initial_date<E: serde::de::Error>(
+    initial_value_type: Option<InitialDate>,
+    initial_shift: Option<i32>,
+    initial_date: Option<&Value>,
+) -> Result<InitialDateParts, E> {
+    let Some(Value::Object(object)) = initial_date else {
+        let date = optional_field(initial_date, "initialDate")?;
+        return Ok((initial_value_type, initial_shift, date));
+    };
+    let id: i64 = optional_field(object.get("id"), "initialDate.id")?
+        .ok_or_else(|| E::custom("invalid initialDate.id: missing"))?;
+    let mode = InitialDate::from_api_value(id)
+        .ok_or_else(|| E::custom(format!("invalid initialDate.id: unknown value {id}")))?;
+    Ok((
+        Some(mode),
+        optional_field(object.get("shift"), "initialDate.shift")?,
+        optional_field(object.get("date"), "initialDate.date")?,
+    ))
 }
 
 #[derive(Debug, Deserialize)]
@@ -129,8 +183,8 @@ struct RawTextAreaFieldType {
 struct RawNumericFieldType {
     #[serde(flatten)]
     base: RawCustomFieldBase,
-    min: Option<f64>,
-    max: Option<f64>,
+    min: Option<Value>,
+    max: Option<Value>,
     initial_value: Option<f64>,
     unit: Option<String>,
 }
@@ -140,11 +194,11 @@ struct RawNumericFieldType {
 struct RawDateFieldType {
     #[serde(flatten)]
     base: RawCustomFieldBase,
-    min: Option<String>,
-    max: Option<String>,
+    min: Option<Value>,
+    max: Option<Value>,
     initial_value_type: Option<InitialDate>,
     initial_shift: Option<i32>,
-    initial_date: Option<String>,
+    initial_date: Option<Value>,
 }
 
 impl RawDateFieldType {
@@ -152,16 +206,14 @@ impl RawDateFieldType {
     where
         D: Deserializer<'de>,
     {
-        Ok((
-            self.base,
-            DateSettings {
-                min: parse_optional_date::<D>(self.min.as_deref(), "min")?,
-                max: parse_optional_date::<D>(self.max.as_deref(), "max")?,
-                initial_value_type: self.initial_value_type,
-                initial_shift: self.initial_shift,
-                initial_date: parse_optional_date::<D>(self.initial_date.as_deref(), "initial")?,
-            },
-        ))
+        let settings = date_settings::<D::Error>(
+            self.min.as_ref(),
+            self.max.as_ref(),
+            self.initial_value_type,
+            self.initial_shift,
+            self.initial_date.as_ref(),
+        )?;
+        Ok((self.base, settings))
     }
 }
 
@@ -241,16 +293,13 @@ impl RawUntaggedCustomFieldType {
     where
         D: Deserializer<'de>,
     {
-        Ok(DateSettings {
-            min: parse_optional_date::<D>(self.min.as_ref().and_then(|v| v.as_str()), "min")?,
-            max: parse_optional_date::<D>(self.max.as_ref().and_then(|v| v.as_str()), "max")?,
-            initial_value_type: self.initial_value_type.clone(),
-            initial_shift: self.initial_shift,
-            initial_date: parse_optional_date::<D>(
-                self.initial_date.as_ref().and_then(|v| v.as_str()),
-                "initial",
-            )?,
-        })
+        date_settings::<D::Error>(
+            self.min.as_ref(),
+            self.max.as_ref(),
+            self.initial_value_type,
+            self.initial_shift,
+            self.initial_date.as_ref(),
+        )
     }
 }
 
@@ -304,17 +353,30 @@ pub struct ListItem {
     pub display_order: i32,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+/// Initial value mode of a date custom field.
+///
+/// Wire values follow the Backlog API (`initialValueType` / `initialDate.id`):
+/// 1 = today, 2 = today + `initialShift` days, 3 = the specified `initialDate`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[cfg_attr(feature = "schemars", derive(JsonSchema))]
 pub enum InitialDate {
     #[serde(rename = "today")]
     Today,
-    #[serde(rename = "tomorrow")]
-    Tomorrow,
-    #[serde(rename = "yesterday")]
-    Yesterday,
+    #[serde(rename = "shifted")]
+    Shifted,
     #[serde(rename = "specified")]
     Specified,
+}
+
+impl InitialDate {
+    fn from_api_value(value: i64) -> Option<Self> {
+        match value {
+            1 => Some(Self::Today),
+            2 => Some(Self::Shifted),
+            3 => Some(Self::Specified),
+            _ => None,
+        }
+    }
 }
 
 impl<'de> Deserialize<'de> for InitialDate {
@@ -325,24 +387,16 @@ impl<'de> Deserialize<'de> for InitialDate {
         #[derive(Deserialize)]
         #[serde(untagged)]
         enum InitialDateHelper {
-            Integer(i32),
+            Integer(i64),
             String(String),
         }
 
         match InitialDateHelper::deserialize(deserializer)? {
-            InitialDateHelper::Integer(i) => match i {
-                1 => Ok(InitialDate::Today),
-                2 => Ok(InitialDate::Tomorrow),
-                3 => Ok(InitialDate::Yesterday),
-                4 => Ok(InitialDate::Specified),
-                _ => Err(serde::de::Error::custom(format!(
-                    "Unknown InitialDate value: {i}"
-                ))),
-            },
+            InitialDateHelper::Integer(i) => InitialDate::from_api_value(i)
+                .ok_or_else(|| serde::de::Error::custom(format!("Unknown InitialDate value: {i}"))),
             InitialDateHelper::String(s) => match s.as_str() {
                 "today" => Ok(InitialDate::Today),
-                "tomorrow" => Ok(InitialDate::Tomorrow),
-                "yesterday" => Ok(InitialDate::Yesterday),
+                "shifted" => Ok(InitialDate::Shifted),
                 "specified" => Ok(InitialDate::Specified),
                 _ => Err(serde::de::Error::custom(format!(
                     "Unknown InitialDate string: {s}"
@@ -377,14 +431,11 @@ impl<'de> Deserialize<'de> for CustomFieldType {
             return CustomFieldType::from_untagged::<D>(untagged);
         }
 
-        // Otherwise, try the tagged format
-        let raw: RawCustomFieldType =
+        // Otherwise, try the tagged format (string typeId). Anything with an integer
+        // typeId returned above, so an untagged fallback here could never succeed.
+        let tagged: RawTaggedCustomFieldType =
             serde_json::from_value(value).map_err(serde::de::Error::custom)?;
-
-        match raw {
-            RawCustomFieldType::Tagged(tagged) => CustomFieldType::from_tagged::<D>(tagged),
-            RawCustomFieldType::Untagged(untagged) => CustomFieldType::from_untagged::<D>(untagged),
-        }
+        CustomFieldType::from_tagged::<D>(tagged)
     }
 }
 
@@ -396,15 +447,15 @@ impl CustomFieldType {
         let (base, settings) = match tagged {
             RawTaggedCustomFieldType::Text(raw) => (raw.base, CustomFieldSettings::Text),
             RawTaggedCustomFieldType::TextArea(raw) => (raw.base, CustomFieldSettings::TextArea),
-            RawTaggedCustomFieldType::Numeric(raw) => (
-                raw.base,
-                CustomFieldSettings::Numeric(NumericSettings {
-                    min: raw.min,
-                    max: raw.max,
-                    initial_value: raw.initial_value,
-                    unit: raw.unit,
-                }),
-            ),
+            RawTaggedCustomFieldType::Numeric(raw) => {
+                let settings = numeric_settings::<D::Error>(
+                    raw.min.as_ref(),
+                    raw.max.as_ref(),
+                    raw.initial_value,
+                    raw.unit,
+                )?;
+                (raw.base, CustomFieldSettings::Numeric(settings))
+            }
             RawTaggedCustomFieldType::Date(raw) => {
                 let (base, settings) = raw.into_date_settings::<D>()?;
                 (base, CustomFieldSettings::Date(settings))
@@ -439,12 +490,12 @@ impl CustomFieldType {
         let settings = match untagged.type_id {
             1 => CustomFieldSettings::Text,
             2 => CustomFieldSettings::TextArea,
-            3 => CustomFieldSettings::Numeric(NumericSettings {
-                min: untagged.min.as_ref().and_then(|v| v.as_f64()),
-                max: untagged.max.as_ref().and_then(|v| v.as_f64()),
-                initial_value: untagged.initial_value,
-                unit: untagged.unit.clone(),
-            }),
+            3 => CustomFieldSettings::Numeric(numeric_settings::<D::Error>(
+                untagged.min.as_ref(),
+                untagged.max.as_ref(),
+                untagged.initial_value,
+                untagged.unit.clone(),
+            )?),
             4 => CustomFieldSettings::Date(untagged.to_date_settings::<D>()?),
             5 => CustomFieldSettings::SingleList(untagged.to_list_settings()),
             6 => CustomFieldSettings::MultipleList(untagged.to_list_settings()),
@@ -475,6 +526,7 @@ impl CustomFieldType {
 mod tests {
     use super::*;
     use backlog_core::identifier::Identifier;
+    use serde_json::json;
 
     #[test]
     fn test_custom_field_type_creation() {
@@ -575,119 +627,279 @@ mod tests {
     // ============================================
 
     #[test]
-    fn test_initial_date_deserialize_integer_today() {
-        let result: InitialDate = serde_json::from_str("1").expect("should deserialize 1 as Today");
-        assert_eq!(result, InitialDate::Today);
-    }
-
-    #[test]
-    fn test_initial_date_deserialize_integer_tomorrow() {
-        let result: InitialDate =
-            serde_json::from_str("2").expect("should deserialize 2 as Tomorrow");
-        assert_eq!(result, InitialDate::Tomorrow);
-    }
-
-    #[test]
-    fn test_initial_date_deserialize_integer_yesterday() {
-        let result: InitialDate =
-            serde_json::from_str("3").expect("should deserialize 3 as Yesterday");
-        assert_eq!(result, InitialDate::Yesterday);
-    }
-
-    #[test]
-    fn test_initial_date_deserialize_integer_specified() {
-        let result: InitialDate =
-            serde_json::from_str("4").expect("should deserialize 4 as Specified");
-        assert_eq!(result, InitialDate::Specified);
-    }
-
-    #[test]
-    fn test_initial_date_deserialize_string_today() {
-        let result: InitialDate =
-            serde_json::from_str("\"today\"").expect("should deserialize 'today'");
-        assert_eq!(result, InitialDate::Today);
-    }
-
-    #[test]
-    fn test_initial_date_deserialize_string_tomorrow() {
-        let result: InitialDate =
-            serde_json::from_str("\"tomorrow\"").expect("should deserialize 'tomorrow'");
-        assert_eq!(result, InitialDate::Tomorrow);
-    }
-
-    #[test]
-    fn test_initial_date_deserialize_string_yesterday() {
-        let result: InitialDate =
-            serde_json::from_str("\"yesterday\"").expect("should deserialize 'yesterday'");
-        assert_eq!(result, InitialDate::Yesterday);
-    }
-
-    #[test]
-    fn test_initial_date_deserialize_string_specified() {
-        let result: InitialDate =
-            serde_json::from_str("\"specified\"").expect("should deserialize 'specified'");
-        assert_eq!(result, InitialDate::Specified);
-    }
-
-    #[test]
-    fn test_initial_date_deserialize_invalid_integer() {
-        let result = serde_json::from_str::<InitialDate>("0");
-        assert!(result.is_err(), "0 should be invalid");
-
-        let result = serde_json::from_str::<InitialDate>("5");
-        assert!(result.is_err(), "5 should be invalid");
-
-        let result = serde_json::from_str::<InitialDate>("99");
-        assert!(result.is_err(), "99 should be invalid");
-
-        let result = serde_json::from_str::<InitialDate>("-1");
-        assert!(result.is_err(), "-1 should be invalid");
-    }
-
-    #[test]
-    fn test_initial_date_deserialize_invalid_string() {
-        let result = serde_json::from_str::<InitialDate>("\"invalid\"");
-        assert!(result.is_err(), "'invalid' should fail");
-
-        let result = serde_json::from_str::<InitialDate>("\"Today\"");
-        assert!(result.is_err(), "'Today' (capitalized) should fail");
-
-        let result = serde_json::from_str::<InitialDate>("\"\"");
-        assert!(result.is_err(), "empty string should fail");
-    }
-
-    #[test]
-    fn test_initial_date_serialize() {
-        assert_eq!(
-            serde_json::to_string(&InitialDate::Today).expect("should serialize Today"),
-            "\"today\""
-        );
-        assert_eq!(
-            serde_json::to_string(&InitialDate::Tomorrow).expect("should serialize Tomorrow"),
-            "\"tomorrow\""
-        );
-        assert_eq!(
-            serde_json::to_string(&InitialDate::Yesterday).expect("should serialize Yesterday"),
-            "\"yesterday\""
-        );
-        assert_eq!(
-            serde_json::to_string(&InitialDate::Specified).expect("should serialize Specified"),
-            "\"specified\""
-        );
-    }
-
-    #[test]
-    fn test_initial_date_roundtrip() {
-        for original in [
-            InitialDate::Today,
-            InitialDate::Tomorrow,
-            InitialDate::Yesterday,
-            InitialDate::Specified,
+    fn test_initial_date_deserialize_valid() {
+        for (json, expected) in [
+            ("1", InitialDate::Today),
+            ("2", InitialDate::Shifted),
+            ("3", InitialDate::Specified),
+            ("\"today\"", InitialDate::Today),
+            ("\"shifted\"", InitialDate::Shifted),
+            ("\"specified\"", InitialDate::Specified),
         ] {
-            let json = serde_json::to_string(&original).expect("should serialize");
-            let deserialized: InitialDate =
-                serde_json::from_str(&json).expect("should deserialize");
-            assert_eq!(original, deserialized);
+            let result: InitialDate =
+                serde_json::from_str(json).unwrap_or_else(|e| panic!("{json}: {e}"));
+            assert_eq!(result, expected, "{json}");
+        }
+    }
+
+    #[test]
+    fn test_initial_date_deserialize_invalid() {
+        for json in [
+            "0",
+            "4",
+            "99",
+            "-1",
+            "\"2\"",
+            "\"tomorrow\"",
+            "\"yesterday\"",
+            "\"Today\"",
+            "\"invalid\"",
+            "\"\"",
+        ] {
+            assert!(
+                serde_json::from_str::<InitialDate>(json).is_err(),
+                "{json} should be invalid"
+            );
+        }
+    }
+
+    #[test]
+    fn test_initial_date_serialize_roundtrip() {
+        for (value, json) in [
+            (InitialDate::Today, "\"today\""),
+            (InitialDate::Shifted, "\"shifted\""),
+            (InitialDate::Specified, "\"specified\""),
+        ] {
+            assert_eq!(serde_json::to_string(&value).expect("serialize"), json);
+            let restored: InitialDate = serde_json::from_str(json).expect("deserialize");
+            assert_eq!(restored, value);
+        }
+    }
+
+    // ============================================
+    // Numeric / Date settings validation (both typeId forms)
+    // ============================================
+
+    /// Parse the same custom field with an integer typeId and with a string typeId.
+    fn parse_both_type_id_forms(
+        type_id: u8,
+        extra: &serde_json::Value,
+    ) -> [Result<CustomFieldType, serde_json::Error>; 2] {
+        [json!(type_id), json!(type_id.to_string())].map(|type_id| {
+            let mut field = json!({
+                "id": 4,
+                "projectId": 100,
+                "typeId": type_id,
+                "name": "Field",
+                "description": "",
+                "required": false,
+                "applicableIssueTypes": null,
+                "displayOrder": 0
+            });
+            let object = field.as_object_mut().expect("object");
+            for (key, value) in extra.as_object().expect("extra must be an object") {
+                object.insert(key.clone(), value.clone());
+            }
+            serde_json::from_value(field)
+        })
+    }
+
+    fn parse_settings(type_id: u8, extra: serde_json::Value) -> CustomFieldSettings {
+        let [integer, string] = parse_both_type_id_forms(type_id, &extra);
+        let integer = integer.unwrap_or_else(|e| panic!("{extra} (integer typeId): {e}"));
+        let string = string.unwrap_or_else(|e| panic!("{extra} (string typeId): {e}"));
+        assert_eq!(integer, string, "{extra}: typeId forms disagree");
+        integer.settings
+    }
+
+    fn assert_rejected(type_id: u8, extra: serde_json::Value, field: &str) {
+        for result in parse_both_type_id_forms(type_id, &extra) {
+            let error = match result {
+                Ok(parsed) => panic!("{extra} should be rejected, got {parsed:?}"),
+                Err(error) => error.to_string(),
+            };
+            assert!(
+                error.contains(field),
+                "{extra}: error {error:?} should mention {field:?}"
+            );
+        }
+    }
+
+    fn date(s: &str) -> Option<Date> {
+        Some(s.parse().expect("valid date"))
+    }
+
+    #[test]
+    fn test_numeric_min_max_validation() {
+        for (extra, min, max) in [
+            (json!({}), None, None),
+            (json!({"min": null, "max": null}), None, None),
+            (json!({"min": 0, "max": 100.5}), Some(0.0), Some(100.5)),
+        ] {
+            let CustomFieldSettings::Numeric(settings) = parse_settings(3, extra.clone()) else {
+                panic!("{extra}: expected Numeric settings");
+            };
+            assert_eq!((settings.min, settings.max), (min, max), "{extra}");
+        }
+
+        for field in ["min", "max"] {
+            for value in [
+                json!("not-a-number"),
+                json!("1"),
+                json!(true),
+                json!([]),
+                json!({}),
+            ] {
+                assert_rejected(3, json!({ field: value }), field);
+            }
+        }
+    }
+
+    #[test]
+    fn test_date_min_max_validation() {
+        let CustomFieldSettings::Date(settings) = parse_settings(
+            4,
+            json!({"min": "2025-01-01", "max": "2025-12-31T00:00:00Z"}),
+        ) else {
+            panic!("expected Date settings");
+        };
+        assert_eq!(settings.min, date("2025-01-01"));
+        assert_eq!(settings.max, date("2025-12-31"));
+
+        let CustomFieldSettings::Date(settings) = parse_settings(4, json!({"min": null})) else {
+            panic!("expected Date settings");
+        };
+        assert_eq!((settings.min, settings.max), (None, None));
+
+        for field in ["min", "max"] {
+            for value in [
+                json!(12345),
+                json!(false),
+                json!([]),
+                json!({}),
+                json!("not-a-date"),
+            ] {
+                assert_rejected(4, json!({ field: value }), field);
+            }
+        }
+    }
+
+    #[test]
+    fn test_date_initial_value_normalization() {
+        use InitialDate::{Shifted, Specified, Today};
+        let cases = [
+            // initialDate object (API response form)
+            (
+                json!({"initialDate": {"id": 1, "date": "2025-06-15T00:00:00Z"}}),
+                (Some(Today), None, date("2025-06-15")),
+            ),
+            (
+                json!({"initialDate": {"id": 2, "shift": -7}}),
+                (Some(Shifted), Some(-7), None),
+            ),
+            (
+                json!({"initialDate": {"id": 2, "shift": 0}}),
+                (Some(Shifted), Some(0), None),
+            ),
+            (
+                json!({"initialDate": {"id": 2, "shift": 7, "date": null}}),
+                (Some(Shifted), Some(7), None),
+            ),
+            (
+                json!({"initialDate": {"id": 3, "shift": null, "date": "2025-06-15", "extra": 1}}),
+                (Some(Specified), None, date("2025-06-15")),
+            ),
+            // The object wins as a whole; top-level values are not used as fallbacks
+            (
+                json!({"initialValueType": 1, "initialShift": 5, "initialDate": {"id": 2}}),
+                (Some(Shifted), None, None),
+            ),
+            (
+                json!({
+                    "initialValueType": 2,
+                    "initialShift": 5,
+                    "initialDate": {"id": 3, "date": "2025-06-15"}
+                }),
+                (Some(Specified), None, date("2025-06-15")),
+            ),
+            // Flat form (date string + top-level mode and shift)
+            (
+                json!({"initialValueType": 2, "initialShift": 7, "initialDate": "2025-06-15"}),
+                (Some(Shifted), Some(7), date("2025-06-15")),
+            ),
+            (
+                json!({"initialValueType": "shifted", "initialShift": 7}),
+                (Some(Shifted), Some(7), None),
+            ),
+            (
+                json!({"initialValueType": 3, "initialDate": null}),
+                (Some(Specified), None, None),
+            ),
+            (json!({}), (None, None, None)),
+        ];
+
+        for (extra, expected) in cases {
+            let CustomFieldSettings::Date(settings) = parse_settings(4, extra.clone()) else {
+                panic!("{extra}: expected Date settings");
+            };
+            let actual = (
+                settings.initial_value_type,
+                settings.initial_shift,
+                settings.initial_date,
+            );
+            assert_eq!(actual, expected, "{extra}");
+        }
+    }
+
+    #[test]
+    fn test_date_initial_value_rejections() {
+        let cases = [
+            (json!({"initialDate": 20250615}), "initialDate"),
+            (json!({"initialDate": true}), "initialDate"),
+            (json!({"initialDate": []}), "initialDate"),
+            (json!({"initialDate": "not-a-date"}), "initialDate"),
+            (json!({"initialDate": {}}), "initialDate.id"),
+            (json!({"initialDate": {"id": null}}), "initialDate.id"),
+            (json!({"initialDate": {"id": "2"}}), "initialDate.id"),
+            (json!({"initialDate": {"id": "today"}}), "initialDate.id"),
+            (json!({"initialDate": {"id": 2.0}}), "initialDate.id"),
+            (json!({"initialDate": {"id": 0}}), "initialDate.id"),
+            (json!({"initialDate": {"id": 4}}), "initialDate.id"),
+            (
+                json!({"initialDate": {"id": 2, "shift": "7"}}),
+                "initialDate.shift",
+            ),
+            (
+                json!({"initialDate": {"id": 2, "shift": 1.5}}),
+                "initialDate.shift",
+            ),
+            (
+                json!({"initialDate": {"id": 2, "shift": 4294967296_i64}}),
+                "initialDate.shift",
+            ),
+            (
+                json!({"initialDate": {"id": 3, "date": 20250615}}),
+                "initialDate.date",
+            ),
+            (
+                json!({"initialDate": {"id": 3, "date": {}}}),
+                "initialDate.date",
+            ),
+            (
+                json!({"initialDate": {"id": 3, "date": "not-a-date"}}),
+                "initialDate.date",
+            ),
+            // Invalid top-level values are rejected even when a valid object is present
+            (
+                json!({"initialValueType": 4, "initialDate": {"id": 1}}),
+                "InitialDate",
+            ),
+            (json!({"initialValueType": "tomorrow"}), "InitialDate"),
+            (json!({"initialShift": "7", "initialDate": {"id": 1}}), ""),
+        ];
+
+        for (extra, field) in cases {
+            assert_rejected(4, extra, field);
         }
     }
 
