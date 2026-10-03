@@ -6,9 +6,8 @@ use backlog_core::identifier::{DocumentAttachmentId, DocumentId, Identifier, Pro
 #[cfg(feature = "document_writable")]
 use backlog_document::{AddDocumentParams, DeleteDocumentParams};
 use backlog_document::{
-    DocumentComment, DocumentOrder, DocumentSortKey, DownloadAttachmentParams,
-    GetDocumentCommentsParams, GetDocumentParams, GetDocumentTreeParamsBuilder,
-    ListDocumentsParamsBuilder,
+    DocumentOrder, DocumentSortKey, DownloadAttachmentParams, GetDocumentCommentsParams,
+    GetDocumentParams, GetDocumentTreeParamsBuilder, ListDocumentsParamsBuilder,
 };
 use std::str::FromStr;
 
@@ -133,20 +132,27 @@ pub(crate) async fn comments(
     } else if comments.is_empty() {
         println!("No comments");
     } else {
-        fn print(c: &DocumentComment, depth: usize) {
-            let indent = "  ".repeat(depth);
+        fn print(
+            id: &str,
+            user: &str,
+            created: &chrono::DateTime<chrono::Utc>,
+            plain: &str,
+            indent: &str,
+        ) {
             println!(
-                "{indent}[{}] {} ({}):",
-                c.id,
-                c.created_user.name,
-                c.created.format("%Y-%m-%d %H:%M:%S")
+                "{indent}[{id}] {user} ({}):",
+                created.format("%Y-%m-%d %H:%M:%S")
             );
-            for line in c.plain.lines() {
+            for line in plain.lines() {
                 println!("{indent}  {line}");
             }
-            c.replies.iter().for_each(|r| print(r, depth + 1));
         }
-        comments.iter().for_each(|c| print(c, 0));
+        for c in &comments {
+            print(&c.id, &c.created_user.name, &c.created, &c.plain, "");
+            for r in &c.replies {
+                print(&r.id, &r.created_user.name, &r.created, &r.plain, "  ");
+            }
+        }
     }
     Ok(())
 }

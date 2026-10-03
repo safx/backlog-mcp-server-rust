@@ -8,7 +8,7 @@ mod tag;
 mod tree_node;
 
 pub use attachment::DocumentAttachment;
-pub use comment::DocumentComment;
+pub use comment::{DocumentComment, DocumentCommentReply};
 pub use document::Document;
 pub use document_count::DocumentCount;
 pub use document_detail::DocumentDetail;

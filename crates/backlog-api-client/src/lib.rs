@@ -27,8 +27,8 @@ pub use backlog_domain_models::Star as UserStar;
 // Document module (from backlog_document)
 #[cfg(feature = "document")]
 pub use backlog_document::{
-    Document, DocumentApi, DocumentComment, DocumentCount, DocumentDetail, DocumentOrder,
-    DocumentSortKey, DocumentTag, DocumentTreeRootNode, DownloadAttachmentParams,
+    Document, DocumentApi, DocumentComment, DocumentCommentReply, DocumentCount, DocumentDetail,
+    DocumentOrder, DocumentSortKey, DocumentTag, DocumentTreeRootNode, DownloadAttachmentParams,
     GetDocumentCommentsParams, GetDocumentCommentsResponse, GetDocumentCountParams,
     GetDocumentCountResponse, GetDocumentParams, GetDocumentTreeParams, GetDocumentTreeResponse,
     ListDocumentsParams, ListDocumentsParamsBuilder, ListDocumentsResponse,
