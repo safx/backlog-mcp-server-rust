@@ -11,9 +11,11 @@ pub struct GetUserStarCountParams {
     #[serde(skip)]
     pub user_id: UserId,
     /// Count stars from this date (inclusive).
+    #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub since: Option<ApiDate>,
     /// Count stars until this date (inclusive).
+    #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub until: Option<ApiDate>,
 }
@@ -73,6 +75,18 @@ mod tests {
 
         assert_eq!(params.user_id.value(), 12345);
         assert_eq!(params.path(), "/api/v2/users/12345/stars/count");
+    }
+
+    #[test]
+    fn test_get_user_star_count_builder_without_dates() {
+        let params = GetUserStarCountParamsBuilder::default()
+            .user_id(UserId::new(12345))
+            .build()
+            .expect("builder should allow omitted date filters");
+
+        assert_eq!(params.user_id.value(), 12345);
+        assert!(params.since.is_none());
+        assert!(params.until.is_none());
     }
 
     #[test]
