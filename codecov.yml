@@ -1,0 +1,12 @@
+coverage:
+  status:
+    project:
+      default:
+        threshold: 1%
+    patch:
+      default:
+        informational: true
+
+# The CLI has no tests; exclude it so CLI-only diffs don't skew coverage.
+ignore:
+  - "cli/**"
