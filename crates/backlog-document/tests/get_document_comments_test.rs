@@ -41,7 +41,31 @@ async fn test_get_document_comments_success() {
     let server = MockServer::start().await;
     let api = setup_document_api(&server).await;
 
-    let reply = comment_json("bbbb", "");
+    // Shape taken from the official API example: replies carry `commentId` and
+    // lack `statusId`, `commentType`, and `replies`.
+    let reply = format!(
+        r#"{{
+            "id": "bbbb",
+            "documentId": "{DOC_ID}",
+            "commentId": "aaaa",
+            "content": "{{\"type\":\"doc\",\"content\":[]}}",
+            "plain": "This is the one we talked about before.",
+            "createdUserId": 5,
+            "created": "2026-04-01T00:11:37Z",
+            "updatedUserId": 5,
+            "updated": "2026-04-01T00:11:37Z",
+            "createdUser": {{
+                "id": 5,
+                "userId": "test02",
+                "uniqueId": null,
+                "name": "Test Two",
+                "mailAddress": "test02@example.com",
+                "roleType": 2,
+                "lang": null,
+                "icon": "icons/default/09.png"
+            }}
+        }}"#
+    );
     let body = format!("[{}]", comment_json("aaaa", &reply));
 
     Mock::given(method("GET"))
@@ -67,8 +91,13 @@ async fn test_get_document_comments_success() {
     assert_eq!(c.comment_type, "comment");
     assert_eq!(c.created_user.name, "管理者");
     assert_eq!(c.replies.len(), 1);
-    assert_eq!(c.replies[0].id, "bbbb");
-    assert!(c.replies[0].replies.is_empty());
+    let r = &c.replies[0];
+    assert_eq!(r.id, "bbbb");
+    assert_eq!(r.comment_id, "aaaa");
+    assert_eq!(r.document_id.value(), DOC_ID);
+    assert_eq!(r.plain, "This is the one we talked about before.");
+    assert_eq!(r.created_user_id.value(), 5);
+    assert_eq!(r.created_user.name, "Test Two");
 }
 
 #[tokio::test]
