@@ -108,7 +108,8 @@ pub async fn recently_viewed(
             } else {
                 println!("\nRecently Viewed Projects:");
                 println!("{}", "=".repeat(50));
-                for (i, project) in projects.iter().enumerate() {
+                for (i, entry) in projects.iter().enumerate() {
+                    let project = &entry.project;
                     println!(
                         "\n{}. [{}] {} ({})",
                         i + 1,

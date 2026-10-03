@@ -31,7 +31,7 @@ mod update_wiki;
 pub use download_wiki_attachment::DownloadWikiAttachmentParams;
 pub use get_recently_viewed_wikis::{
     GetRecentlyViewedWikisParams, GetRecentlyViewedWikisParamsBuilder,
-    GetRecentlyViewedWikisResponse,
+    GetRecentlyViewedWikisResponse, RecentlyViewedWiki,
 };
 pub use get_wiki_attachment_list::{GetWikiAttachmentListParams, GetWikiAttachmentListResponse};
 pub use get_wiki_count::{GetWikiCountParams, GetWikiCountResponse};

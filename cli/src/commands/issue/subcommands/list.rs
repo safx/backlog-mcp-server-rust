@@ -127,7 +127,8 @@ pub async fn recently_viewed(
                 println!("Found {} recently viewed issue(s):", issues.len());
                 println!();
 
-                for (index, issue) in issues.iter().enumerate() {
+                for (index, entry) in issues.iter().enumerate() {
+                    let issue = &entry.issue;
                     println!("{}. {} - {}", index + 1, issue.issue_key, issue.summary);
                     println!("   Project ID: {}", issue.project_id);
                     println!("   Status: {}", issue.status.name);

@@ -1,10 +1,19 @@
 use crate::Project;
 use backlog_api_core::{Error as ApiError, IntoRequest};
 use backlog_api_macros::ToFormParams;
+use chrono::{DateTime, Utc};
 use derive_builder::Builder;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-pub type GetRecentlyViewedProjectsResponse = Vec<Project>;
+/// A project and its most recent view timestamp.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecentlyViewedProject {
+    pub project: Project,
+    /// When the project was most recently viewed, rather than modified.
+    pub updated: DateTime<Utc>,
+}
+
+pub type GetRecentlyViewedProjectsResponse = Vec<RecentlyViewedProject>;
 
 /// Parameters for getting recently viewed projects
 ///

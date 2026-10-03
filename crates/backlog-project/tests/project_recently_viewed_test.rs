@@ -14,36 +14,42 @@ async fn test_get_recently_viewed_projects_no_params() {
 
     let response_body = json!([
         {
-            "id": 1,
-            "projectKey": "TEST",
-            "name": "Test Project",
-            "chartEnabled": true,
-            "subtaskingEnabled": true,
-            "projectLeaderCanEditProjectLeader": false,
-            "useWiki": true,
-            "useFileSharing": true,
-            "useWikiTreeView": true,
-            "useOriginalImageSizeAtWiki": false,
-            "textFormattingRule": "markdown",
-            "archived": false,
-            "displayOrder": 1,
-            "useDevAttributes": true
+            "project": {
+                "id": 1,
+                "projectKey": "TEST",
+                "name": "Test Project",
+                "chartEnabled": true,
+                "subtaskingEnabled": true,
+                "projectLeaderCanEditProjectLeader": false,
+                "useWiki": true,
+                "useFileSharing": true,
+                "useWikiTreeView": true,
+                "useOriginalImageSizeAtWiki": false,
+                "textFormattingRule": "markdown",
+                "archived": false,
+                "displayOrder": 1,
+                "useDevAttributes": true
+            },
+            "updated": "2024-04-14T07:00:00Z"
         },
         {
-            "id": 2,
-            "projectKey": "DEMO",
-            "name": "Demo Project",
-            "chartEnabled": false,
-            "subtaskingEnabled": true,
-            "projectLeaderCanEditProjectLeader": true,
-            "useWiki": true,
-            "useFileSharing": false,
-            "useWikiTreeView": false,
-            "useOriginalImageSizeAtWiki": true,
-            "textFormattingRule": "backlog",
-            "archived": false,
-            "displayOrder": 2,
-            "useDevAttributes": false
+            "project": {
+                "id": 2,
+                "projectKey": "DEMO",
+                "name": "Demo Project",
+                "chartEnabled": false,
+                "subtaskingEnabled": true,
+                "projectLeaderCanEditProjectLeader": true,
+                "useWiki": true,
+                "useFileSharing": false,
+                "useWikiTreeView": false,
+                "useOriginalImageSizeAtWiki": true,
+                "textFormattingRule": "backlog",
+                "archived": false,
+                "displayOrder": 2,
+                "useDevAttributes": false
+            },
+            "updated": "2024-04-14T06:00:00Z"
         }
     ]);
 
@@ -61,12 +67,20 @@ async fn test_get_recently_viewed_projects_no_params() {
     assert!(result.is_ok());
     let projects = result.unwrap();
     assert_eq!(projects.len(), 2);
-    assert_eq!(projects[0].id.value(), 1);
-    assert_eq!(projects[0].project_key.to_string(), "TEST");
-    assert_eq!(projects[0].name, "Test Project");
-    assert_eq!(projects[1].id.value(), 2);
-    assert_eq!(projects[1].project_key.to_string(), "DEMO");
-    assert_eq!(projects[1].name, "Demo Project");
+    assert_eq!(projects[0].project.id.value(), 1);
+    assert_eq!(projects[0].project.project_key.to_string(), "TEST");
+    assert_eq!(projects[0].project.name, "Test Project");
+    assert_eq!(projects[1].project.id.value(), 2);
+    assert_eq!(projects[1].project.project_key.to_string(), "DEMO");
+    assert_eq!(projects[1].project.name, "Demo Project");
+    assert_eq!(
+        projects[0].updated.to_rfc3339(),
+        "2024-04-14T07:00:00+00:00"
+    );
+    assert_eq!(
+        projects[1].updated.to_rfc3339(),
+        "2024-04-14T06:00:00+00:00"
+    );
 }
 
 #[tokio::test]
@@ -76,20 +90,23 @@ async fn test_get_recently_viewed_projects_with_order_asc() {
 
     let response_body = json!([
         {
-            "id": 3,
-            "projectKey": "OLD",
-            "name": "Old Project",
-            "chartEnabled": true,
-            "subtaskingEnabled": false,
-            "projectLeaderCanEditProjectLeader": false,
-            "useWiki": false,
-            "useFileSharing": true,
-            "useWikiTreeView": false,
-            "useOriginalImageSizeAtWiki": false,
-            "textFormattingRule": "markdown",
-            "archived": false,
-            "displayOrder": 3,
-            "useDevAttributes": false
+            "project": {
+                "id": 3,
+                "projectKey": "OLD",
+                "name": "Old Project",
+                "chartEnabled": true,
+                "subtaskingEnabled": false,
+                "projectLeaderCanEditProjectLeader": false,
+                "useWiki": false,
+                "useFileSharing": true,
+                "useWikiTreeView": false,
+                "useOriginalImageSizeAtWiki": false,
+                "textFormattingRule": "markdown",
+                "archived": false,
+                "displayOrder": 3,
+                "useDevAttributes": false
+            },
+            "updated": "2024-01-03T09:00:00Z"
         }
     ]);
 
@@ -109,7 +126,7 @@ async fn test_get_recently_viewed_projects_with_order_asc() {
     assert!(result.is_ok());
     let projects = result.unwrap();
     assert_eq!(projects.len(), 1);
-    assert_eq!(projects[0].name, "Old Project");
+    assert_eq!(projects[0].project.name, "Old Project");
 }
 
 #[tokio::test]
@@ -119,20 +136,23 @@ async fn test_get_recently_viewed_projects_with_pagination() {
 
     let response_body = json!([
         {
-            "id": 10,
-            "projectKey": "PAGE10",
-            "name": "Page 10 Project",
-            "chartEnabled": true,
-            "subtaskingEnabled": true,
-            "projectLeaderCanEditProjectLeader": false,
-            "useWiki": true,
-            "useFileSharing": true,
-            "useWikiTreeView": true,
-            "useOriginalImageSizeAtWiki": false,
-            "textFormattingRule": "markdown",
-            "archived": false,
-            "displayOrder": 10,
-            "useDevAttributes": true
+            "project": {
+                "id": 10,
+                "projectKey": "PAGE10",
+                "name": "Page 10 Project",
+                "chartEnabled": true,
+                "subtaskingEnabled": true,
+                "projectLeaderCanEditProjectLeader": false,
+                "useWiki": true,
+                "useFileSharing": true,
+                "useWikiTreeView": true,
+                "useOriginalImageSizeAtWiki": false,
+                "textFormattingRule": "markdown",
+                "archived": false,
+                "displayOrder": 10,
+                "useDevAttributes": true
+            },
+            "updated": "2024-04-14T07:00:00Z"
         }
     ]);
 
@@ -154,7 +174,7 @@ async fn test_get_recently_viewed_projects_with_pagination() {
     assert!(result.is_ok());
     let projects = result.unwrap();
     assert_eq!(projects.len(), 1);
-    assert_eq!(projects[0].name, "Page 10 Project");
+    assert_eq!(projects[0].project.name, "Page 10 Project");
 }
 
 #[tokio::test]

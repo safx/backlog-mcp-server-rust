@@ -16,7 +16,7 @@ pub use api::{
     GetProjectTeamListResponse, GetProjectUserListParams, GetProjectUserListResponse,
     GetRecentlyViewedProjectsParams, GetRecentlyViewedProjectsParamsBuilder,
     GetRecentlyViewedProjectsResponse, GetResolutionListParams, GetResolutionListResponse,
-    GetStatusListParams, GetStatusListResponse, ProjectApi,
+    GetStatusListParams, GetStatusListResponse, ProjectApi, RecentlyViewedProject,
 };
 
 #[cfg(feature = "writable")]
