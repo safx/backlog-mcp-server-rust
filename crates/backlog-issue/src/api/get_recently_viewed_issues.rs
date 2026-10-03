@@ -1,10 +1,19 @@
 use crate::models::Issue;
 use backlog_api_core::{Error as ApiError, IntoRequest};
 use backlog_api_macros::ToFormParams;
+use chrono::{DateTime, Utc};
 use derive_builder::Builder;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-pub type GetRecentlyViewedIssuesResponse = Vec<Issue>;
+/// An issue and its most recent view timestamp.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecentlyViewedIssue {
+    pub issue: Issue,
+    /// When the issue was most recently viewed, rather than modified.
+    pub updated: DateTime<Utc>,
+}
+
+pub type GetRecentlyViewedIssuesResponse = Vec<RecentlyViewedIssue>;
 
 /// Parameters for getting recently viewed issues
 ///

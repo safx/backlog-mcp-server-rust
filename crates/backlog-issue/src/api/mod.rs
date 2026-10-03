@@ -68,7 +68,7 @@ pub use get_issue_list::{GetIssueListParams, GetIssueListParamsBuilder, GetIssue
 pub use get_participant_list::{GetParticipantListParams, GetParticipantListResponse};
 pub use get_recently_viewed_issues::{
     GetRecentlyViewedIssuesParams, GetRecentlyViewedIssuesParamsBuilder,
-    GetRecentlyViewedIssuesResponse,
+    GetRecentlyViewedIssuesResponse, RecentlyViewedIssue,
 };
 pub use get_related_issues::{GetRelatedIssuesParams, GetRelatedIssuesResponse};
 pub use get_shared_file_list::{GetSharedFileListParams, GetSharedFileListResponse};

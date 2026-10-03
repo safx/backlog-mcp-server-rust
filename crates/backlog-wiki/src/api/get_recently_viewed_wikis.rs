@@ -1,10 +1,20 @@
 use crate::models::Wiki;
 use backlog_api_core::{Error as ApiError, IntoRequest};
 use backlog_api_macros::ToFormParams;
+use chrono::{DateTime, Utc};
 use derive_builder::Builder;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-pub type GetRecentlyViewedWikisResponse = Vec<Wiki>;
+/// A wiki page and its most recent view timestamp.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+pub struct RecentlyViewedWiki {
+    pub page: Wiki,
+    /// When the page was most recently viewed, rather than modified.
+    pub updated: DateTime<Utc>,
+}
+
+pub type GetRecentlyViewedWikisResponse = Vec<RecentlyViewedWiki>;
 
 /// Parameters for getting recently viewed wikis.
 ///

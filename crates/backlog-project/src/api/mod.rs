@@ -163,7 +163,7 @@ pub use get_project_recent_updates::{
 };
 pub use get_recently_viewed_projects::{
     GetRecentlyViewedProjectsParams, GetRecentlyViewedProjectsParamsBuilder,
-    GetRecentlyViewedProjectsResponse,
+    GetRecentlyViewedProjectsResponse, RecentlyViewedProject,
 };
 pub use get_resolution_list::{GetResolutionListParams, GetResolutionListResponse};
 

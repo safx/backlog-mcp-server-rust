@@ -36,7 +36,8 @@ pub(crate) async fn recently_viewed(
         println!("No recently viewed wikis found");
     } else {
         println!("Recently viewed wikis ({} total):", wikis.len());
-        for wiki in wikis {
+        for entry in wikis {
+            let wiki = entry.page;
             println!("\n[{}] {}", wiki.id.value(), wiki.name);
             println!("  Project ID: {}", wiki.project_id.value());
             if !wiki.tags.is_empty() {
