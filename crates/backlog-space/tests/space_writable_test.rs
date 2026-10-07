@@ -5,7 +5,7 @@ mod writable_tests {
     use std::fs;
     use std::path::PathBuf;
     use tempfile::NamedTempFile;
-    use wiremock::matchers::{method, path};
+    use wiremock::matchers::{body_string, header, method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     async fn setup_space_api(mock_server: &MockServer) -> SpaceApi {
@@ -18,15 +18,15 @@ mod writable_tests {
         let server = MockServer::start().await;
         let space_api = setup_space_api(&server).await;
 
-        // Create a temporary test file
-        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
-        let test_content = b"test file content for attachment";
-        fs::write(temp_file.path(), test_content).expect("Failed to write to temp file");
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp directory");
+        let file_path = temp_dir.path().join("test_attachment.bin");
+        let test_content = b"\x00\xfftest\r\nfile content\x80";
+        fs::write(&file_path, test_content).expect("Failed to write to temp file");
 
         let mock_response = serde_json::json!({
             "id": 456,
-            "name": "test_attachment.txt",
-            "size": 32
+            "name": "test_attachment.bin",
+            "size": test_content.len()
         });
 
         Mock::given(method("POST"))
@@ -35,14 +35,51 @@ mod writable_tests {
             .mount(&server)
             .await;
 
-        let params = UploadAttachmentParams::new(temp_file.path().to_path_buf());
+        let params = UploadAttachmentParams::new(file_path);
         let result = space_api.upload_attachment(params).await;
 
         assert!(result.is_ok());
         let attachment = result.expect("upload_attachment should succeed");
         assert_eq!(attachment.id, 456);
-        assert_eq!(attachment.name, "test_attachment.txt");
-        assert_eq!(attachment.size, 32);
+        assert_eq!(attachment.name, "test_attachment.bin");
+        assert_eq!(attachment.size, test_content.len() as u64);
+
+        let requests = server
+            .received_requests()
+            .await
+            .expect("request recording should be enabled");
+        assert_eq!(requests.len(), 1);
+        let request = &requests[0];
+        let content_type = request
+            .headers
+            .get("content-type")
+            .expect("upload should have a Content-Type header")
+            .to_str()
+            .expect("Content-Type should be valid text");
+        let boundary = content_type
+            .strip_prefix("multipart/form-data; boundary=")
+            .expect("upload should use multipart/form-data with a boundary")
+            .trim_matches('"');
+        assert!(
+            request
+                .body
+                .starts_with(format!("--{boundary}\r\n").as_bytes())
+        );
+
+        let headers_end = request
+            .body
+            .windows(4)
+            .position(|bytes| bytes == b"\r\n\r\n")
+            .expect("file part should separate its headers and content");
+        let part_headers = std::str::from_utf8(&request.body[..headers_end])
+            .expect("multipart headers should be valid text");
+        assert!(part_headers.lines().any(|line| {
+            line == "Content-Disposition: form-data; name=\"file\"; filename=\"test_attachment.bin\""
+        }));
+        let uploaded_content = request.body[headers_end + 4..]
+            .strip_suffix(format!("\r\n--{boundary}--\r\n").as_bytes())
+            .expect("file part should end with the advertised closing boundary");
+        assert_eq!(uploaded_content, test_content);
     }
 
     #[tokio::test]
@@ -145,7 +182,10 @@ mod writable_tests {
 
         Mock::given(method("PUT"))
             .and(path("/api/v2/space/notification"))
+            .and(header("Content-Type", "application/x-www-form-urlencoded"))
+            .and(body_string("content=Updated+space+notification+content"))
             .respond_with(ResponseTemplate::new(200).set_body_json(&mock_response))
+            .expect(1)
             .mount(&server)
             .await;
 
@@ -173,7 +213,10 @@ mod writable_tests {
 
         Mock::given(method("PUT"))
             .and(path("/api/v2/space/notification"))
+            .and(header("Content-Type", "application/x-www-form-urlencoded"))
+            .and(body_string("content="))
             .respond_with(ResponseTemplate::new(200).set_body_json(&mock_response))
+            .expect(1)
             .mount(&server)
             .await;
 
@@ -184,6 +227,31 @@ mod writable_tests {
         let notification =
             result.expect("update_space_notification should succeed with empty content");
         assert_eq!(notification.content, "");
+    }
+
+    #[tokio::test]
+    async fn test_update_space_notification_encodes_content() {
+        let server = MockServer::start().await;
+        let space_api = setup_space_api(&server).await;
+        let content = "通知 & = + %\n";
+
+        Mock::given(method("PUT"))
+            .and(path("/api/v2/space/notification"))
+            .and(header("Content-Type", "application/x-www-form-urlencoded"))
+            .and(body_string("content=%E9%80%9A%E7%9F%A5+%26+%3D+%2B+%25%0A"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "content": content,
+                "updated": "2024-01-20T10:30:00Z"
+            })))
+            .expect(1)
+            .mount(&server)
+            .await;
+
+        let notification = space_api
+            .update_space_notification(UpdateSpaceNotificationParams::new(content))
+            .await
+            .expect("notification content should be form encoded");
+        assert_eq!(notification.content, content);
     }
 
     #[tokio::test]

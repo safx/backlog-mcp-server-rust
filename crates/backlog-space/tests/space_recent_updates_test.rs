@@ -5,7 +5,7 @@ use backlog_space::api::GetSpaceRecentUpdatesParams;
 use common::*;
 use wiremock::{
     Mock, MockServer, ResponseTemplate,
-    matchers::{method, path},
+    matchers::{method, path, query_param, query_param_is_missing},
 };
 
 #[tokio::test]
@@ -55,7 +55,9 @@ async fn test_get_space_recent_updates_success() {
 
     Mock::given(method("GET"))
         .and(path("/api/v2/space/activities"))
+        .and(|request: &wiremock::Request| request.url.query_pairs().next().is_none())
         .respond_with(ResponseTemplate::new(200).set_body_json(&mock_response))
+        .expect(1)
         .mount(&server)
         .await;
 
@@ -81,7 +83,12 @@ async fn test_get_space_recent_updates_with_filters() {
 
     Mock::given(method("GET"))
         .and(path("/api/v2/space/activities"))
+        .and(query_param("activityTypeId[]", "1"))
+        .and(query_param("activityTypeId[]", "2"))
+        .and(query_param("count", "50"))
+        .and(query_param("order", "desc"))
         .respond_with(ResponseTemplate::new(200).set_body_json(&mock_response))
+        .expect(1)
         .mount(&server)
         .await;
 
@@ -105,7 +112,10 @@ async fn test_get_space_recent_updates_with_pagination() {
 
     Mock::given(method("GET"))
         .and(path("/api/v2/space/activities"))
+        .and(query_param("minId", "100"))
+        .and(query_param("maxId", "200"))
         .respond_with(ResponseTemplate::new(200).set_body_json(&mock_response))
+        .expect(1)
         .mount(&server)
         .await;
 
@@ -117,6 +127,30 @@ async fn test_get_space_recent_updates_with_pagination() {
 
     let result = space_api.get_space_recent_updates(params).await;
     assert!(result.is_ok());
+}
+
+#[tokio::test]
+async fn test_get_space_recent_updates_omits_empty_activity_type_filter() {
+    let server = MockServer::start().await;
+    let space_api = setup_space_api(&server).await;
+
+    Mock::given(method("GET"))
+        .and(path("/api/v2/space/activities"))
+        .and(query_param_is_missing("activityTypeId[]"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!([])))
+        .expect(1)
+        .mount(&server)
+        .await;
+
+    let params = GetSpaceRecentUpdatesParams {
+        activity_type_ids: Some(Vec::new()),
+        ..Default::default()
+    };
+
+    space_api
+        .get_space_recent_updates(params)
+        .await
+        .expect("empty activity type filter should be omitted");
 }
 
 #[tokio::test]
