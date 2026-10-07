@@ -69,7 +69,7 @@ use rmcp::handler::server::router::tool;
 use rmcp::{
     ErrorData as McpError,
     handler::server::{tool::ToolRouter, wrapper::Parameters},
-    model::{CallToolResult, ContentBlock, ServerCapabilities, ServerInfo},
+    model::{CallToolResult, ContentBlock, ServerCapabilities, ServerConfig},
     tool, tool_handler, tool_router,
 };
 use std::env;
@@ -859,12 +859,12 @@ impl Server {
 
 #[tool_handler(router = self.tool_router)]
 impl rmcp::ServerHandler for Server {
-    fn get_info(&self) -> ServerInfo {
+    fn get_info(&self) -> ServerConfig {
         let instructions = "Backlog MCP Server\n\n\
 This server provides tools to interact with Backlog, a project management service.
 "
         .to_string();
-        ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
+        ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
             .with_instructions(instructions)
     }
 }

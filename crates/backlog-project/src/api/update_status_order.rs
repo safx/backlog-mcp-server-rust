@@ -8,6 +8,7 @@ use serde::Serialize;
 #[cfg(feature = "writable")]
 use backlog_api_macros::ToFormParams;
 
+#[cfg(feature = "writable")]
 pub type UpdateStatusOrderResponse = Vec<backlog_domain_models::Status>;
 
 #[cfg(feature = "writable")]

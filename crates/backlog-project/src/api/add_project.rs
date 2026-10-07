@@ -3,6 +3,7 @@ use backlog_api_core::{HttpMethod, IntoRequest};
 #[cfg(feature = "writable")]
 use serde::Serialize;
 
+#[cfg(feature = "writable")]
 pub type AddProjectResponse = backlog_domain_models::Project;
 
 #[cfg(feature = "writable")]

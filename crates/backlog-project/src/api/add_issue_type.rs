@@ -5,6 +5,7 @@ use backlog_core::ProjectIdOrKey;
 #[cfg(feature = "writable")]
 use serde::Serialize;
 
+#[cfg(feature = "writable")]
 pub type AddIssueTypeResponse = backlog_domain_models::IssueType;
 
 #[cfg(feature = "writable")]
