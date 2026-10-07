@@ -3,6 +3,7 @@ use backlog_api_core::{HttpMethod, IntoRequest};
 #[cfg(feature = "writable")]
 use backlog_core::ProjectIdOrKey;
 
+#[cfg(feature = "writable")]
 pub type DeleteCategoryResponse = backlog_domain_models::Category;
 
 #[cfg(feature = "writable")]

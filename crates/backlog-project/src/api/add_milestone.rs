@@ -5,6 +5,7 @@ use backlog_core::{ApiDate, ProjectIdOrKey};
 #[cfg(feature = "writable")]
 use serde::Serialize;
 
+#[cfg(feature = "writable")]
 pub type AddMilestoneResponse = backlog_domain_models::Milestone;
 
 #[cfg(feature = "writable")]
