@@ -1633,6 +1633,7 @@ dependencies = [
  "base64 0.22.1",
  "dashmap",
  "futures-util",
+ "regex",
  "rmcp",
  "schemars",
  "serde",

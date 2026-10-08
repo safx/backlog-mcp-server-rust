@@ -42,6 +42,22 @@ pub(crate) struct GetDocumentDetailsRequest {
 }
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub(crate) struct GetDocumentContentRequest {
+    /// Document ID (32 lowercase hexadecimal characters).
+    pub document_id: String,
+    /// 1-based line number to start from. Defaults to 1.
+    #[schemars(range(min = 1))]
+    pub start_line: Option<u32>,
+    /// Maximum number of lines to return. Defaults to 200, maximum 2000.
+    #[schemars(range(min = 1, max = 2000))]
+    pub limit: Option<u32>,
+    /// Regular expression (Rust regex syntax). When set, only matching lines are returned,
+    /// each with its line number. Use "(?i)" for case-insensitive matching and "^#{1,6} "
+    /// to list Markdown headings.
+    pub search: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub(crate) struct GetDocumentCommentsRequest {
     #[schemars(description = "The document ID (a 32-digit hexadecimal string).")]
     pub document_id: String,
@@ -128,7 +144,22 @@ pub(crate) struct UpdateDocumentContentRequest {
     #[schemars(description = "The document ID to update (32-digit hexadecimal string).")]
     pub document_id: String,
     #[schemars(
-        description = "Full replacement body in Markdown. Read the current body with document_details_get ('plain'), edit it, and send the whole document."
+        description = "Full replacement body in Markdown. For partial changes to a long document use document_content_edit instead."
     )]
     pub content: String,
+}
+
+#[cfg(feature = "document_writable")]
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub(crate) struct EditDocumentContentRequest {
+    /// Document ID (32 lowercase hexadecimal characters).
+    pub document_id: String,
+    /// Exact text to replace, copied verbatim (including indentation and line breaks) from
+    /// document_content_get output without the line-number prefix. Must occur exactly once
+    /// unless replace_all is true.
+    pub old_string: String,
+    /// Replacement text.
+    pub new_string: String,
+    /// Replace every occurrence instead of requiring a unique match. Defaults to false.
+    pub replace_all: Option<bool>,
 }

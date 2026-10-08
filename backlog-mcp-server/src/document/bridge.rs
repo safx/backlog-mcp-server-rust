@@ -18,16 +18,20 @@ use backlog_core::{
 
 #[cfg(feature = "document_writable")]
 use super::request::{
-    AddDocumentRequest, DeleteDocumentRequest, DocumentTagsRequest, UpdateDocumentContentRequest,
-    UpdateDocumentRequest,
+    AddDocumentRequest, DeleteDocumentRequest, DocumentTagsRequest, EditDocumentContentRequest,
+    UpdateDocumentContentRequest, UpdateDocumentRequest,
 };
 use super::request::{
-    DownloadDocumentAttachmentRequest, GetDocumentCommentsRequest, GetDocumentCountRequest,
-    GetDocumentDetailsRequest, GetDocumentTreeRequest, ListDocumentsRequest,
+    DownloadDocumentAttachmentRequest, GetDocumentCommentsRequest, GetDocumentContentRequest,
+    GetDocumentCountRequest, GetDocumentDetailsRequest, GetDocumentTreeRequest,
+    ListDocumentsRequest,
 };
 
+use super::content;
 use crate::access_control::AccessControl;
 use crate::error::{Error, Result};
+use regex::Regex;
+use serde::Serialize;
 
 #[cfg(feature = "document_writable")]
 use backlog_api_client::{
@@ -39,6 +43,128 @@ use backlog_api_client::{
 
 fn parameter_error(error: impl std::fmt::Display) -> Error {
     Error::Parameter(error.to_string())
+}
+
+/// Metadata for one page of a document body; `text` is returned as a separate text block.
+#[derive(Debug, Serialize)]
+pub(crate) struct DocumentContentPage {
+    pub document_id: String,
+    pub title: String,
+    pub updated: String,
+    pub total_lines: u32,
+    pub returned_lines: u32,
+    pub next_line: Option<u32>,
+    pub truncated_line: Option<u32>,
+    #[serde(skip)]
+    pub text: String,
+}
+
+/// Slim result of a body write; the caller already has the content it sent.
+#[cfg(feature = "document_writable")]
+#[derive(Debug, Serialize)]
+pub(crate) struct ContentWriteResult {
+    pub document_id: String,
+    pub updated: String,
+    /// `"NO_CHANGE"` when the server found the result identical to the current content.
+    pub code: Option<String>,
+}
+
+#[cfg(feature = "document_writable")]
+impl From<UpdateDocumentContentResponse> for ContentWriteResult {
+    fn from(response: UpdateDocumentContentResponse) -> Self {
+        Self {
+            document_id: response.document.id.to_string(),
+            updated: response.document.updated.to_rfc3339(),
+            code: response.code,
+        }
+    }
+}
+
+#[cfg(feature = "document_writable")]
+#[derive(Debug, Serialize)]
+pub(crate) struct ContentEditResult {
+    #[serde(flatten)]
+    pub result: ContentWriteResult,
+    /// Occurrences replaced in the submitted body (not proof of what was stored).
+    pub replacements: usize,
+}
+
+/// Fetches the document and checks project access on it (one GET).
+async fn fetch_document(
+    client: &BacklogApiClient,
+    document_id: &DocumentId,
+    access_control: &AccessControl,
+) -> Result<DocumentDetail> {
+    let document = client
+        .document()
+        .get_document(GetDocumentParams::new(document_id.clone()))
+        .await?;
+    access_control
+        .check_project_access_by_id_async(&document.project_id, client)
+        .await?;
+    Ok(document)
+}
+
+pub(crate) async fn get_document_content_bridge(
+    client: Arc<Mutex<BacklogApiClient>>,
+    req: GetDocumentContentRequest,
+    access_control: &AccessControl,
+) -> Result<DocumentContentPage> {
+    let document_id = DocumentId::from_str(req.document_id.trim()).map_err(parameter_error)?;
+    let search = req
+        .search
+        .as_deref()
+        .map(Regex::new)
+        .transpose()
+        .map_err(parameter_error)?;
+    let client_guard = client.lock().await;
+    let document = fetch_document(&client_guard, &document_id, access_control).await?;
+    let plain = content::normalize_newlines(&document.plain);
+    let page = content::page(
+        &plain,
+        req.start_line.unwrap_or(1),
+        req.limit.unwrap_or(content::DEFAULT_LIMIT),
+        search.as_ref(),
+    );
+    Ok(DocumentContentPage {
+        document_id: document.id.to_string(),
+        title: document.title,
+        updated: document.updated.to_rfc3339(),
+        total_lines: plain.lines().count() as u32,
+        returned_lines: page.returned_lines,
+        next_line: page.next_line,
+        truncated_line: page.truncated_line,
+        text: page.text,
+    })
+}
+
+/// Read-modify-write under the client lock. The API has no version parameter, so an edit
+/// made elsewhere between the GET and the PATCH can still be overwritten.
+#[cfg(feature = "document_writable")]
+pub(crate) async fn edit_document_content_bridge(
+    client: Arc<Mutex<BacklogApiClient>>,
+    req: EditDocumentContentRequest,
+    access_control: &AccessControl,
+) -> Result<ContentEditResult> {
+    let document_id = DocumentId::from_str(req.document_id.trim()).map_err(parameter_error)?;
+    let client_guard = client.lock().await;
+    let document = fetch_document(&client_guard, &document_id, access_control).await?;
+    let plain = content::normalize_newlines(&document.plain);
+    let (body, replacements) = content::apply_edit(
+        &plain,
+        &req.old_string,
+        &req.new_string,
+        req.replace_all.unwrap_or(false),
+    )
+    .map_err(Error::Parameter)?;
+    let response = client_guard
+        .document()
+        .update_document_content(UpdateDocumentContentParams::new(document_id, body))
+        .await?;
+    Ok(ContentEditResult {
+        result: response.into(),
+        replacements,
+    })
 }
 
 pub(crate) async fn list_documents_bridge(
@@ -347,15 +473,15 @@ pub(crate) async fn update_document_content_bridge(
     client: Arc<Mutex<BacklogApiClient>>,
     req: UpdateDocumentContentRequest,
     access_control: &AccessControl,
-) -> Result<UpdateDocumentContentResponse> {
+) -> Result<ContentWriteResult> {
     let client_guard = client.lock().await;
     let document_id = DocumentId::from_str(req.document_id.trim())?;
     check_document_access(&client_guard, &document_id, access_control).await?;
 
     let params = UpdateDocumentContentParams::new(document_id, req.content);
-    client_guard
+    let response = client_guard
         .document()
         .update_document_content(params)
-        .await
-        .map_err(crate::error::Error::from)
+        .await?;
+    Ok(response.into())
 }

@@ -7,7 +7,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use wiremock::{
     Mock, MockServer, ResponseTemplate,
-    matchers::{method, path, query_param},
+    matchers::{body_string, method, path, query_param},
 };
 
 const ID: &str = "01939983409c79d5a06a49859789e38f";
@@ -49,6 +49,238 @@ async fn project_response(server: &MockServer, lookup: &str, id: u32, key: &str)
         .expect(1)
         .mount(server)
         .await;
+}
+
+/// Mounts GET document (project 1, given body) and the project lookup used by access control.
+async fn content_server(plain: &str, project_key: &str) -> MockServer {
+    let server = MockServer::start().await;
+    let mut doc = document(1);
+    doc["plain"] = json!(plain);
+    Mock::given(method("GET"))
+        .and(path(format!("/api/v2/documents/{ID}")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(doc))
+        .expect(1)
+        .mount(&server)
+        .await;
+    project_response(&server, "1", 1, project_key).await;
+    server
+}
+
+fn content_request(
+    start_line: Option<u32>,
+    limit: Option<u32>,
+    search: Option<&str>,
+) -> GetDocumentContentRequest {
+    GetDocumentContentRequest {
+        document_id: ID.into(),
+        start_line,
+        limit,
+        search: search.map(Into::into),
+    }
+}
+
+#[tokio::test]
+async fn content_get_pages_lines() {
+    let server = content_server("# Title\nline two\n## Section\nline four\n", "TEST").await;
+    let page = bridge::get_document_content_bridge(
+        client(&server),
+        content_request(Some(2), Some(2), None),
+        &access(Some(vec!["TEST"])),
+    )
+    .await
+    .unwrap();
+    assert_eq!(page.document_id, ID);
+    assert_eq!(page.text, "2\tline two\n3\t## Section\n");
+    assert_eq!(
+        (
+            page.total_lines,
+            page.returned_lines,
+            page.next_line,
+            page.truncated_line
+        ),
+        (4, 2, Some(4), None)
+    );
+}
+
+#[tokio::test]
+async fn content_get_searches_and_normalizes_crlf() {
+    let server = content_server("# Title\r\nline two\r\n## Section\r\n", "TEST").await;
+    let page = bridge::get_document_content_bridge(
+        client(&server),
+        content_request(None, None, Some("^#{1,6} ")),
+        &access(Some(vec!["TEST"])),
+    )
+    .await
+    .unwrap();
+    assert_eq!(page.text, "1\t# Title\n3\t## Section\n");
+    assert_eq!(
+        (page.total_lines, page.returned_lines, page.next_line),
+        (3, 2, None)
+    );
+}
+
+#[tokio::test]
+async fn content_get_clamps_bounds() {
+    for (start, limit, expected_lines, next) in
+        [(Some(0), Some(0), 1, Some(2)), (None, Some(5000), 3, None)]
+    {
+        let server = content_server("a\nb\nc\n", "TEST").await;
+        let page = bridge::get_document_content_bridge(
+            client(&server),
+            content_request(start, limit, None),
+            &access(Some(vec!["TEST"])),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            (page.returned_lines, page.next_line),
+            (expected_lines, next)
+        );
+        assert!(page.text.starts_with("1\ta\n"));
+    }
+}
+
+#[tokio::test]
+async fn content_get_rejects_bad_input_before_fetching() {
+    let server = MockServer::start().await;
+    for req in [
+        content_request(None, None, Some("(unclosed")),
+        GetDocumentContentRequest {
+            document_id: "nope".into(),
+            ..content_request(None, None, None)
+        },
+    ] {
+        let result = bridge::get_document_content_bridge(client(&server), req, &access(None)).await;
+        assert!(matches!(result, Err(crate::error::Error::Parameter(_))));
+    }
+    assert!(server.received_requests().await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn content_get_checks_project_access() {
+    let server = content_server("a\n", "OTHER").await;
+    let result = bridge::get_document_content_bridge(
+        client(&server),
+        content_request(None, None, None),
+        &access(Some(vec!["TEST"])),
+    )
+    .await;
+    assert!(matches!(
+        result,
+        Err(crate::error::Error::ProjectAccessDenied { .. })
+    ));
+}
+
+#[cfg(feature = "document_writable")]
+fn edit_request(old: &str, new: &str, replace_all: Option<bool>) -> EditDocumentContentRequest {
+    EditDocumentContentRequest {
+        document_id: ID.into(),
+        old_string: old.into(),
+        new_string: new.into(),
+        replace_all,
+    }
+}
+
+#[cfg(feature = "document_writable")]
+fn write_response(code: Option<&str>) -> Value {
+    json!({"id": ID, "projectId": 1, "title": "Doc", "statusId": 1,
+        "created": "2024-01-01T00:00:00Z", "updated": "2024-01-02T00:00:00Z", "code": code})
+}
+
+#[cfg(feature = "document_writable")]
+#[tokio::test]
+async fn content_edit_patches_full_body_with_replacement() {
+    // CRLF in the fetched body is normalized before the anchor is matched and the body sent.
+    let server = content_server("a\r\nb\r\n", "TEST").await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("/api/v2/documents/{ID}/content")))
+        .and(body_string("content=a%0Ac%0A"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(write_response(None)))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let edited = bridge::edit_document_content_bridge(
+        client(&server),
+        edit_request("b", "c", None),
+        &access(Some(vec!["TEST"])),
+    )
+    .await
+    .unwrap();
+    assert_eq!(edited.replacements, 1);
+    assert_eq!(edited.result.document_id, ID);
+    assert_eq!(edited.result.code, None);
+    assert_eq!(edited.result.updated, "2024-01-02T00:00:00+00:00");
+}
+
+#[cfg(feature = "document_writable")]
+#[tokio::test]
+async fn content_edit_replace_all_and_no_change_passthrough() {
+    let server = content_server("x\nx\n", "TEST").await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("/api/v2/documents/{ID}/content")))
+        .and(body_string("content=y%0Ay%0A"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(write_response(Some("NO_CHANGE"))))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let edited = bridge::edit_document_content_bridge(
+        client(&server),
+        edit_request("x", "y", Some(true)),
+        &access(Some(vec!["TEST"])),
+    )
+    .await
+    .unwrap();
+    assert_eq!(edited.replacements, 2);
+    assert_eq!(edited.result.code.as_deref(), Some("NO_CHANGE"));
+}
+
+#[cfg(feature = "document_writable")]
+#[tokio::test]
+async fn content_edit_rejects_ambiguous_missing_or_identical_anchor_without_writing() {
+    for (old, new) in [("a", "z"), ("missing", "z"), ("b", "b"), ("", "z")] {
+        let server = content_server("a\nb\na\n", "TEST").await;
+        Mock::given(method("PATCH"))
+            .and(path(format!("/api/v2/documents/{ID}/content")))
+            .respond_with(ResponseTemplate::new(200).set_body_json(write_response(None)))
+            .expect(0)
+            .mount(&server)
+            .await;
+        let result = bridge::edit_document_content_bridge(
+            client(&server),
+            edit_request(old, new, None),
+            &access(Some(vec!["TEST"])),
+        )
+        .await;
+        assert!(
+            matches!(result, Err(crate::error::Error::Parameter(_))),
+            "{old:?} -> {new:?}"
+        );
+    }
+}
+
+#[cfg(feature = "document_writable")]
+#[tokio::test]
+async fn content_edit_propagates_conflict() {
+    let server = content_server("a\nb\n", "TEST").await;
+    Mock::given(method("PATCH"))
+        .and(path(format!("/api/v2/documents/{ID}/content")))
+        .respond_with(ResponseTemplate::new(409).set_body_json(json!({"errors":[
+            {"message":"Document changed","code":7,"moreInfo":"DOCUMENT_CHANGED"}]})))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let result = bridge::edit_document_content_bridge(
+        client(&server),
+        edit_request("b", "c", None),
+        &access(Some(vec!["TEST"])),
+    )
+    .await;
+    assert!(matches!(
+        result,
+        Err(crate::error::Error::Api(
+            backlog_api_client::ApiError::HttpStatus { status: 409, .. }
+        ))
+    ));
 }
 
 #[tokio::test]

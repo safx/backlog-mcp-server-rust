@@ -14,8 +14,9 @@ use crate::{
     document::{
         self,
         request::{
-            DownloadDocumentAttachmentRequest, GetDocumentCommentsRequest, GetDocumentCountRequest,
-            GetDocumentDetailsRequest, GetDocumentTreeRequest, ListDocumentsRequest,
+            DownloadDocumentAttachmentRequest, GetDocumentCommentsRequest,
+            GetDocumentContentRequest, GetDocumentCountRequest, GetDocumentDetailsRequest,
+            GetDocumentTreeRequest, ListDocumentsRequest,
         },
     },
     file::{
@@ -60,8 +61,8 @@ use crate::wiki::request::UpdateWikiRequest;
 
 #[cfg(feature = "document_writable")]
 use crate::document::request::{
-    AddDocumentRequest, DeleteDocumentRequest, DocumentTagsRequest, UpdateDocumentContentRequest,
-    UpdateDocumentRequest,
+    AddDocumentRequest, DeleteDocumentRequest, DocumentTagsRequest, EditDocumentContentRequest,
+    UpdateDocumentContentRequest, UpdateDocumentRequest,
 };
 
 use crate::access_control::AccessControl;
@@ -234,7 +235,7 @@ impl Server {
     }
 
     #[tool(
-        description = "Get details for a specific Backlog document. Returns document title, content as both Markdown ('plain') and ProseMirror JSON ('json'), and metadata. Requires project_id_or_key and document_id."
+        description = "Get details for a specific Backlog document: title, body as both Markdown ('plain') and ProseMirror JSON ('json'), attachments, tags and metadata. Requires document_id. For long documents, or to read only part of the body, use document_content_get instead."
     )]
     async fn document_details_get(
         &self,
@@ -248,6 +249,26 @@ impl Server {
         .await?;
 
         Ok(CallToolResult::success(vec![ContentBlock::json(document)?]))
+    }
+
+    #[tool(
+        description = "Read part of a document's Markdown body (no ProseMirror JSON). Returns a JSON block {document_id, title, updated, total_lines, returned_lines, next_line, truncated_line} and a text block of lines formatted as 'LINE_NUMBER<TAB>text'. Pages from start_line (1-based, default 1) for up to limit lines (default 200, max 2000); next_line is set only when more of the document remains, so call again with start_line = next_line. With search (a regex), only matching lines are returned, e.g. search '^#{1,6} ' lists Markdown headings with their line numbers. The text block never exceeds 50,000 bytes: a single longer line is cut at that size and reported in truncated_line. Use this instead of document_details_get for long documents, and to find unique anchors for document_content_edit."
+    )]
+    async fn document_content_get(
+        &self,
+        request: Parameters<GetDocumentContentRequest>,
+    ) -> McpResult {
+        let mut page = document::bridge::get_document_content_bridge(
+            self.client.clone(),
+            request.0,
+            &self.access_control,
+        )
+        .await?;
+        let text = std::mem::take(&mut page.text);
+        Ok(CallToolResult::success(vec![
+            ContentBlock::json(page)?,
+            ContentBlock::text(text),
+        ]))
     }
 
     #[tool(
@@ -873,9 +894,8 @@ impl Server {
         Ok(CallToolResult::success(vec![ContentBlock::json(document)?]))
     }
 
-    #[cfg(feature = "document_writable")]
     #[tool(
-        description = "Replace a document's whole body with Markdown. Requires document_id (32-digit hex string) and content (the full new body). Read the current body with document_details_get ('plain'), edit it, and send the whole document. In the response, code \"NO_CHANGE\" means the body was identical, and markdownIsFallback=true means 'plain' is not Markdown, so do not edit and resend it. HTTP 409 (DOCUMENT_CHANGED) means the document changed concurrently: re-read and retry. Needs the space feature use-document-content-update-api; otherwise HTTP 404."
+        description = "Replace a document's whole body with Markdown. Requires document_id (32-digit hex string) and content (the full new body). For partial changes to a long document use document_content_edit instead. Response: {document_id, updated, code}; code \"NO_CHANGE\" means the body was identical and nothing was written. HTTP 409 (DOCUMENT_CHANGED) means the document changed concurrently: re-read and retry. Needs the space feature use-document-content-update-api; otherwise HTTP 404."
     )]
     async fn document_content_update(
         &self,
@@ -888,6 +908,22 @@ impl Server {
         )
         .await?;
         Ok(CallToolResult::success(vec![ContentBlock::json(updated)?]))
+    }
+
+    #[tool(
+        description = "Edit a document's Markdown body by exact string replacement without sending the whole document. The server reads the current body, replaces old_string with new_string, and writes the full body back. old_string must occur exactly once (set replace_all to replace every occurrence); on 0 or several matches nothing is written and the error says how many matched. Copy old_string verbatim from document_content_get output, without the line-number prefix. Response: {document_id, updated, code, replacements}; replacements counts occurrences replaced locally. Backlog re-serializes Markdown into a canonical form, so the stored text can differ slightly from new_string, and code \"NO_CHANGE\" means the result was identical to the current content and nothing was written. There is no version check: a change made elsewhere between the read and the write can be overwritten, and HTTP 409 (DOCUMENT_CHANGED) is a server-side conflict check after which you can simply call again. For an empty body or a full rewrite use document_content_update. Needs the space feature use-document-content-update-api; otherwise HTTP 404."
+    )]
+    async fn document_content_edit(
+        &self,
+        request: Parameters<EditDocumentContentRequest>,
+    ) -> McpResult {
+        let edited = document::bridge::edit_document_content_bridge(
+            self.client.clone(),
+            request.0,
+            &self.access_control,
+        )
+        .await?;
+        Ok(CallToolResult::success(vec![ContentBlock::json(edited)?]))
     }
 }
 

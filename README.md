@@ -136,6 +136,7 @@ The server includes both **read operations** for information gathering and **wri
 -   **`document_tag_add`**: Add one or more `tag_names` to a `document_id`; returns the API's tag array
 -   **`document_tag_remove`**: Remove named tags from a `document_id`; returns `{"success":true}` after a successful empty API response
 -   **`document_details_get`**: Retrieves details for a specific Backlog document
+-   **`document_content_get`**: Read a line range of a document's Markdown body, or only lines matching a regex, with line numbers (for documents too long to read at once)
 -   **`document_attachment_download`**: Download a document attachment
 -   **`document_comment_list_get`**: Get the comments (with replies) on a document
 -   **`document_tree_get`**: Get the document tree for a specified project
@@ -143,6 +144,7 @@ The server includes both **read operations** for information gathering and **wri
 -   **`document_delete`**: Delete a document from Backlog
 -   **`document_update`**: Update a document's title or emoji
 -   **`document_content_update`**: Replace a document's body with Markdown
+-   **`document_content_edit`**: Replace one exact text anchor in a document's body server-side, without sending the whole document
 
 Names above are shown without `BACKLOG_PREFIX` (default `backlog_`). When `project_ids` is omitted,
 the list tool searches participating projects within `BACKLOG_PROJECTS`. If a project restriction is
@@ -250,7 +252,7 @@ The MCP server supports multiple feature flags to enable different write operati
     -   Allows AI agents to update wiki page content, names, and notification settings
 
 -   **`document_writable`** (enabled by default)
-    -   Enables: `document_add`, `document_delete`, `document_update`, `document_content_update`, `document_tag_add`, and `document_tag_remove`
+    -   Enables: `document_add`, `document_delete`, `document_update`, `document_content_update`, `document_content_edit`, `document_tag_add`, and `document_tag_remove`
     -   Allows AI agents to create/update/delete documents and add/remove tags; list/count remain available when disabled
 
 ### Build Configuration

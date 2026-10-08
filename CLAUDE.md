@@ -341,6 +341,7 @@ pub use get_issues::{GetIssuesParams, GetIssuesParamsBuilder};
 - Update API.md counts after adding endpoints
 
 ## Recent Updates
+- **Large document editing (MCP)**: `document_content_get` pages or regex-filters a document's Markdown body with line numbers (text block capped at 50,000 bytes, `next_line` for paging, `truncated_line` for a single oversized line). `document_content_edit` does a server-side exact-match `old_string`/`new_string` replacement and PATCHes the full body, so the LLM never holds the whole document. Write responses are slim (`{document_id, updated, code}`); pure text helpers live in `backlog-mcp-server/src/document/content.rs`.
 - **Document APIs**: List/count and add/remove tags are available in CLI and MCP. List accepts numeric project IDs, count accepts ID or key. Tag operations require `document_writable`; DELETE tags uses `execute_no_content()`.
 - **Document MCP routing**: Writable document tools live in a separate feature-gated tool router because the router macro collects methods before method-level cfg attributes are removed. List scopes queries to `BACKLOG_PROJECTS` before pagination; tag mutations check document ownership first.
 - **OAuth Support**: Added OAuth 2.0 authentication flow and webhook management APIs  
@@ -365,7 +366,7 @@ pub use get_issues::{GetIssuesParams, GetIssuesParamsBuilder};
 - Project access control via `BACKLOG_PROJECTS` environment variable
 - Unified file handling with intelligent format detection
 - Available tools follow `category_resource_action` naming pattern (e.g., `issue_details_get`, `wiki_update`)
-- 41 tools available covering read and write operations across all domains
+- 48 tools available covering read and write operations across all domains
 
 ## Release Process
 

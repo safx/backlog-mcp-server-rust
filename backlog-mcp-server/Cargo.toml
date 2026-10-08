@@ -30,6 +30,7 @@ backlog-core = { path = "../crates/backlog-core" } # For ProjectIdOrKey parsing 
 backlog-issue = { path = "../crates/backlog-issue" } # For CustomFieldType
 backlog-domain-models = { path = "../crates/backlog-domain-models" } # For CustomFieldType and CustomFieldSettings
 schemars = { workspace = true, features = ["derive"] } # For JsonSchema derive
+regex = { workspace = true }
 strsim = "0.11.1"
 base64 = { workspace = true }
 dashmap = "6.1"
