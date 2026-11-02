@@ -11,7 +11,7 @@ const MAX_SPACE_KEY_LENGTH: usize = 10;
 
 // NOTE: Regex uses {3,10} which must match MIN/MAX_SPACE_KEY_LENGTH
 static SPACE_KEY_REGEXP: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9-]{3,10}$").expect("valid regex pattern"));
+    LazyLock::new(|| Regex::new(r"^[a-z0-9-]{3,10}$").expect("valid regex pattern"));
 
 /// A type of Backlog's space identifier, also known as "Space ID" in Backlog's help document,
 /// is used to access the organization's Backlog space. It is found in the
